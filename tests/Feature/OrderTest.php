@@ -190,7 +190,21 @@ test('invalid order request does not decrement inventory', function () {
 
     $this->postJson('/api/order', orderPayload($product))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['idempotency_key']);
+        ->assertJsonPath('message', 'Header X-Idempotency-Key là bắt buộc.');
+
+    expect(Order::count())->toBe(0);
+    expect($product->fresh()->inventory)->toBe(10);
+});
+
+test('order idempotency key is accepted from header only', function () {
+    $product = createOrderProduct();
+
+    $payload = orderPayload($product);
+    $payload['idempotency_key'] = 'body-key-should-not-work';
+
+    $this->postJson('/api/order', $payload)
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'Header X-Idempotency-Key là bắt buộc.');
 
     expect(Order::count())->toBe(0);
     expect($product->fresh()->inventory)->toBe(10);

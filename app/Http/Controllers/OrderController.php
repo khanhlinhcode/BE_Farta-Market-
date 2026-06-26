@@ -50,13 +50,18 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
+        $idempotencyKey = $request->header('X-Idempotency-Key');
+
+        if (! is_string($idempotencyKey) || trim($idempotencyKey) === '') {
+            return response()->json([
+                'message' => 'Header X-Idempotency-Key là bắt buộc.',
+            ], 422);
+        }
+
         $request->merge([
             'customer_name' => $request->input('customer_name', $request->input('fullname')),
             'customer_phone' => $request->input('customer_phone', $request->input('phone')),
-            'idempotency_key' => $request->header(
-                'X-Idempotency-Key',
-                $request->input('idempotency_key')
-            ),
+            'idempotency_key' => $idempotencyKey,
         ]);
 
         $data = $request->validate([

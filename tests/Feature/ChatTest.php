@@ -94,6 +94,19 @@ it('recognizes a product alias and returns the exact stock', function () {
     Http::assertNothingSent();
 });
 
+test('chat understands short product alias', function () {
+    createChatProduct();
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', [
+        'message' => 'cam còn không',
+        'history' => [],
+    ])->assertOk();
+
+    expect(Str::lower($response->json('reply')))->toContain('cam');
+    Http::assertNothingSent();
+});
+
 it('returns a cart action for an explicit product and quantity request', function () {
     $product = createChatProduct();
     Http::preventStrayRequests();
@@ -109,6 +122,24 @@ it('returns a cart action for an explicit product and quantity request', functio
         ->assertJsonPath('action.product.name', 'Cam Tươi')
         ->assertJsonPath('action.product.inventory', 30);
 
+    Http::assertNothingSent();
+});
+
+test('chat handles affirmation in context', function () {
+    createChatProduct();
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', [
+        'message' => 'có',
+        'history' => [
+            ['role' => 'user', 'content' => 'Cam Tươi còn không?'],
+            ['role' => 'assistant', 'content' => 'Còn 30 quả. Bạn muốn mua không?'],
+        ],
+    ])
+        ->assertOk()
+        ->assertJsonStructure(['reply', 'action']);
+
+    expect($response->json('action.type'))->not->toBe('none');
     Http::assertNothingSent();
 });
 
@@ -171,6 +202,22 @@ it('responds to a greeting without treating it as a missing product', function (
     Http::assertNothingSent();
 });
 
+test('chat greeting does not trigger product-not-found', function () {
+    createChatProduct();
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', [
+        'message' => 'alo',
+        'history' => [],
+    ])->assertOk();
+
+    $this->assertStringNotContainsStringIgnoringCase(
+        'chưa có sản phẩm',
+        $response->json('reply'),
+    );
+    Http::assertNothingSent();
+});
+
 it('uses the configured Ollama model and parses its structured reply', function () {
     createChatProduct([
         'name' => 'Ổi',
@@ -200,6 +247,7 @@ it('uses the configured Ollama model and parses its structured reply', function 
     ])
         ->assertOk()
         ->assertExactJson([
+            'action' => ['type' => 'none'],
             'reply' => 'Xin chào, tôi có thể giúp gì?',
             'source' => 'ai',
         ]);
@@ -207,8 +255,34 @@ it('uses the configured Ollama model and parses its structured reply', function 
     Http::assertSent(fn ($request) => $request->url() === 'http://127.0.0.1:11434/api/chat'
         && $request['model'] === 'qwen3:4b'
         && $request['keep_alive'] === '30m'
-        && Str::endsWith($request['messages'][1]['content'], '/no_think')
-        && $request['stream'] === false);
+	        && Str::endsWith($request['messages'][1]['content'], '/no_think')
+	        && $request['stream'] === false);
+});
+
+test('chat returns safe fallback on malformed JSON from model', function () {
+    config()->set('services.ai_chat.driver', 'ollama');
+    config()->set('services.ai_chat.model', 'qwen3:4b');
+    config()->set('services.ai_chat.base_url', 'http://127.0.0.1:11434');
+
+    Http::fake([
+        'http://127.0.0.1:11434/api/tags' => Http::response([
+            'models' => [
+                ['name' => 'qwen3:4b'],
+            ],
+        ]),
+        'http://127.0.0.1:11434/api/chat' => Http::response([
+            'message' => [
+                'role' => 'assistant',
+                'content' => '###INVALID###',
+            ],
+        ]),
+    ]);
+
+    $this->postJson('/api/chat', ['message' => '###INVALID###'])
+        ->assertOk()
+        ->assertJsonStructure(['reply'])
+        ->assertJsonPath('reply', 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.')
+        ->assertJsonPath('action.type', 'none');
 });
 
 it('returns a clear error when the configured Ollama model is unavailable', function () {

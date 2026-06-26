@@ -29,7 +29,14 @@ test('login fails with wrong password', function () {
     $this->postJson('/api/admin/login', [
         'email' => 'wrong-password@example.test',
         'password' => 'bad-password',
-    ])->assertUnprocessable();
+    ])->assertUnauthorized();
+});
+
+test('default weak admin account cannot log in', function () {
+    $this->postJson('/api/admin/login', [
+        'email' => 'test@example.com',
+        'password' => 'password',
+    ])->assertUnauthorized();
 });
 
 test('login is rate limited after five attempts', function () {
@@ -42,7 +49,7 @@ test('login is rate limited after five attempts', function () {
         $this->postJson('/api/admin/login', [
             'email' => 'limited@example.test',
             'password' => 'bad-password',
-        ])->assertUnprocessable();
+        ])->assertUnauthorized();
     }
 
     $this->postJson('/api/admin/login', [

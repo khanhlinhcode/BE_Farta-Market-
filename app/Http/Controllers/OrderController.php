@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendOrderConfirmationEmail;
 use App\Models\IdempotencyKey;
 use App\Models\Order;
 use App\Models\Product;
@@ -46,6 +47,18 @@ class OrderController extends Controller
             ->findOrFail($id);
 
         return response()->json($order);
+    }
+
+    public function myOrders(Request $request)
+    {
+        return response()->json(
+            Order::query()
+                ->where('user_id', $request->user()->id)
+                ->with(['details.product.category'])
+                ->withSum('details as total', 'line_total')
+                ->orderByDesc('created_at')
+                ->paginate(10)
+        );
     }
 
     public function store(Request $request)
@@ -129,12 +142,15 @@ class OrderController extends Controller
                     }
 
                     $order = Order::create([
+                        'user_id' => $userId,
                         'fullname' => $data['customer_name'],
                         'address' => $data['address'],
                         'phone' => $data['customer_phone'],
                         'email' => $data['email'] ?? null,
                         'note' => $data['note'] ?? null,
                         'status' => Order::STATUS_ORDERED,
+                        'payment_method' => Order::PAYMENT_METHOD_COD,
+                        'payment_status' => Order::PAYMENT_STATUS_PENDING,
                         'idempotency_key' => $data['idempotency_key'],
                     ]);
 
@@ -195,6 +211,10 @@ class OrderController extends Controller
         }
 
         $order->load(['details.product.category'])->loadSum('details as total', 'line_total');
+
+        if (! $isReplay) {
+            SendOrderConfirmationEmail::dispatch($order->id)->onQueue('emails');
+        }
 
         return response()->json([
             'data' => $order,
@@ -257,6 +277,53 @@ class OrderController extends Controller
 
         $order->load(['details.product.category']);
         $order->loadSum('details as total', 'line_total');
+
+        return response()->json($order);
+    }
+
+    public function cancelMyOrder(Request $request, Order $order)
+    {
+        if ((int) $order->user_id !== (int) $request->user()->id) {
+            abort(404);
+        }
+
+        if ($order->status !== Order::STATUS_ORDERED) {
+            return response()->json([
+                'message' => 'Chỉ có thể hủy đơn hàng đang chờ xử lý.',
+            ], 422);
+        }
+
+        $order = DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedOrder->status !== Order::STATUS_ORDERED) {
+                abort(422, 'Chỉ có thể hủy đơn hàng đang chờ xử lý.');
+            }
+
+            $details = $lockedOrder->details()->get();
+            $products = Product::query()
+                ->whereIn('id', $details->pluck('product_id')->filter()->unique()->sort()->values())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            foreach ($details as $detail) {
+                $products->get($detail->product_id)?->increment(
+                    'inventory',
+                    $detail->quantity
+                );
+            }
+
+            $lockedOrder->update(['status' => Order::STATUS_CANCELLED]);
+
+            return $lockedOrder;
+        });
+
+        $order->load(['details.product.category'])->loadSum('details as total', 'line_total');
 
         return response()->json($order);
     }

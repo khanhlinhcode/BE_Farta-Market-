@@ -21,7 +21,10 @@ class ProductController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $query = ProductModel::query()->with('category');
+        $query = ProductModel::query()
+            ->with('category')
+            ->withAvg('reviews as avg_rating', 'rating')
+            ->withCount('reviews');
 
         if (! empty($filters['q'])) {
             $keyword = trim($filters['q']);
@@ -82,7 +85,11 @@ class ProductController extends Controller
 
     public function show(string $id)
     {
-        $product = ProductModel::with('category')->where('id', $id)->firstOrFail();
+        $product = ProductModel::with('category')
+            ->withAvg('reviews as avg_rating', 'rating')
+            ->withCount('reviews')
+            ->where('id', $id)
+            ->firstOrFail();
 
         return response()->json($product, 200);
     }

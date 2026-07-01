@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -9,11 +10,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $user = \App\Models\User::where('email', 'test@example.com')->first();
+        $user = DB::table('users')->where('email', 'test@example.com')->first();
 
         if ($user) {
-            $user->tokens()->delete();
-            $user->delete();
+            DB::table('personal_access_tokens')
+                ->where('tokenable_type', \App\Models\User::class)
+                ->where('tokenable_id', $user->id)
+                ->delete();
+
+            DB::table('users')->where('id', $user->id)->delete();
         }
     }
 

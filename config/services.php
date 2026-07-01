@@ -44,6 +44,19 @@ return [
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
     ],
 
+    'vnpay' => [
+        'tmn_code' => env('VNPAY_TMN_CODE'),
+        'hash_secret' => env('VNPAY_HASH_SECRET'),
+        'url' => env('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+        'return_url' => env('VNPAY_RETURN_URL')
+            ?: rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/').'/api/payment/vnpay-return',
+        'frontend_url' => env('FRONTEND_URL') ?: 'http://127.0.0.1:5173',
+    ],
+
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'http://127.0.0.1:5173'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -41,4 +41,14 @@ class Product extends Model
     {
         return $this->hasMany(OrderDetail::class);
     }
+
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
 }

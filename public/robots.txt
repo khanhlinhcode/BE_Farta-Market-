@@ -1,2 +1,5 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /quan-tri/
+Disallow: /api/
+Sitemap: https://YOUR_DOMAIN/sitemap.xml

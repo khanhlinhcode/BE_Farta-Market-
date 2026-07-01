@@ -5,8 +5,10 @@ use App\Models\IdempotencyKey;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Jobs\SendOrderConfirmationEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -67,6 +69,22 @@ test('placing an order creates snapshot and admin total uses line totals', funct
     $response = $this->getJson('/api/admin/orders')->assertOk();
 
     expect((float) $response->json('0.total'))->toBe(90000.0);
+});
+
+test('placing a new order queues confirmation email', function () {
+    Queue::fake();
+    $product = createOrderProduct();
+
+    $orderId = $this->withHeader('X-Idempotency-Key', 'order-email-test-0001')
+        ->postJson('/api/order', orderPayload($product))
+        ->assertCreated()
+        ->json('data.id');
+
+    Queue::assertPushedOn(
+        'emails',
+        SendOrderConfirmationEmail::class,
+        fn (SendOrderConfirmationEmail $job) => $job->orderId === $orderId
+    );
 });
 
 test('replaying an idempotency key returns the same order without decrementing stock twice', function () {

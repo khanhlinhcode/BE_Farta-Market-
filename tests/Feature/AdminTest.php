@@ -24,9 +24,9 @@ test('admin can delete a user', function () {
 
     $this->deleteJson("/api/admin/users/{$target->id}")
         ->assertOk()
-        ->assertJsonPath('message', 'Đã xoá người dùng.');
+        ->assertJsonPath('message', 'Đã vô hiệu hóa người dùng.');
 
-    $this->assertDatabaseMissing('users', [
+    $this->assertSoftDeleted('users', [
         'id' => $target->id,
     ]);
 });

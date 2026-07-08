@@ -13,7 +13,7 @@ class AdminUserController extends Controller
     {
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
-            'role' => ['nullable', Rule::in(['admin', 'staff'])],
+            'role' => ['nullable', Rule::in(['admin', 'staff', 'customer'])],
         ]);
 
         $query = User::query()
@@ -43,6 +43,28 @@ class AdminUserController extends Controller
             'role' => ['required', Rule::in(['admin', 'staff'])],
         ]);
 
+        if ($request->user()->is($user)) {
+            return response()->json([
+                'message' => 'Không thể đổi quyền tài khoản đang đăng nhập.',
+            ], 422);
+        }
+
+        if (! in_array($user->role, ['admin', 'staff'], true)) {
+            return response()->json([
+                'message' => 'Chỉ được phân quyền tài khoản nhân sự.',
+            ], 422);
+        }
+
+        if (
+            $user->role === 'admin'
+            && $data['role'] !== 'admin'
+            && ! $this->hasAnotherActiveAdmin($user)
+        ) {
+            return response()->json([
+                'message' => 'Không thể hạ quyền admin cuối cùng.',
+            ], 409);
+        }
+
         $user->update(['role' => $data['role']]);
 
         return response()->json($user->fresh()->loadCount('orders'));
@@ -62,11 +84,31 @@ class AdminUserController extends Controller
 
     public function destroy(User $user)
     {
+        if (request()->user()->is($user)) {
+            return response()->json([
+                'message' => 'Không thể vô hiệu hóa tài khoản đang đăng nhập.',
+            ], 422);
+        }
+
+        if ($user->role === 'admin' && ! $this->hasAnotherActiveAdmin($user)) {
+            return response()->json([
+                'message' => 'Không thể vô hiệu hóa admin cuối cùng.',
+            ], 409);
+        }
+
         $user->tokens()->delete();
         $user->delete();
 
         return response()->json([
             'message' => 'Đã vô hiệu hóa người dùng.',
         ]);
+    }
+
+    private function hasAnotherActiveAdmin(User $user): bool
+    {
+        return User::query()
+            ->where('role', 'admin')
+            ->whereKeyNot($user->id)
+            ->exists();
     }
 }

@@ -123,12 +123,15 @@ class ChatController extends Controller
                 'category_id',
                 'sort_description',
             ])
+            ->where('is_active', true)
             ->orderBy('name')
             ->get();
 
         $categories = Category::query()
             ->select(['id', 'name'])
-            ->withCount('products')
+            ->withCount([
+                'products' => fn ($query) => $query->where('is_active', true),
+            ])
             ->orderBy('name')
             ->get();
 
@@ -293,6 +296,7 @@ class ChatController extends Controller
             'ton kho',
             'so luong',
             'con hang',
+            'con khong',
             'het hang',
             'available',
             'stock',

@@ -28,6 +28,30 @@ function createCommerceProduct(array $overrides = []): Product
     ], $overrides));
 }
 
+function createReviewOrder(User $user, Product $product, array $overrides = []): Order
+{
+    $order = Order::create(array_merge([
+        'user_id' => $user->id,
+        'fullname' => 'Nguyen Van A',
+        'address' => 'Da Nang City',
+        'phone' => '0900000000',
+        'email' => 'customer@example.test',
+        'status' => Order::STATUS_ORDERED,
+        'payment_method' => Order::PAYMENT_METHOD_COD,
+        'payment_status' => Order::PAYMENT_STATUS_PENDING,
+    ], $overrides));
+
+    $order->details()->create([
+        'product_id' => $product->id,
+        'quantity' => 2,
+        'unit_price' => 45000,
+        'product_name' => $product->name,
+        'line_total' => 90000,
+    ]);
+
+    return $order;
+}
+
 test('authenticated user can add list and remove wishlist products', function () {
     $user = User::factory()->create();
     $product = createCommerceProduct();
@@ -51,7 +75,7 @@ test('authenticated user can add list and remove wishlist products', function ()
         ->assertJsonPath('ids', []);
 });
 
-test('review requires a completed purchase by the authenticated user', function () {
+test('review requires a delivered purchase by the authenticated user', function () {
     $buyer = User::factory()->create();
     $otherUser = User::factory()->create();
     $product = createCommerceProduct();
@@ -63,23 +87,15 @@ test('review requires a completed purchase by the authenticated user', function 
         'comment' => 'Sản phẩm rất tươi.',
     ])->assertForbidden();
 
-    $order = Order::create([
-        'user_id' => $buyer->id,
-        'fullname' => 'Nguyen Van A',
-        'address' => 'Da Nang City',
-        'phone' => '0900000000',
-        'email' => 'customer@example.test',
-        'status' => Order::STATUS_ORDERED,
-    ]);
-    $order->details()->create([
-        'product_id' => $product->id,
-        'quantity' => 2,
-        'unit_price' => 45000,
-        'product_name' => $product->name,
-        'line_total' => 90000,
-    ]);
+    $order = createReviewOrder($buyer, $product);
 
     Sanctum::actingAs($buyer);
+
+    $this->getJson("/api/products/{$product->id}/reviews/eligibility")
+        ->assertOk()
+        ->assertJsonPath('can_review', false);
+
+    $order->update(['status' => Order::STATUS_DELIVERED]);
 
     $this->getJson("/api/products/{$product->id}/reviews/eligibility")
         ->assertOk()
@@ -102,4 +118,77 @@ test('review requires a completed purchase by the authenticated user', function 
         ->assertOk()
         ->assertJsonPath('can_review', false)
         ->assertJsonPath('has_reviewed', true);
+});
+
+test('pending and failed vnpay orders cannot review products', function () {
+    $buyer = User::factory()->create();
+    $product = createCommerceProduct();
+
+    createReviewOrder($buyer, $product, [
+        'status' => Order::STATUS_PENDING_PAYMENT,
+        'payment_method' => Order::PAYMENT_METHOD_VNPAY,
+        'payment_status' => Order::PAYMENT_STATUS_PENDING,
+    ]);
+
+    Sanctum::actingAs($buyer);
+
+    $this->getJson("/api/products/{$product->id}/reviews/eligibility")
+        ->assertOk()
+        ->assertJsonPath('can_review', false);
+
+    $this->postJson("/api/products/{$product->id}/reviews", [
+        'rating' => 5,
+        'comment' => 'Không được đánh giá đơn chưa thanh toán.',
+    ])->assertForbidden();
+
+    Order::query()->delete();
+
+    createReviewOrder($buyer, $product, [
+        'status' => Order::STATUS_PAYMENT_FAILED,
+        'payment_method' => Order::PAYMENT_METHOD_VNPAY,
+        'payment_status' => Order::PAYMENT_STATUS_FAILED,
+    ]);
+
+    $this->getJson("/api/products/{$product->id}/reviews/eligibility")
+        ->assertOk()
+        ->assertJsonPath('can_review', false);
+});
+
+test('paid vnpay orders cannot review until delivered', function () {
+    $buyer = User::factory()->create();
+    $product = createCommerceProduct();
+
+    createReviewOrder($buyer, $product, [
+        'status' => Order::STATUS_CONFIRMED,
+        'payment_method' => Order::PAYMENT_METHOD_VNPAY,
+        'payment_status' => Order::PAYMENT_STATUS_PAID,
+    ]);
+
+    Sanctum::actingAs($buyer);
+
+    $this->getJson("/api/products/{$product->id}/reviews/eligibility")
+        ->assertOk()
+        ->assertJsonPath('can_review', false);
+
+    Order::query()->update(['status' => Order::STATUS_DELIVERED]);
+
+    $this->getJson("/api/products/{$product->id}/reviews/eligibility")
+        ->assertOk()
+        ->assertJsonPath('can_review', true);
+});
+
+test('admin or staff account cannot submit product reviews', function () {
+    $admin = User::factory()->admin()->create();
+    $product = createCommerceProduct();
+
+    Sanctum::actingAs($admin);
+
+    $this->postJson("/api/products/{$product->id}/reviews", [
+        'rating' => 5,
+        'comment' => 'Admin should not review products.',
+    ])->assertForbidden();
+
+    $this->getJson("/api/products/{$product->id}/reviews/eligibility")
+        ->assertOk()
+        ->assertJsonPath('can_review', false);
 });

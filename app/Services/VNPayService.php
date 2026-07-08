@@ -69,6 +69,10 @@ class VNPayService
 
     public function orderTotal(Order $order): float
     {
+        if ((float) $order->grand_total > 0) {
+            return (float) $order->grand_total;
+        }
+
         if ($order->relationLoaded('details')) {
             return (float) $order->details->sum(fn ($detail) => (float) $detail->line_total);
         }

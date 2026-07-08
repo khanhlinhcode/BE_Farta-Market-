@@ -50,7 +50,7 @@ return [
         'url' => env('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
         'return_url' => env('VNPAY_RETURN_URL')
             ?: rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/').'/api/payment/vnpay-return',
-        'frontend_url' => env('FRONTEND_URL') ?: 'http://127.0.0.1:5173',
+        'frontend_url' => env('FRONTEND_URL'),
     ],
 
     'frontend' => [

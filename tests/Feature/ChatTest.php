@@ -8,6 +8,10 @@ use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
+beforeEach(function () {
+    $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+});
+
 function createChatProduct(array $overrides = []): Product
 {
     $category = Category::firstOrCreate(['name' => 'Trái Cây']);
@@ -75,6 +79,26 @@ it('does not invent products or categories that are absent from the database', f
         ->toContain('Trái Cây')
         ->not->toContain('điện máy')
         ->not->toContain('di động');
+});
+
+it('does not expose inactive products in catalog answers', function () {
+    createChatProduct();
+    createChatProduct([
+        'name' => 'Táo Ẩn',
+        'is_active' => false,
+    ]);
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', [
+        'message' => 'Táo Ẩn còn không?',
+    ])->assertOk();
+
+    expect($response->json('source'))->toBe('catalog');
+    expect($response->json('reply'))
+        ->toContain('chưa có sản phẩm hoặc danh mục đó')
+        ->not->toContain('Táo Ẩn');
+
+    Http::assertNothingSent();
 });
 
 it('recognizes a product alias and returns the exact stock', function () {

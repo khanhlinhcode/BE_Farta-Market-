@@ -10,3 +10,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('idempotency:prune')->daily();
 Schedule::command('sitemap:generate')->daily();
+Schedule::command('payments:expire-pending')->everyTenMinutes();
+Schedule::command('queue:check-stuck')->everyFiveMinutes();

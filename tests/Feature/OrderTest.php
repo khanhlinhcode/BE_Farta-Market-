@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Jobs\SendOrderConfirmationEmail;
+use App\Mail\OrderConfirmation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -87,6 +88,38 @@ test('placing a new order queues confirmation email', function () {
     );
 });
 
+test('order confirmation email uses stored order totals including discount and shipping', function () {
+    $product = createOrderProduct();
+    $order = Order::create([
+        'fullname' => 'Nguyen Van A',
+        'address' => 'Da Nang City',
+        'phone' => '0900000000',
+        'email' => 'customer@example.test',
+        'status' => Order::STATUS_PENDING,
+        'payment_method' => Order::PAYMENT_METHOD_COD,
+        'payment_status' => Order::PAYMENT_STATUS_PENDING,
+        'subtotal' => 90000,
+        'discount_amount' => 10000,
+        'shipping_fee' => 20000,
+        'grand_total' => 100000,
+    ]);
+    $order->details()->create([
+        'product_id' => $product->id,
+        'quantity' => 2,
+        'unit_price' => 45000,
+        'product_name' => $product->name,
+        'line_total' => 90000,
+    ]);
+
+    $html = (new OrderConfirmation($order->load('details.product')))->render();
+
+    expect($html)->toContain('Tạm tính')
+        ->and($html)->toContain('90.000đ')
+        ->and($html)->toContain('-10.000đ')
+        ->and($html)->toContain('20.000đ')
+        ->and($html)->toContain('100.000đ');
+});
+
 test('replaying an idempotency key returns the same order without decrementing stock twice', function () {
     $product = createOrderProduct();
     $payload = orderPayload($product);
@@ -115,6 +148,55 @@ test('reusing an idempotency key with a different payload returns conflict', fun
 
     $this->withHeaders($headers)
         ->postJson('/api/order', orderPayload($product, 1))
+        ->assertConflict()
+        ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
+
+    expect(Order::count())->toBe(1);
+    expect($product->fresh()->inventory)->toBe(8);
+});
+
+test('reusing an order idempotency key with a changed email returns conflict', function () {
+    $product = createOrderProduct();
+    $headers = ['X-Idempotency-Key' => 'order-conflict-email-0001'];
+    $payload = orderPayload($product, 2);
+
+    $this->withHeaders($headers)
+        ->postJson('/api/order', $payload)
+        ->assertCreated();
+
+    $payload['email'] = 'another-customer@example.test';
+
+    $this->withHeaders($headers)
+        ->postJson('/api/order', $payload)
+        ->assertConflict()
+        ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
+
+    expect(Order::count())->toBe(1);
+    expect($product->fresh()->inventory)->toBe(8);
+});
+
+test('reusing an order idempotency key with changed customer name or note returns conflict', function () {
+    $product = createOrderProduct();
+    $headers = ['X-Idempotency-Key' => 'order-conflict-profile-fields-0001'];
+    $payload = orderPayload($product, 2);
+    $payload['note'] = 'Leave at reception';
+
+    $this->withHeaders($headers)
+        ->postJson('/api/order', $payload)
+        ->assertCreated();
+
+    $payload['customer_name'] = 'Tran Thi B';
+
+    $this->withHeaders($headers)
+        ->postJson('/api/order', $payload)
+        ->assertConflict()
+        ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
+
+    $payload['customer_name'] = 'Nguyen Van A';
+    $payload['note'] = 'Call before delivery';
+
+    $this->withHeaders($headers)
+        ->postJson('/api/order', $payload)
         ->assertConflict()
         ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
 
@@ -223,6 +305,20 @@ test('order idempotency key is accepted from header only', function () {
     $this->postJson('/api/order', $payload)
         ->assertUnprocessable()
         ->assertJsonPath('message', 'Header X-Idempotency-Key là bắt buộc.');
+
+    expect(Order::count())->toBe(0);
+    expect($product->fresh()->inventory)->toBe(10);
+});
+
+test('order requires customer email to match checkout validation', function () {
+    $product = createOrderProduct();
+    $payload = orderPayload($product);
+    unset($payload['email']);
+
+    $this->withHeader('X-Idempotency-Key', 'order-email-required-0001')
+        ->postJson('/api/order', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['email']);
 
     expect(Order::count())->toBe(0);
     expect($product->fresh()->inventory)->toBe(10);

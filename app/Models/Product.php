@@ -13,9 +13,11 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'img',
         'price',
         'inventory',
+        'is_active',
         'description',
         'sort_description',
         'facebook',
@@ -30,6 +32,7 @@ class Product extends Model
         'price' => 'integer',
         'inventory' => 'integer',
         'category_id' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     public function category():BelongsTo
@@ -50,5 +53,15 @@ class Product extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderByDesc('is_primary')->orderBy('sort_order');
+    }
+
+    public function primaryImage()
+    {
+        return $this->hasOne(ProductImage::class)->where('is_primary', true);
     }
 }

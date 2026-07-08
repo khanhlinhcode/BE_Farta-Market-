@@ -34,6 +34,15 @@ class GenerateSitemap extends Command
             });
 
         $sitemap->writeToFile(public_path('sitemap.xml'));
+        file_put_contents(public_path('robots.txt'), implode(PHP_EOL, [
+            'User-agent: *',
+            'Allow: /',
+            'Disallow: /quan-tri/',
+            'Disallow: /api/',
+            'Sitemap: '.$baseUrl.'/sitemap.xml',
+            '',
+        ]));
+
         $this->info('Sitemap generated at public/sitemap.xml');
 
         return self::SUCCESS;

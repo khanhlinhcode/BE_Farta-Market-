@@ -1,5 +1,7 @@
 /.phpunit.cache
 .DS_Store
+test-results/
+*.bak
 /node_modules
 /public/build
 /public/hot
@@ -12,6 +14,7 @@
 .env.bak
 .env.backup
 .env.production
+public/sitemap.xml
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

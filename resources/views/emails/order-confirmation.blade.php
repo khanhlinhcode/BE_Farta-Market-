@@ -68,8 +68,20 @@
 
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:18px;border-collapse:collapse;">
                                 <tr>
-                                    <td style="padding:16px 0;border-top:2px solid #00917c;font-size:18px;font-weight:800;">Tổng tiền</td>
-                                    <td align="right" style="padding:16px 0;border-top:2px solid #00917c;font-size:18px;font-weight:800;color:#00917c;">{{ number_format((float) $total, 0, ',', '.') }}đ</td>
+                                    <td style="padding:10px 0;border-top:2px solid #00917c;color:#667085;">Tạm tính</td>
+                                    <td align="right" style="padding:10px 0;border-top:2px solid #00917c;font-weight:700;">{{ number_format((float) $subtotal, 0, ',', '.') }}đ</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:10px 0;border-top:1px solid #edf2f7;color:#667085;">Giảm giá</td>
+                                    <td align="right" style="padding:10px 0;border-top:1px solid #edf2f7;font-weight:700;color:#027a48;">-{{ number_format((float) $discount, 0, ',', '.') }}đ</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:10px 0;border-top:1px solid #edf2f7;color:#667085;">Phí ship</td>
+                                    <td align="right" style="padding:10px 0;border-top:1px solid #edf2f7;font-weight:700;">{{ number_format((float) $shipping, 0, ',', '.') }}đ</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:16px 0;border-top:1px solid #edf2f7;font-size:18px;font-weight:800;">Tổng cộng</td>
+                                    <td align="right" style="padding:16px 0;border-top:1px solid #edf2f7;font-size:18px;font-weight:800;color:#00917c;">{{ number_format((float) $grandTotal, 0, ',', '.') }}đ</td>
                                 </tr>
                             </table>
 

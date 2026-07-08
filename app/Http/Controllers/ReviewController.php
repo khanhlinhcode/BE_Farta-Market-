@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\Review;
 use Illuminate\Http\Request;
@@ -32,7 +31,16 @@ class ReviewController extends Controller
     public function eligibility(Request $request, Product $product)
     {
         $user = $request->user();
-        $hasPurchased = $this->hasPurchased($user->id, $product->id);
+
+        if ($user->role !== 'customer') {
+            return response()->json([
+                'has_purchased' => false,
+                'has_reviewed' => false,
+                'can_review' => false,
+            ]);
+        }
+
+        $hasPurchased = $this->hasDeliveredPurchase($user->id, $product->id);
         $hasReviewed = Review::query()
             ->where('user_id', $user->id)
             ->where('product_id', $product->id)
@@ -54,9 +62,15 @@ class ReviewController extends Controller
 
         $user = $request->user();
 
-        if (! $this->hasPurchased($user->id, $product->id)) {
+        if ($user->role !== 'customer') {
             return response()->json([
-                'message' => 'Bạn cần mua sản phẩm trước khi đánh giá.',
+                'message' => 'Vui lòng đăng nhập bằng tài khoản khách hàng để đánh giá.',
+            ], 403);
+        }
+
+        if (! $this->hasDeliveredPurchase($user->id, $product->id)) {
+            return response()->json([
+                'message' => 'Bạn chỉ có thể đánh giá sau khi đơn hàng đã giao thành công.',
             ], 403);
         }
 
@@ -84,15 +98,12 @@ class ReviewController extends Controller
         ], 201);
     }
 
-    private function hasPurchased(int $userId, int $productId): bool
+    private function hasDeliveredPurchase(int $userId, int $productId): bool
     {
-        return OrderDetail::query()
-            ->where('product_id', $productId)
-            ->whereHas('order', function ($query) use ($userId) {
-                $query
-                    ->where('user_id', $userId)
-                    ->where('status', '!=', Order::STATUS_CANCELLED);
-            })
+        return Order::query()
+            ->where('user_id', $userId)
+            ->where('status', Order::STATUS_DELIVERED)
+            ->whereHas('details', fn ($query) => $query->where('product_id', $productId))
             ->exists();
     }
 

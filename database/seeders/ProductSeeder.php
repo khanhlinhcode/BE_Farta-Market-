@@ -229,6 +229,34 @@ class ProductSeeder extends Seeder
                 'instagram' => 'https://instagram.com/example',
                 'category_id' => $categoryIds['Sữa']
             ],
+            [
+                'name'=> '[QA] Sản phẩm hết hàng mẫu',
+                'img'=> $img.'2.png',
+                'price'=> 39000,
+                'inventory'=> 0,
+                'is_active' => true,
+                'description'=> 'Sản phẩm mẫu dùng để QA trạng thái hết hàng và chặn thêm vào giỏ.',
+                'sort_description'=> 'Sản phẩm QA hết hàng, dùng để kiểm thử giao diện và nghiệp vụ tồn kho.',
+                'facebook' => 'https://facebook.com/example',
+                'linkedin' => 'https://linkedin.com/example',
+                'twitter' => 'https://twitter.com/example',
+                'instagram' => 'https://instagram.com/example',
+                'category_id' => $categoryIds['Trái Cây']
+            ],
+            [
+                'name'=> '[QA] Sữa hết hàng mẫu',
+                'img'=> $img.'4.png',
+                'price'=> 32000,
+                'inventory'=> 0,
+                'is_active' => true,
+                'description'=> 'Sản phẩm mẫu dùng để QA trạng thái sữa hết hàng.',
+                'sort_description'=> 'Sản phẩm QA hết hàng trong danh mục Sữa.',
+                'facebook' => 'https://facebook.com/example',
+                'linkedin' => 'https://linkedin.com/example',
+                'twitter' => 'https://twitter.com/example',
+                'instagram' => 'https://instagram.com/example',
+                'category_id' => $categoryIds['Sữa']
+            ],
         ];
 
         foreach ($products as $product) {

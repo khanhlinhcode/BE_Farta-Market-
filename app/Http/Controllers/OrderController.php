@@ -253,11 +253,17 @@ class OrderController extends Controller
                         $quantity = (int) $productData['quantity'];
 
                         if (! $product) {
-                            abort(422, 'Sản phẩm không tồn tại.');
+                            throw new HttpResponseException(response()->json([
+                                'message' => 'Sản phẩm không tồn tại.',
+                                'code' => 'PRODUCT_NOT_FOUND',
+                            ], 422));
                         }
 
                         if ($product->inventory < $quantity) {
-                            abort(422, "Sản phẩm {$product->name} không đủ tồn kho.");
+                            throw new HttpResponseException(response()->json([
+                                'message' => "Sản phẩm {$product->name} không đủ tồn kho.",
+                                'code' => 'INSUFFICIENT_STOCK',
+                            ], 422));
                         }
 
                         $product->decrement('inventory', $quantity);

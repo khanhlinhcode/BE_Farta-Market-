@@ -614,9 +614,9 @@ PROMPT;
     {
         $this->ensureOllamaModelAvailable();
         $baseUrl = $this->aiBaseUrl();
-        $timeout = (int) config('services.ai_chat.timeout', 60);
+        $timeout = max(1, min((int) config('services.ai_chat.timeout', 15), 15));
 
-        if (function_exists('set_time_limit')) {
+        if (! app()->runningUnitTests() && function_exists('set_time_limit')) {
             set_time_limit($timeout + 5);
         }
 
@@ -633,6 +633,7 @@ PROMPT;
         }
 
         $response = Http::acceptJson()
+            ->connectTimeout(3)
             ->timeout($timeout)
             ->post("{$baseUrl}/api/chat", [
                 'model' => config('services.ai_chat.model'),

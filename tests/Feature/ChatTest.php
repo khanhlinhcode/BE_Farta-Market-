@@ -333,6 +333,29 @@ it('returns a clear error when the configured Ollama model is unavailable', func
         );
 });
 
+it('returns a clear error when the AI provider times out', function () {
+    config()->set('services.ai_chat.driver', 'ollama');
+    config()->set('services.ai_chat.model', 'qwen3:4b');
+    config()->set('services.ai_chat.base_url', 'http://127.0.0.1:11434');
+    config()->set('services.ai_chat.timeout', 1);
+
+    Http::fake([
+        'http://127.0.0.1:11434/api/tags' => Http::response([
+            'models' => [
+                ['name' => 'qwen3:4b'],
+            ],
+        ]),
+        'http://127.0.0.1:11434/api/chat' => fn () => throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: Operation timed out'),
+    ]);
+
+    $this->postJson('/api/chat', [
+        'message' => 'Bạn có thể tư vấn món ăn sáng phù hợp không?',
+    ])
+        ->assertServiceUnavailable()
+        ->assertJsonPath('code', 'AI_UNAVAILABLE')
+        ->assertJsonPath('message', 'Xin lỗi, trợ lý đang bận. Vui lòng thử lại sau.');
+});
+
 it('reports chat health only when the configured model is available', function () {
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'qwen3:4b');

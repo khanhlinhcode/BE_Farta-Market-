@@ -40,7 +40,7 @@ return [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('AI_CHAT_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-4-6')),
         'base_url' => env('AI_CHAT_BASE_URL', env('ANTHROPIC_API_URL', 'https://api.anthropic.com')),
-        'timeout' => (int) env('AI_CHAT_TIMEOUT', 60),
+        'timeout' => (int) env('AI_CHAT_TIMEOUT', 15),
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
     ],
 

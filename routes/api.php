@@ -69,6 +69,8 @@ Route::prefix('')->group(function () {
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:admin-login');
+    Route::post('/logout', [AuthController::class, 'logout'])
+        ->middleware('auth:sanctum');
 
     Route::middleware(['auth:sanctum', 'admin.panel'])->group(function () {
         Route::get('/dashboard', AdminDashboardController::class);
@@ -78,7 +80,6 @@ Route::prefix('admin')->group(function () {
         Route::get('/system/queue-health', [AdminSystemController::class, 'queueHealth'])
             ->middleware('admin');
         Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/logout', [AuthController::class, 'logout']);
         Route::apiResource('categories', CategoryController::class)->except(['destroy']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
             ->middleware('admin');

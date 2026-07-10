@@ -21,7 +21,7 @@ Local Ollama configuration:
 AI_CHAT_DRIVER=ollama
 AI_CHAT_MODEL=qwen3:4b
 AI_CHAT_BASE_URL=http://127.0.0.1:11434
-AI_CHAT_TIMEOUT=60
+AI_CHAT_TIMEOUT=15
 AI_CHAT_KEEP_ALIVE=30m
 ```
 
@@ -50,19 +50,29 @@ ANTHROPIC_API_KEY=
 
 The API never exposes the provider key to the frontend.
 
-## Local admin seed
+## Local/QA seed accounts
 
-No default admin credential is stored in source. To create a local admin through
-the seeder, set all values explicitly:
+No production credential is stored in source. To create reusable local/QA
+accounts through the seeder, enable the flag below. The seeder refuses to run
+these accounts in production.
 
 ```dotenv
 SEED_ADMIN_ENABLED=true
-SEED_ADMIN_NAME="Local Admin"
-SEED_ADMIN_EMAIL=admin@example.test
-SEED_ADMIN_PASSWORD=replace-with-at-least-12-characters
 ```
 
-Admin seeding is ignored outside `local` and `testing`.
+Created test accounts:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| admin | qa.admin@example.test | FartaQa12345 |
+| staff | qa.staff@example.test | FartaQa12345 |
+| customer | qa.customer@example.test | FartaQa12345 |
+
+You can also add a custom local admin by setting `SEED_ADMIN_NAME`,
+`SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` with a password of at least
+12 characters.
+
+Admin/QA seeding is ignored outside `local` and `testing`.
 
 ## Order API
 
@@ -84,3 +94,8 @@ Guest order creation is limited to five requests per minute per IP.
 php artisan test
 composer audit
 ```
+
+Testing is configured to avoid real network calls for mail, queues, and password
+breach checks. If `php artisan test` appears to hang on macOS/Homebrew PHP, first
+check whether CLI OPcache is stuck compiling files; running with
+`php -d opcache.enable_cli=0 artisan test` should behave consistently.

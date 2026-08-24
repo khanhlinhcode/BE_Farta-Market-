@@ -99,3 +99,5 @@ Testing is configured to avoid real network calls for mail, queues, and password
 breach checks. If `php artisan test` appears to hang on macOS/Homebrew PHP, first
 check whether CLI OPcache is stuck compiling files; running with
 `php -d opcache.enable_cli=0 artisan test` should behave consistently.
+# BE_Farta-Market-
+# BE_Farta-Market-

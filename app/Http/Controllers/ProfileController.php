@@ -74,7 +74,7 @@ class ProfileController extends Controller
     public function uploadAvatar(Request $request)
     {
         $data = $request->validate([
-            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=4096,max_height=4096', 'max:2048'],
         ], [
             'avatar.max' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
             'avatar.mimes' => 'Chỉ hỗ trợ định dạng JPG, PNG, WEBP',

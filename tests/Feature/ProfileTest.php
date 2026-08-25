@@ -52,6 +52,11 @@ test('profile avatar validates file type and size', function () {
         ->post('/api/profile/avatar', [
         'avatar' => UploadedFile::fake()->image('avatar.jpg')->size(2200),
     ])->assertUnprocessable();
+
+    $this->withHeader('Accept', 'application/json')
+        ->post('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->image('oversized-dimensions.jpg', 4097, 1),
+        ])->assertUnprocessable();
 });
 
 test('changing password validates current password and revokes all tokens including current token', function () {

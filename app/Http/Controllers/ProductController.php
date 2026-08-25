@@ -266,7 +266,7 @@ class ProductController extends Controller
     public function uploadImage(Request $request, ProductModel $product)
     {
         $data = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=4096,max_height=4096', 'max:2048'],
         ], [
             'image.uploaded' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
             'image.max' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
@@ -293,7 +293,7 @@ class ProductController extends Controller
     {
         $data = $request->validate([
             'images' => ['required', 'array', 'min:1', 'max:8'],
-            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'dimensions:max_width=4096,max_height=4096', 'max:2048'],
         ], [
             'images.*.uploaded' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
             'images.*.max' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',

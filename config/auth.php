@@ -112,4 +112,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Breach Check Timeout
+    |--------------------------------------------------------------------------
+    |
+    | The uncompromised password rule checks the k-anonymity API from
+    | HaveIBeenPwned. Keep this timeout short so registration never hangs for
+    | too long if the external API is slow or unavailable.
+    |
+    */
+
+    'password_uncompromised_timeout' => (int) env('PASSWORD_UNCOMPROMISED_TIMEOUT', 3),
+
 ];

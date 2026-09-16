@@ -1,8 +1,10 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->statefulApi();
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        $middleware->redirectGuestsTo(fn (Request $request) => null);
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
@@ -20,7 +24,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (\App\Exceptions\CloudinaryException $exception, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (AuthenticationException $exception, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
+
+            return null;
+        });
+
+        $exceptions->render(function (\App\Exceptions\CloudinaryException $exception, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'message' => 'Không thể xử lý ảnh trên Cloudinary. Vui lòng thử lại.',
@@ -28,9 +42,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\Illuminate\Contracts\Cache\LockTimeoutException $exception, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (\Illuminate\Contracts\Cache\LockTimeoutException $exception, Request $request) {
             if ($request->is('api/*')) {
-                return response()->json(['message' => 'A request is already being processed. Please try again.'], 409);
+                return response()->json([
+                    'message' => 'A request is already being processed. Please try again.',
+                ], 409);
             }
         });
     })->create();

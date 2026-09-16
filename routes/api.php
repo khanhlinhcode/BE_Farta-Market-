@@ -26,7 +26,9 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('')->group(function () {
-    Route::post('/register', [AuthController::class, 'register'])->block(35, 1);
+    Route::post('/register', [AuthController::class, 'register'])
+        ->block(35, 1)
+        ->middleware('throttle:register');
     Route::post('/login', [AuthController::class, 'userLogin'])
         ->block(35, 1)
         ->middleware('throttle:admin-login');
@@ -49,11 +51,11 @@ Route::prefix('')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [ProfileController::class, 'show']);
-        Route::put('/profile', [ProfileController::class, 'update']);
-        Route::patch('/profile', [ProfileController::class, 'update']);
-        Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
-        Route::post('/profile/change-password', [ProfileController::class, 'updatePassword']);
-        Route::patch('/profile/password', [ProfileController::class, 'updatePassword']);
+        Route::put('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-update');
+        Route::patch('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-update');
+        Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->middleware('throttle:uploads');
+        Route::post('/profile/change-password', [ProfileController::class, 'updatePassword'])->middleware('throttle:password-change');
+        Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->middleware('throttle:password-change');
         Route::get('/addresses', [AddressController::class, 'index']);
         Route::post('/addresses', [AddressController::class, 'store']);
         Route::put('/addresses/{address}', [AddressController::class, 'update']);
@@ -81,6 +83,9 @@ Route::prefix('admin')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->block(35, 1)
         ->middleware('throttle:admin-login');
+    Route::post('/logout', [AuthController::class, 'logout'])
+        ->block(35, 1)
+        ->middleware('auth:sanctum');
 
     Route::middleware(['auth:sanctum', 'admin.panel'])->group(function () {
         Route::get('/dashboard', AdminDashboardController::class);
@@ -90,7 +95,6 @@ Route::prefix('admin')->group(function () {
         Route::get('/system/queue-health', [AdminSystemController::class, 'queueHealth'])
             ->middleware('admin');
         Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/logout', [AuthController::class, 'logout'])->block(35, 1);
         Route::apiResource('categories', CategoryController::class)->except(['destroy']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
             ->middleware('admin');
@@ -100,8 +104,8 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('products', ProductController::class)->except(['destroy']);
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])
             ->middleware('admin');
-        Route::post('/products/{product}/image', [ProductController::class, 'uploadImage']);
-        Route::post('/products/{product}/images', [ProductController::class, 'uploadImages']);
+        Route::post('/products/{product}/image', [ProductController::class, 'uploadImage'])->middleware('throttle:uploads');
+        Route::post('/products/{product}/images', [ProductController::class, 'uploadImages'])->middleware('throttle:uploads');
         Route::delete('/product-images/{image}', [ProductController::class, 'destroyImage']);
         Route::patch('/product-images/{image}/primary', [ProductController::class, 'setPrimaryImage']);
         Route::patch('/products/{product}/images/order', [ProductController::class, 'reorderImages']);

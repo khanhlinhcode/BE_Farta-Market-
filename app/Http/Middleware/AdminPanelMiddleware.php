@@ -10,7 +10,11 @@ class AdminPanelMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless(in_array($request->user()?->role, ['admin', 'staff'], true), 403);
+        if (! in_array($request->user()?->role, ['admin', 'staff'], true)) {
+            return response()->json([
+                'message' => 'Bạn không có quyền truy cập trang quản trị.',
+            ], 403);
+        }
 
         return $next($request);
     }

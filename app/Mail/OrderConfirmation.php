@@ -28,7 +28,10 @@ class OrderConfirmation extends Mailable
             view: 'emails.order-confirmation',
             with: [
                 'order' => $this->order,
-                'total' => $this->orderTotal(),
+                'subtotal' => $this->subtotal(),
+                'discount' => (float) ($this->order->discount_amount ?? 0),
+                'shipping' => (float) ($this->order->shipping_fee ?? 0),
+                'grandTotal' => $this->grandTotal(),
                 'trackingUrl' => rtrim((string) config('services.frontend.url'), '/')
                     .'/don-hang-cua-toi',
                 'hotline' => '0977-232-232',
@@ -36,8 +39,29 @@ class OrderConfirmation extends Mailable
         );
     }
 
-    private function orderTotal(): float
+    private function subtotal(): float
     {
-        return (float) $this->order->grand_total;
+        if ($this->order->subtotal !== null) {
+            return (float) $this->order->subtotal;
+        }
+
+        if ($this->order->relationLoaded('details')) {
+            return (float) $this->order->details->sum(
+                fn ($detail) => (float) $detail->line_total
+            );
+        }
+
+        return (float) $this->order->details()->sum('line_total');
+    }
+
+    private function grandTotal(): float
+    {
+        if ($this->order->grand_total !== null) {
+            return (float) $this->order->grand_total;
+        }
+
+        return $this->subtotal()
+            + (float) ($this->order->shipping_fee ?? 0)
+            - (float) ($this->order->discount_amount ?? 0);
     }
 }

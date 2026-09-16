@@ -2,28 +2,37 @@
 
 namespace App\Services;
 
+use App\Mail\OrderDeliveredMail;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use InvalidArgumentException;
 
 class OrderStatusService
 {
+    private array $allowedTransitions = [
+        Order::STATUS_PENDING => [Order::STATUS_CONFIRMED, Order::STATUS_CANCELLED],
+        Order::STATUS_CONFIRMED => [Order::STATUS_PROCESSING, Order::STATUS_CANCELLED],
+        Order::STATUS_PROCESSING => [Order::STATUS_SHIPPED],
+        Order::STATUS_SHIPPED => [Order::STATUS_DELIVERED],
+        Order::STATUS_DELIVERED => [],
+        Order::STATUS_CANCELLED => [],
+    ];
+
+    public function allowedNextStatuses(string $status): array
+    {
+        return $this->allowedTransitions[$status] ?? [];
+    }
+
     public function transition(Order $order, string $status, ?string $note = null, ?int $customerId = null): Order
     {
         return DB::transaction(function () use ($order, $status, $note, $customerId) {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
             $actor = request()->user();
-            $transitions = [
-                Order::STATUS_PENDING => [Order::STATUS_CONFIRMED, Order::STATUS_CANCELLED],
-                Order::STATUS_CONFIRMED => [Order::STATUS_PROCESSING, Order::STATUS_CANCELLED],
-                Order::STATUS_PROCESSING => [Order::STATUS_SHIPPED],
-                Order::STATUS_SHIPPED => [Order::STATUS_DELIVERED],
-            ];
-
             if ($customerId !== null
                 && ($order->user_id !== $customerId || $order->status !== Order::STATUS_PENDING || $status !== Order::STATUS_CANCELLED)) {
                 throw new InvalidArgumentException('Chỉ có thể hủy đơn hàng đang chờ xử lý.');
@@ -33,7 +42,7 @@ class OrderStatusService
                 return $order;
             }
 
-            if (! in_array($status, $transitions[$order->status] ?? [], true)) {
+            if (! in_array($status, $this->allowedNextStatuses($order->status), true)) {
                 throw new InvalidArgumentException("Không thể chuyển từ {$order->status} sang {$status}");
             }
 
@@ -75,7 +84,11 @@ class OrderStatusService
             }
             $order->update($updates);
 
-            return $order;
+            if ($status === Order::STATUS_DELIVERED && $order->email) {
+                Mail::to($order->email)->queue(new OrderDeliveredMail($order->fresh(['details'])));
+            }
+
+            return $order->refresh();
         }, 3);
     }
 }

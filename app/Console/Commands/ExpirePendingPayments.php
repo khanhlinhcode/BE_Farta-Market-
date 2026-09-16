@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Order;
+use App\Models\OrderStatusHistory;
+use App\Models\Product;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -55,10 +57,30 @@ class ExpirePendingPayments extends Command
                 return false;
             }
 
-            $order = app(\App\Services\OrderStatusService::class)->transition(
-                $order, Order::STATUS_CANCELLED, 'Pending VNPay payment expired.'
-            );
-            $order->update(['payment_status' => Order::PAYMENT_STATUS_FAILED]);
+            $details = $order->details()->get();
+            $products = Product::query()
+                ->whereIn('id', $details->pluck('product_id')->filter()->unique()->sort()->values())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            foreach ($details as $detail) {
+                $products->get($detail->product_id)?->increment('inventory', $detail->quantity);
+            }
+
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'from_status' => $order->status,
+                'to_status' => Order::STATUS_CANCELLED,
+                'changed_by' => null,
+                'note' => 'Pending VNPay payment expired.',
+            ]);
+
+            $order->update([
+                'status' => Order::STATUS_CANCELLED,
+                'payment_status' => Order::PAYMENT_STATUS_FAILED,
+            ]);
 
             return true;
         });

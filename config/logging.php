@@ -62,6 +62,7 @@ return [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'replace_placeholders' => true,
         ],
 
@@ -70,6 +71,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'replace_placeholders' => true,
         ],
 
@@ -79,6 +81,7 @@ return [
             'username' => env('LOG_SLACK_USERNAME', 'Laravel Log'),
             'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
             'level' => env('LOG_LEVEL', 'critical'),
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'replace_placeholders' => true,
         ],
 
@@ -91,6 +94,7 @@ return [
                 'port' => env('PAPERTRAIL_PORT'),
                 'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
             ],
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
@@ -102,6 +106,7 @@ return [
                 'stream' => 'php://stderr',
             ],
             'formatter' => env('LOG_STDERR_FORMATTER'),
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
@@ -109,12 +114,14 @@ return [
             'driver' => 'syslog',
             'level' => env('LOG_LEVEL', 'debug'),
             'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'replace_placeholders' => true,
         ],
 
         'errorlog' => [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
+            'tap' => [App\Logging\RedactSensitiveLogContext::class],
             'replace_placeholders' => true,
         ],
 

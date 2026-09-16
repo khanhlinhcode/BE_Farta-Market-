@@ -13,9 +13,7 @@ class OrderConfirmation extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Order $order)
-    {
-    }
+    public function __construct(public Order $order) {}
 
     public function envelope(): Envelope
     {
@@ -40,12 +38,6 @@ class OrderConfirmation extends Mailable
 
     private function orderTotal(): float
     {
-        if ($this->order->relationLoaded('details')) {
-            return (float) $this->order->details->sum(
-                fn ($detail) => (float) $detail->line_total
-            );
-        }
-
-        return (float) $this->order->details()->sum('line_total');
+        return (float) $this->order->grand_total;
     }
 }

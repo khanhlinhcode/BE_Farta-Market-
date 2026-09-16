@@ -14,9 +14,11 @@ class SendOrderConfirmationEmail implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public int $orderId)
-    {
-    }
+    public int $timeout = 60;
+
+    public array $backoff = [10, 30, 60];
+
+    public function __construct(public int $orderId) {}
 
     public function handle(): void
     {

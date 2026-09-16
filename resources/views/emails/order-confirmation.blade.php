@@ -68,6 +68,20 @@
 
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:18px;border-collapse:collapse;">
                                 <tr>
+                                    <td>Tạm tính</td>
+                                    <td align="right">{{ number_format((float) $order->subtotal, 0, ',', '.') }}đ</td>
+                                </tr>
+                                <tr>
+                                    <td>Phí giao hàng</td>
+                                    <td align="right">{{ number_format((float) $order->shipping_fee, 0, ',', '.') }}đ</td>
+                                </tr>
+                                @if ((float) $order->discount_amount > 0)
+                                    <tr>
+                                        <td>Giảm giá</td>
+                                        <td align="right">-{{ number_format((float) $order->discount_amount, 0, ',', '.') }}đ</td>
+                                    </tr>
+                                @endif
+                                <tr>
                                     <td style="padding:16px 0;border-top:2px solid #00917c;font-size:18px;font-weight:800;">Tổng tiền</td>
                                     <td align="right" style="padding:16px 0;border-top:2px solid #00917c;font-size:18px;font-weight:800;color:#00917c;">{{ number_format((float) $total, 0, ',', '.') }}đ</td>
                                 </tr>

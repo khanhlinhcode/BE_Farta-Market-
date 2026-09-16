@@ -28,6 +28,13 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'cloudinary' => [
+        'base_url' => env('CLOUDINARY_API_BASE_URL', 'https://api.cloudinary.com'),
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_API_KEY'),
+        'api_secret' => env('CLOUDINARY_API_SECRET'),
+    ],
+
     'anthropic' => [
         'driver' => env('AI_CHAT_DRIVER', 'anthropic'),
         'key' => env('ANTHROPIC_API_KEY'),
@@ -40,7 +47,7 @@ return [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('AI_CHAT_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-4-6')),
         'base_url' => env('AI_CHAT_BASE_URL', env('ANTHROPIC_API_URL', 'https://api.anthropic.com')),
-        'timeout' => (int) env('AI_CHAT_TIMEOUT', 60),
+        'timeout' => (int) env('AI_CHAT_TIMEOUT', 15),
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
     ],
 
@@ -50,11 +57,15 @@ return [
         'url' => env('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
         'return_url' => env('VNPAY_RETURN_URL')
             ?: rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/').'/api/payment/vnpay-return',
-        'frontend_url' => env('FRONTEND_URL') ?: 'http://127.0.0.1:5173',
+        'frontend_url' => env('FRONTEND_URL'),
     ],
 
     'frontend' => [
         'url' => env('FRONTEND_URL', 'http://127.0.0.1:5173'),
+    ],
+
+    'analytics' => [
+        'retention_days' => (int) env('ANALYTICS_RETENTION_DAYS', 90),
     ],
 
     'slack' => [

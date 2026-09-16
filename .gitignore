@@ -1,5 +1,7 @@
 /.phpunit.cache
 .DS_Store
+test-results/
+*.bak
 /node_modules
 /public/build
 /public/hot
@@ -24,3 +26,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/.codex
+/.cursor
+/.agent

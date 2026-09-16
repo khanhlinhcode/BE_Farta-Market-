@@ -11,7 +11,7 @@ use Laravel\Sanctum\Sanctum;
 uses(RefreshDatabase::class);
 
 test('admin can create a product with a long short description', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->admin()->create());
 
     $category = Category::create(['name' => 'Test category']);
     $shortDescription = str_repeat('x', 300);
@@ -30,7 +30,7 @@ test('admin can create a product with a long short description', function () {
 });
 
 test('admin partial product update preserves omitted social links', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->admin()->create());
 
     $category = Category::create(['name' => 'Test category']);
     $product = Product::create([

@@ -29,5 +29,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('guest-orders', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });
+
+        RateLimiter::for('analytics', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
     }
 }

@@ -14,9 +14,10 @@ class WishlistController extends Controller
             ->where('user_id', $request->user()->id)
             ->with([
                 'product' => fn ($query) => $query
+                    ->where('is_active', true)
                     ->with('category')
-                    ->withAvg('reviews as avg_rating', 'rating')
-                    ->withCount('reviews'),
+                    ->withAvg('visibleReviews as avg_rating', 'rating')
+                    ->withCount('visibleReviews as reviews_count'),
             ])
             ->latest()
             ->get();
@@ -34,6 +35,8 @@ class WishlistController extends Controller
 
     public function store(Request $request, Product $product)
     {
+        abort_unless($product->is_active, 404);
+
         Wishlist::query()->firstOrCreate([
             'user_id' => $request->user()->id,
             'product_id' => $product->id,
@@ -43,8 +46,8 @@ class WishlistController extends Controller
             'data' => $product
                 ->fresh()
                 ->load('category')
-                ->loadAvg('reviews as avg_rating', 'rating')
-                ->loadCount('reviews'),
+                ->loadAvg('visibleReviews as avg_rating', 'rating')
+                ->loadCount('visibleReviews as reviews_count'),
         ], 201);
     }
 

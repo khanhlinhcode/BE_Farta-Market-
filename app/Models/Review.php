@@ -15,12 +15,17 @@ class Review extends Model
         'product_id',
         'rating',
         'comment',
+        'is_visible',
+        'moderated_by',
+        'moderated_at',
     ];
 
     protected $casts = [
         'user_id' => 'integer',
         'product_id' => 'integer',
         'rating' => 'integer',
+        'is_visible' => 'boolean',
+        'moderated_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -31,5 +36,10 @@ class Review extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function moderator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
     }
 }

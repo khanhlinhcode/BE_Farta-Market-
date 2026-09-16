@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['admin', 'staff'])->default('staff')->after('password')->index();
+            $table->enum('role', ['admin', 'staff', 'customer'])->default('customer')->after('password')->index();
         });
 
         DB::table('users')->update([
@@ -21,6 +21,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
+            $table->dropIndex(['role']);
             $table->dropColumn('role');
         });
     }

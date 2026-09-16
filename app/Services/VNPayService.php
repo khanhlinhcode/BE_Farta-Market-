@@ -34,7 +34,7 @@ class VNPayService
         ];
 
         ksort($params);
-        $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        $query = http_build_query($params, '', '&', PHP_QUERY_RFC1738);
         $secureHash = hash_hmac(
             'sha512',
             $query,
@@ -50,30 +50,33 @@ class VNPayService
     {
         $secureHash = $params['vnp_SecureHash'] ?? '';
 
-        if (! is_string($secureHash) || $secureHash === '') {
+        if (! is_string($secureHash) || ! preg_match('/^[a-f0-9]{128}$/i', $secureHash)
+            || ! config('services.vnpay.hash_secret')
+            || ($params['vnp_TmnCode'] ?? '') !== config('services.vnpay.tmn_code')) {
             return false;
         }
 
         $hashParams = Arr::except($params, ['vnp_SecureHash', 'vnp_SecureHashType']);
+        foreach ($hashParams as $key => $value) {
+            if (! str_starts_with($key, 'vnp_') || ! is_string($value)) {
+                return false;
+            }
+        }
         ksort($hashParams);
 
-        $hashData = http_build_query($hashParams, '', '&', PHP_QUERY_RFC3986);
+        $hashData = http_build_query($hashParams, '', '&', PHP_QUERY_RFC1738);
         $expectedHash = hash_hmac(
             'sha512',
             $hashData,
             (string) config('services.vnpay.hash_secret')
         );
 
-        return hash_equals($expectedHash, $secureHash);
+        return hash_equals($expectedHash, strtolower($secureHash));
     }
 
     public function orderTotal(Order $order): float
     {
-        if ($order->relationLoaded('details')) {
-            return (float) $order->details->sum(fn ($detail) => (float) $detail->line_total);
-        }
-
-        return (float) $order->details()->sum('line_total');
+        return (float) $order->grand_total;
     }
 
     private function ensureConfigured(): void

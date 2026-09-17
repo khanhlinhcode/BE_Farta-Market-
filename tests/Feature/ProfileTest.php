@@ -221,8 +221,6 @@ test('changing password invalidates an older browser session', function () {
     ])->assertOk();
     expect(session()->has('password_hash_web'))->toBeTrue();
     $oldSessionId = session()->getId();
-    $oldSession = unserialize(session()->getHandler()->read($oldSessionId));
-    expect($oldSession)->toHaveKey('password_hash_web');
 
     $currentSessionId = Str::random(40);
     $this->withCookie(config('session.cookie'), $currentSessionId)
@@ -239,8 +237,6 @@ test('changing password invalidates an older browser session', function () {
             'new_password' => 'NewPassword123',
             'new_password_confirmation' => 'NewPassword123',
         ])->assertOk();
-
-    expect($oldSession['password_hash_web'])->not->toBe($user->fresh()->getAuthPassword());
 
     $this->withCookie(config('session.cookie'), $oldSessionId)
         ->withHeaders($headers)

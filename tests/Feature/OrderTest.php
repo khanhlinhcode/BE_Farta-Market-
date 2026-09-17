@@ -88,7 +88,9 @@ test('order uses database shipping policy and stores only hashed analytics attri
         'X-Idempotency-Key' => 'order-shipping-policy-0001',
         'X-Analytics-Session' => $session,
     ])->postJson('/api/order', orderPayload($product, 1))
-        ->assertCreated();
+        ->assertCreated()
+        ->assertJsonMissingPath('data.idempotency_key')
+        ->assertJsonMissingPath('data.analytics_session_hash');
     expect((float) $response->json('data.shipping_fee'))->toBe(17000.0)
         ->and((float) $response->json('data.grand_total'))->toBe(62000.0);
 

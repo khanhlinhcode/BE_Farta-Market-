@@ -48,6 +48,12 @@ test('customer can update profile information and upload avatar', function () {
 
     Sanctum::actingAs($user);
 
+    $this->getJson('/api/me')
+        ->assertOk()
+        ->assertJsonMissingPath('password')
+        ->assertJsonMissingPath('remember_token')
+        ->assertJsonMissingPath('avatar_public_id');
+
     $this->putJson('/api/profile', [
         'name' => 'Linh Nguyen',
         'phone' => '0901234567',

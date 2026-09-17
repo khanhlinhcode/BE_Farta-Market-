@@ -180,3 +180,24 @@ test('admin dashboard summary chart and export use delivered order data', functi
         ->assertOk()
         ->assertHeader('content-type', 'text/csv; charset=UTF-8');
 });
+
+test('order csv neutralizes spreadsheet formulas from customer fields', function () {
+    $admin = User::factory()->admin()->create();
+    $customer = User::factory()->customer()->create();
+    $product = createStatusProduct();
+
+    foreach (['=HYPERLINK("https://example.test")', '+SUM(1,1)', '-1+1', '@cmd'] as $fullname) {
+        createStatusOrder($customer, $product, ['fullname' => $fullname]);
+    }
+
+    Sanctum::actingAs($admin);
+    $content = $this->get('/api/admin/orders/export.csv')
+        ->assertOk()
+        ->streamedContent();
+    $rows = array_map('str_getcsv', array_filter(preg_split('/\r\n|\r|\n/', trim($content))));
+
+    expect($rows)->toHaveCount(5);
+    foreach (array_slice($rows, 1) as $row) {
+        expect($row[1])->toStartWith("'");
+    }
+});

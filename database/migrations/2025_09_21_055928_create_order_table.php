@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->text('note')->nullable();
-            $table->enum('status', ['ORDERED','PREPARING','DELIVERING','CANCELLED'])->default('ORDERED');
+            $table->enum('status', ['ORDERED', 'PREPARING', 'DELIVERING', 'CANCELLED'])->default('ORDERED');
             $table->timestamps();
         });
     }

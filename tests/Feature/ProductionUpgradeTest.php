@@ -57,8 +57,8 @@ test('customer can view update profile and revoke tokens after password change',
 
     $this->patchJson('/api/profile/password', [
         'current_password' => 'password',
-        'password' => 'new-password',
-        'password_confirmation' => 'new-password',
+        'password' => 'NewPassword123',
+        'password_confirmation' => 'NewPassword123',
     ])->assertOk()
         ->assertJsonPath('reauthenticate', true);
 

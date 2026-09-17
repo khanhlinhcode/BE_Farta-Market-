@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\CloudinaryException;
+use App\Services\CloudinaryImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly CloudinaryImageService $cloudinary) {}
+
     public function show(Request $request)
     {
         return response()->json($this->profilePayload($request->user()));
@@ -31,8 +37,8 @@ class ProfileController extends Controller
     {
         $data = $request->validate([
             'current_password' => ['required', 'string'],
-            'new_password' => ['nullable', 'string', 'confirmed', Password::min(8)],
-            'password' => ['nullable', 'string', 'confirmed', Password::min(8)],
+            'new_password' => ['nullable', 'string', 'confirmed', 'different:current_password', Password::defaults()],
+            'password' => ['nullable', 'string', 'confirmed', 'different:current_password', Password::defaults()],
         ]);
 
         $user = $request->user();
@@ -82,17 +88,39 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-        $path = $data['avatar']->store('avatars', 'public');
-        $avatarUrl = asset('storage/'.$path);
+        $uploaded = $this->cloudinary->uploadToFolder($data['avatar'], 'farta/avatars/'.$user->id);
+        $oldPublicId = $user->avatar_public_id;
 
-        $user->update([
-            'avatar_url' => $avatarUrl,
-        ]);
+        try {
+            $user->update([
+                'avatar_url' => $uploaded['url'],
+                'avatar_public_id' => $uploaded['public_id'],
+            ]);
+        } catch (Throwable $exception) {
+            $this->destroyCloudinaryAvatar($uploaded['public_id']);
+            throw $exception;
+        }
+
+        if ($oldPublicId) {
+            $this->destroyCloudinaryAvatar($oldPublicId);
+        }
 
         return response()->json([
-            'avatar_url' => $avatarUrl,
+            'avatar_url' => $uploaded['url'],
             'data' => $this->profilePayload($user->fresh()),
         ]);
+    }
+
+    private function destroyCloudinaryAvatar(string $publicId): void
+    {
+        try {
+            $this->cloudinary->destroy($publicId);
+        } catch (CloudinaryException $exception) {
+            Log::warning('Could not clean up a Cloudinary avatar.', [
+                'public_id_hash' => hash('sha256', $publicId),
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function profilePayload($user): array

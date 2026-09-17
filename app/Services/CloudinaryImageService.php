@@ -30,7 +30,7 @@ final class CloudinaryImageService
             throw new CloudinaryException('Could not read the uploaded image.');
         }
 
-        if (! preg_match('#^farta/(products|categories|banners)/[1-9][0-9]*$#', $folder)) {
+        if (! preg_match('#^farta/(products|categories|banners|avatars)/[1-9][0-9]*$#', $folder)) {
             throw new CloudinaryException('The Cloudinary upload folder is invalid.');
         }
 

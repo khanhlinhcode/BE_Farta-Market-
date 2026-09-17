@@ -20,7 +20,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => $this->passwordRules(),
+            'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
         $user = DB::transaction(function () use ($data, $request): User {
@@ -151,18 +151,5 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Yêu cầu xác thực cần session cookie hợp lệ.',
         ], 419);
-    }
-
-    private function passwordRules(): array
-    {
-        $rule = Password::min(8)
-            ->mixedCase()
-            ->numbers();
-
-        if (! app()->runningUnitTests() && ! app()->environment('testing')) {
-            $rule = $rule->uncompromised();
-        }
-
-        return ['required', 'confirmed', $rule];
     }
 }

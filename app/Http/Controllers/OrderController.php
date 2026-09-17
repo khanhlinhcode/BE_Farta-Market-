@@ -109,7 +109,7 @@ class OrderController extends Controller
 
             $query->chunk(100, function ($orders) use ($handle) {
                 foreach ($orders as $order) {
-                    fputcsv($handle, [
+                    fputcsv($handle, array_map($this->csvCell(...), [
                         $order->id,
                         $order->fullname,
                         $order->phone,
@@ -121,7 +121,7 @@ class OrderController extends Controller
                         $order->shipping_fee,
                         $order->grand_total,
                         optional($order->created_at)->toDateTimeString(),
-                    ]);
+                    ]));
                 }
             });
 
@@ -490,6 +490,17 @@ class OrderController extends Controller
         }
 
         return (float) $settings->shipping_fee;
+    }
+
+    private function csvCell(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return preg_match('/^[\x00-\x20]*[=+\-@]/', $value) === 1
+            ? "'".$value
+            : $value;
     }
 
     private function idempotencyUserId(Request $request): ?int

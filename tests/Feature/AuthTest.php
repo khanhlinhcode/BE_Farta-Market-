@@ -109,8 +109,8 @@ test('customer can register and login through user auth only', function () {
     $this->withHeaders(spaHeaders())->postJson('/api/register', [
         'name' => 'Weak Password',
         'email' => 'weak-password@example.test',
-        'password' => '123456',
-        'password_confirmation' => '123456',
+        'password' => 'aaaaaaaa',
+        'password_confirmation' => 'aaaaaaaa',
     ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['password']);

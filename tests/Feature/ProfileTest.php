@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -195,4 +196,48 @@ test('changing password validates current password and revokes all tokens includ
     expect($oldToken->accessToken->fresh())->toBeNull();
     expect($currentToken->accessToken->fresh())->toBeNull();
     expect(Hash::check('NewPassword123', $user->fresh()->password))->toBeTrue();
+});
+
+test('changing password invalidates an older browser session', function () {
+    $this->withCredentials();
+    $user = User::factory()->customer()->create([
+        'email' => 'session-revocation@example.test',
+        'password' => Hash::make('CurrentPass123'),
+    ]);
+    $headers = [
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+    ];
+
+    $this->withHeaders($headers)->postJson('/api/login', [
+        'email' => $user->email,
+        'password' => 'CurrentPass123',
+    ])->assertOk();
+    expect(session()->has('password_hash_web'))->toBeTrue();
+    $oldSessionId = session()->getId();
+    $oldSession = unserialize(session()->getHandler()->read($oldSessionId));
+    expect($oldSession)->toHaveKey('password_hash_web');
+
+    $currentSessionId = Str::random(40);
+    $this->withCookie(config('session.cookie'), $currentSessionId)
+        ->withHeaders($headers)
+        ->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'CurrentPass123',
+        ])->assertOk();
+
+    $this->withCookie(config('session.cookie'), $currentSessionId)
+        ->withHeaders($headers)
+        ->postJson('/api/profile/change-password', [
+            'current_password' => 'CurrentPass123',
+            'new_password' => 'NewPassword123',
+            'new_password_confirmation' => 'NewPassword123',
+        ])->assertOk();
+
+    expect($oldSession['password_hash_web'])->not->toBe($user->fresh()->getAuthPassword());
+
+    $this->withCookie(config('session.cookie'), $oldSessionId)
+        ->withHeaders($headers)
+        ->getJson('/api/me')
+        ->assertUnauthorized();
 });

@@ -33,6 +33,7 @@ class AuthController extends Controller
 
             Auth::login($user);
             $request->session()->regenerate();
+            $this->bindSessionToPassword($request, $user);
 
             return $user;
         });
@@ -72,6 +73,8 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $this->bindSessionToPassword($request, $user);
+
         return response()->json([
             'user' => $user,
         ]);
@@ -106,6 +109,8 @@ class AuthController extends Controller
                 'message' => 'Thông tin đăng nhập không đúng.',
             ], 401);
         }
+
+        $this->bindSessionToPassword($request, $user);
 
         return response()->json([
             'user' => $user,
@@ -151,5 +156,13 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Yêu cầu xác thực cần session cookie hợp lệ.',
         ], 419);
+    }
+
+    private function bindSessionToPassword(Request $request, User $user): void
+    {
+        $request->session()->put(
+            'password_hash_'.Auth::getDefaultDriver(),
+            $user->getAuthPassword()
+        );
     }
 }

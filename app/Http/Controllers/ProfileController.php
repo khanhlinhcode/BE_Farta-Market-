@@ -63,7 +63,6 @@ class ProfileController extends Controller
             'password' => $newPassword,
         ])->saveQuietly();
 
-        $user->currentAccessToken()?->delete();
         $user->tokens()->delete();
 
         if ($request->hasSession()) {

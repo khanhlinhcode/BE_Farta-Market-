@@ -8,8 +8,10 @@ use App\Models\IdempotencyKey;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SiteSetting;
+use App\Services\AnalyticsSessionService;
 use App\Services\CouponService;
 use App\Services\OrderStatusService;
+use App\Services\TurnstileService;
 use App\Support\AnalyticsIdentifier;
 use App\Support\IdempotencyHasher;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -159,8 +161,12 @@ class OrderController extends Controller
         return response()->json($order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role']));
     }
 
-    public function store(Request $request, CouponService $couponService)
-    {
+    public function store(
+        Request $request,
+        CouponService $couponService,
+        TurnstileService $turnstile,
+        AnalyticsSessionService $analyticsSessions
+    ) {
         $idempotencyKey = $request->header('X-Idempotency-Key');
 
         if (! is_string($idempotencyKey) || trim($idempotencyKey) === '') {
@@ -187,17 +193,29 @@ class OrderController extends Controller
             'address' => ['required', 'string', 'min:10', 'max:255'],
             'customer_phone' => ['required', 'string', 'regex:/^[0-9]{10,11}$/'],
             'email' => ['required', 'email', 'max:255'],
+            'turnstile_token' => ['nullable', 'string', 'max:2048'],
             'note' => ['nullable', 'string', 'max:2000'],
             'coupon_code' => ['nullable', 'string', 'max:80'],
-            'products' => ['required', 'array', 'min:1', 'max:50'],
+            'products' => ['required', 'array', 'min:1', 'max:20'],
             'products.*.product_id' => [
                 'required',
                 'integer',
                 'distinct',
                 Rule::exists('products', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
-            'products.*.quantity' => ['required', 'integer', 'min:1', 'max:100'],
+            'products.*.quantity' => ['required', 'integer', 'min:1', 'max:20'],
         ]);
+
+        if (collect($data['products'])->sum('quantity') > 50) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'products' => ['Tổng số lượng sản phẩm không được vượt quá 50.'],
+            ]);
+        }
+
+        $turnstileToken = $data['turnstile_token'] ?? null;
+        unset($data['turnstile_token']);
+        $data['email'] = Str::lower(trim($data['email']));
+        $data['customer_phone'] = preg_replace('/\D+/', '', $data['customer_phone']);
 
         $data['coupon_code'] = isset($data['coupon_code']) && trim((string) $data['coupon_code']) !== ''
             ? strtoupper(trim((string) $data['coupon_code']))
@@ -205,8 +223,35 @@ class OrderController extends Controller
         $data['payment_method'] = Order::PAYMENT_METHOD_COD;
         $payloadHash = IdempotencyHasher::hash($data);
         $userId = $this->idempotencyUserId($request);
-        $analyticsSession = (string) $request->header('X-Analytics-Session', '');
-        $analyticsSessionHash = Str::isUuid($analyticsSession) ? AnalyticsIdentifier::hash($analyticsSession) : null;
+        $authenticatedUser = $request->user('sanctum') ?? $request->user();
+        if ($authenticatedUser && ! $authenticatedUser->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Vui lòng xác minh email trước khi đặt hàng.',
+                'email_verification_required' => true,
+            ], 403);
+        }
+
+        $checkoutIpHash = AnalyticsIdentifier::hash('checkout-ip|'.(string) $request->ip());
+        if ($userId === null) {
+            if (! $turnstile->verify($turnstileToken, $request->ip())) {
+                return response()->json([
+                    'message' => 'Không thể xác minh yêu cầu. Vui lòng thử lại.',
+                ], 422);
+            }
+
+            if ($this->hasTooManyPendingGuestOrders($data['email'], $data['customer_phone'], $checkoutIpHash)) {
+                return response()->json([
+                    'message' => 'Bạn đã có nhiều đơn đang chờ xử lý. Vui lòng thử lại sau.',
+                ], 429);
+            }
+        }
+        $analyticsBinding = $request->hasSession() ? (string) $request->session()->token() : '';
+        $analyticsSession = $analyticsBinding !== ''
+            ? $analyticsSessions->verify($request->header('X-Analytics-Token'), $analyticsBinding)
+            : null;
+        $analyticsSessionHash = $analyticsSession
+            ? AnalyticsIdentifier::hash($analyticsSession['session_id'])
+            : null;
         $idempotencyScope = $userId === null ? 'guest' : "user:{$userId}";
 
         if ($data['coupon_code'] && $userId === null) {
@@ -219,8 +264,8 @@ class OrderController extends Controller
             [$order, $isReplay] = Cache::lock(
                 'order:create:'.hash('sha256', $idempotencyScope.'|'.$data['idempotency_key']),
                 15
-            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash) {
-                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash) {
+            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash) {
+                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash) {
                     IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
                         ->where('user_id', $userId)
@@ -263,6 +308,10 @@ class OrderController extends Controller
                         'payment_method' => Order::PAYMENT_METHOD_COD,
                         'payment_status' => Order::PAYMENT_STATUS_PENDING,
                         'idempotency_key' => $data['idempotency_key'],
+                        'checkout_ip_hash' => $userId === null ? $checkoutIpHash : null,
+                        'guest_expires_at' => $userId === null
+                            ? now()->addMinutes(max(15, (int) config('services.turnstile.guest_order_ttl_minutes', 120)))
+                            : null,
                     ]);
                     if ($analyticsSessionHash) {
                         $order->forceFill(['analytics_session_hash' => $analyticsSessionHash])->save();
@@ -370,7 +419,11 @@ class OrderController extends Controller
         $order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
             ->loadSum('details as total', 'line_total');
 
-        if (! $isReplay) {
+        if (! $isReplay && Cache::add(
+            'order-confirmation-email:'.AnalyticsIdentifier::hash($data['email']),
+            true,
+            now()->addMinute()
+        )) {
             SendOrderConfirmationEmail::dispatch($order->id)->onQueue('emails');
         }
 
@@ -522,5 +575,17 @@ class OrderController extends Controller
         }
 
         return null;
+    }
+
+    private function hasTooManyPendingGuestOrders(string $email, string $phone, string $ipHash): bool
+    {
+        $pending = Order::query()
+            ->whereNull('user_id')
+            ->where('status', Order::STATUS_PENDING)
+            ->where('created_at', '>=', now()->subHours(2));
+
+        return (clone $pending)->where('email', $email)->count() >= 5
+            || (clone $pending)->where('phone', $phone)->count() >= 5
+            || (clone $pending)->where('checkout_ip_hash', $ipHash)->count() >= 5;
     }
 }

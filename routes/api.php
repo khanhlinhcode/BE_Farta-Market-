@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminMfaController;
 use App\Http\Controllers\AdminSiteSettingController;
 use App\Http\Controllers\AdminSystemController;
 use App\Http\Controllers\AdminUserController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CouponController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
@@ -31,12 +33,14 @@ Route::prefix('')->group(function () {
         ->middleware('throttle:register');
     Route::post('/login', [AuthController::class, 'userLogin'])
         ->block(35, 1)
-        ->middleware('throttle:admin-login');
+        ->middleware('throttle:user-login');
     Route::post('/logout', [AuthController::class, 'logout'])
         ->block(35, 1)
         ->middleware('auth:sanctum');
     Route::apiResource('categories', CategoryController::class)->only(['index', 'show']);
     Route::get('/site-content', SiteContentController::class);
+    Route::post('/analytics/session', [AnalyticsController::class, 'issueSession'])
+        ->middleware('throttle:analytics-session');
     Route::post('/analytics/page-view', [AnalyticsController::class, 'store'])
         ->middleware('throttle:analytics');
     Route::get('/products/suggest', [ProductController::class, 'suggest']);
@@ -48,6 +52,9 @@ Route::prefix('')->group(function () {
     Route::post('/order', [OrderController::class, 'store'])
         ->middleware('throttle:guest-orders');
     Route::get('/payment/vnpay-return', [PaymentController::class, 'vnpayReturn']);
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -61,8 +68,11 @@ Route::prefix('')->group(function () {
         Route::put('/addresses/{address}', [AddressController::class, 'update']);
         Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
         Route::patch('/addresses/{address}/set-default', [AddressController::class, 'setDefault']);
-        Route::post('/coupons/validate', [CouponController::class, 'validateCoupon']);
-        Route::post('/payment/create', [PaymentController::class, 'create']);
+        Route::get('/email/verification-status', [EmailVerificationController::class, 'status']);
+        Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
+            ->middleware('throttle:verification-resend');
+        Route::post('/coupons/validate', [CouponController::class, 'validateCoupon'])->middleware('verified');
+        Route::post('/payment/create', [PaymentController::class, 'create'])->middleware('verified');
         Route::get('/my-orders', [OrderController::class, 'myOrders']);
         Route::get('/my-orders/{order}', [OrderController::class, 'myOrder']);
         Route::patch('/my-orders/{order}/cancel', [OrderController::class, 'cancelMyOrder']);
@@ -70,7 +80,7 @@ Route::prefix('')->group(function () {
         Route::post('/wishlist/{product}', [WishlistController::class, 'store']);
         Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy']);
         Route::get('/products/{product}/reviews/eligibility', [ReviewController::class, 'eligibility']);
-        Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
+        Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->middleware('verified');
     });
     Route::post('/chat', [ChatController::class, 'send'])
         ->block(35, 1)
@@ -86,6 +96,12 @@ Route::prefix('admin')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])
         ->block(35, 1)
         ->middleware('auth:sanctum');
+    Route::post('/mfa/setup', [AdminMfaController::class, 'setup'])
+        ->middleware('throttle:mfa-challenge');
+    Route::post('/mfa/confirm', [AdminMfaController::class, 'confirm'])
+        ->middleware('throttle:mfa-challenge');
+    Route::post('/mfa/challenge', [AdminMfaController::class, 'challenge'])
+        ->middleware('throttle:mfa-challenge');
 
     Route::middleware(['auth:sanctum', 'admin.panel'])->group(function () {
         Route::get('/dashboard', AdminDashboardController::class);
@@ -95,6 +111,10 @@ Route::prefix('admin')->group(function () {
         Route::get('/system/queue-health', [AdminSystemController::class, 'queueHealth'])
             ->middleware('admin');
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/mfa/recovery-codes', [AdminMfaController::class, 'regenerateRecoveryCodes'])
+            ->middleware('throttle:mfa-challenge');
+        Route::delete('/mfa', [AdminMfaController::class, 'disable'])
+            ->middleware('throttle:mfa-challenge');
         Route::apiResource('categories', CategoryController::class)->except(['destroy']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
             ->middleware('admin');

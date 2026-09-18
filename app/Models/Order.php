@@ -68,6 +68,8 @@ class Order extends Model
         'shipping_fee',
         'grand_total',
         'idempotency_key',
+        'checkout_ip_hash',
+        'guest_expires_at',
     ];
 
     protected $table = 'orders';
@@ -75,6 +77,7 @@ class Order extends Model
     protected $hidden = [
         'idempotency_key',
         'analytics_session_hash',
+        'checkout_ip_hash',
     ];
 
     protected $casts = [
@@ -84,6 +87,7 @@ class Order extends Model
         'subtotal' => 'decimal:2',
         'shipping_fee' => 'decimal:2',
         'grand_total' => 'decimal:2',
+        'guest_expires_at' => 'datetime',
     ];
 
     public function details(): HasMany

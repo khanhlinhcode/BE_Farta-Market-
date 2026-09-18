@@ -9,22 +9,41 @@ use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
+function analyticsHeaders(array $extra = []): array
+{
+    return array_merge([
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+        'User-Agent' => 'Mozilla/5.0',
+    ], $extra);
+}
+
+function issueAnalyticsSession($test): array
+{
+    return $test->withHeaders(analyticsHeaders())
+        ->postJson('/api/analytics/session')
+        ->assertCreated()
+        ->json();
+}
+
 test('page view ingestion hashes identifiers strips referrer and deduplicates quickly', function () {
-    $visitor = '11111111-1111-4111-8111-111111111111';
-    $session = '22222222-2222-4222-8222-222222222222';
-    $payload = ['visitor_id' => $visitor, 'session_id' => $session, 'path' => '/san-pham', 'referrer' => 'https://google.com/search?q=private'];
-    $headers = ['User-Agent' => 'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'];
+    $issued = issueAnalyticsSession($this);
+    $payload = ['path' => '/san-pham', 'referrer' => 'https://google.com/search?q=private'];
+    $headers = analyticsHeaders([
+        'User-Agent' => 'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+        'X-Analytics-Token' => $issued['token'],
+    ]);
 
     $this->withHeaders($headers)->postJson('/api/analytics/page-view', $payload)->assertNoContent();
     $this->withHeaders($headers)->postJson('/api/analytics/page-view', $payload)->assertNoContent();
 
     $this->assertDatabaseCount('analytics_page_views', 1);
     $view = AnalyticsPageView::first();
-    expect($view->visitor_hash)->toBe(AnalyticsIdentifier::hash($visitor))
-        ->and($view->session_hash)->toBe(AnalyticsIdentifier::hash($session))
+    expect($view->visitor_hash)->toBe(AnalyticsIdentifier::hash($issued['visitor_id']))
+        ->and($view->session_hash)->toBe(AnalyticsIdentifier::hash($issued['session_id']))
         ->and($view->referrer_host)->toBe('google.com')
         ->and($view->device_type)->toBe('mobile')
-        ->and(json_encode($view->getAttributes()))->not->toContain($visitor)->not->toContain('search?q');
+        ->and(json_encode($view->getAttributes()))->not->toContain($issued['visitor_id'])->not->toContain('search?q');
 });
 
 test('analytics overview reports sessions devices and tracked conversion without raw events', function () {
@@ -59,40 +78,63 @@ test('analytics overview reports sessions devices and tracked conversion without
 });
 
 test('analytics rejects unsafe paths and ignores bots', function () {
-    $payload = [
-        'visitor_id' => '11111111-1111-4111-8111-111111111111',
-        'session_id' => '22222222-2222-4222-8222-222222222222',
-        'path' => '/products?email=private@example.test',
-    ];
-    $this->postJson('/api/analytics/page-view', $payload)->assertUnprocessable();
-    $payload['path'] = '/products';
-    $this->withHeaders(['User-Agent' => 'Googlebot'])->postJson('/api/analytics/page-view', $payload)->assertNoContent();
+    $issued = issueAnalyticsSession($this);
+    $headers = analyticsHeaders(['X-Analytics-Token' => $issued['token']]);
+    $this->withHeaders($headers)->postJson('/api/analytics/page-view', [
+        'path' => '/san-pham?email=private@example.test',
+    ])->assertUnprocessable();
+    $this->withHeaders(analyticsHeaders([
+        'User-Agent' => 'Googlebot',
+        'X-Analytics-Token' => $issued['token'],
+    ]))->postJson('/api/analytics/page-view', ['path' => '/san-pham'])->assertNoContent();
     $this->assertDatabaseCount('analytics_page_views', 0);
 });
 
 test('analytics is rate limited and admin report is protected', function () {
-    $payload = [
-        'visitor_id' => '11111111-1111-4111-8111-111111111111',
-        'session_id' => '22222222-2222-4222-8222-222222222222',
-    ];
-    $headers = ['User-Agent' => 'Mozilla/5.0'];
-
     $this->getJson('/api/admin/analytics/overview')->assertUnauthorized();
     Sanctum::actingAs(User::factory()->customer()->create());
     $this->getJson('/api/admin/analytics/overview')->assertForbidden();
     auth()->forgetGuards();
 
-    foreach (range(1, 60) as $index) {
+    $issued = issueAnalyticsSession($this);
+    $headers = analyticsHeaders(['X-Analytics-Token' => $issued['token']]);
+
+    foreach (range(1, 30) as $index) {
         $this->withHeaders($headers)->postJson('/api/analytics/page-view', [
-            ...$payload,
-            'path' => "/rate-limit/{$index}",
+            'path' => "/san-pham/chi-tiet/{$index}",
         ])->assertNoContent();
     }
 
     $this->withHeaders($headers)->postJson('/api/analytics/page-view', [
-        ...$payload,
-        'path' => '/rate-limit/blocked',
+        'path' => '/san-pham',
     ])->assertTooManyRequests();
+});
+
+test('analytics rejects unsigned tampered expired and foreign-origin events', function () {
+    $issued = issueAnalyticsSession($this);
+
+    $this->withHeaders(analyticsHeaders())->postJson('/api/analytics/page-view', [
+        'visitor_id' => '11111111-1111-4111-8111-111111111111',
+        'session_id' => '22222222-2222-4222-8222-222222222222',
+        'path' => '/',
+    ])->assertUnauthorized();
+
+    $this->withHeaders(analyticsHeaders(['X-Analytics-Token' => $issued['token'].'tampered']))
+        ->postJson('/api/analytics/page-view', ['path' => '/'])
+        ->assertUnauthorized();
+
+    $this->withHeaders([
+        'Origin' => 'https://attacker.example',
+        'Referer' => 'https://attacker.example/',
+        'X-Analytics-Token' => $issued['token'],
+    ])->postJson('/api/analytics/page-view', ['path' => '/'])->assertForbidden();
+
+    $this->travel(31)->minutes();
+    $this->withHeaders(analyticsHeaders(['X-Analytics-Token' => $issued['token']]))
+        ->postJson('/api/analytics/page-view', ['path' => '/'])
+        ->assertUnauthorized();
+
+    $this->assertDatabaseCount('analytics_page_views', 0);
 });
 
 test('analytics prune removes only events beyond retention', function () {

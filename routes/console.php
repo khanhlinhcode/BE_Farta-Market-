@@ -13,3 +13,4 @@ Schedule::command('sitemap:generate')->daily();
 Schedule::command('payments:expire-pending')->everyTenMinutes();
 Schedule::command('queue:check-stuck')->everyFiveMinutes();
 Schedule::command('analytics:prune')->daily();
+Schedule::command('orders:expire-guests')->everyTenMinutes();

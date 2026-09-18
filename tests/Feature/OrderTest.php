@@ -82,11 +82,16 @@ test('order uses database shipping policy and stores only hashed analytics attri
         'free_shipping_threshold' => 100000,
         'shipping_fee' => 17000,
     ]);
-    $session = '22222222-2222-4222-8222-222222222222';
+    $issued = $this->withHeaders([
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+    ])->postJson('/api/analytics/session')->assertCreated()->json();
 
     $response = $this->withHeaders([
         'X-Idempotency-Key' => 'order-shipping-policy-0001',
-        'X-Analytics-Session' => $session,
+        'X-Analytics-Token' => $issued['token'],
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
     ])->postJson('/api/order', orderPayload($product, 1))
         ->assertCreated()
         ->assertJsonMissingPath('data.idempotency_key')
@@ -95,8 +100,8 @@ test('order uses database shipping policy and stores only hashed analytics attri
         ->and((float) $response->json('data.grand_total'))->toBe(62000.0);
 
     $order = Order::findOrFail($response->json('data.id'));
-    expect($order->getRawOriginal('analytics_session_hash'))->toBe(AnalyticsIdentifier::hash($session))
-        ->and(json_encode($order->toArray()))->not->toContain($session)
+    expect($order->getRawOriginal('analytics_session_hash'))->toBe(AnalyticsIdentifier::hash($issued['session_id']))
+        ->and(json_encode($order->toArray()))->not->toContain($issued['session_id'])
         ->and($order->toArray())->not->toHaveKey('analytics_session_hash');
 });
 

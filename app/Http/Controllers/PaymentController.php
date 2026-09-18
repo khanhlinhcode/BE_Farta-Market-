@@ -8,6 +8,7 @@ use App\Models\IdempotencyKey;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SiteSetting;
+use App\Services\AnalyticsSessionService;
 use App\Services\CouponService;
 use App\Services\OrderStatusService;
 use App\Services\VNPayService;
@@ -20,14 +21,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class PaymentController extends Controller
 {
-    public function create(Request $request, VNPayService $vnPayService, CouponService $couponService)
-    {
+    public function create(
+        Request $request,
+        VNPayService $vnPayService,
+        CouponService $couponService,
+        AnalyticsSessionService $analyticsSessions
+    ) {
         if ($request->user()->role !== 'customer') {
             return response()->json([
                 'message' => 'Vui lòng đăng nhập bằng tài khoản khách hàng để thanh toán VNPay.',
@@ -50,8 +54,13 @@ class PaymentController extends Controller
         $data['payment_method'] = Order::PAYMENT_METHOD_VNPAY;
         $payloadHash = IdempotencyHasher::hash($data);
         $userId = $request->user()->id;
-        $analyticsSession = (string) $request->header('X-Analytics-Session', '');
-        $analyticsSessionHash = Str::isUuid($analyticsSession) ? AnalyticsIdentifier::hash($analyticsSession) : null;
+        $analyticsBinding = $request->hasSession() ? (string) $request->session()->token() : '';
+        $analyticsSession = $analyticsBinding !== ''
+            ? $analyticsSessions->verify($request->header('X-Analytics-Token'), $analyticsBinding)
+            : null;
+        $analyticsSessionHash = $analyticsSession
+            ? AnalyticsIdentifier::hash($analyticsSession['session_id'])
+            : null;
 
         try {
             [$order, $isReplay, $paymentUrl] = Cache::lock(

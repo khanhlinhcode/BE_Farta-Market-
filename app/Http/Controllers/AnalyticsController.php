@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AnalyticsPageView;
 use App\Models\Order;
+use App\Services\AnalyticsSessionService;
 use App\Support\AnalyticsIdentifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -13,28 +14,56 @@ use Illuminate\Validation\Rule;
 
 class AnalyticsController extends Controller
 {
+    public function __construct(private readonly AnalyticsSessionService $analyticsSessions) {}
+
+    public function issueSession(Request $request)
+    {
+        if (! $this->hasAllowedOrigin($request) || ! $request->hasSession()) {
+            return response()->json(['message' => 'Analytics origin is not allowed.'], 403);
+        }
+
+        $binding = (string) $request->session()->token();
+
+        return response()->json($this->analyticsSessions->issue($binding), 201);
+    }
+
     public function store(Request $request)
     {
+        if (! $this->hasAllowedOrigin($request) || ! $request->hasSession()) {
+            return response()->json(['message' => 'Analytics origin is not allowed.'], 403);
+        }
+
         $data = $request->validate([
-            'visitor_id' => ['required', 'uuid'],
-            'session_id' => ['required', 'uuid'],
             'path' => ['required', 'string', 'max:255', 'regex:/^\/(?!\/)[^?#]*$/'],
             'referrer' => ['nullable', 'url', 'max:1000'],
         ]);
+
+        if (! $this->isAllowedPath($data['path'])) {
+            return response()->json(['message' => 'Analytics path is not allowed.'], 422);
+        }
+
+        $binding = (string) $request->session()->token();
+        $analyticsSession = $binding !== '' ? $this->analyticsSessions->verify(
+            $request->header('X-Analytics-Token'),
+            $binding
+        ) : null;
+        if (! $analyticsSession) {
+            return response()->json(['message' => 'Analytics token is invalid or expired.'], 401);
+        }
 
         $agent = (string) $request->userAgent();
         if ($this->isBot($agent)) {
             return response()->noContent();
         }
 
-        $sessionHash = AnalyticsIdentifier::hash($data['session_id']);
+        $sessionHash = AnalyticsIdentifier::hash($analyticsSession['session_id']);
         $dedupeKey = 'analytics:page-view:'.hash('sha256', $sessionHash.'|'.$data['path']);
         if (! Cache::add($dedupeKey, true, now()->addSeconds(5))) {
             return response()->noContent();
         }
 
         AnalyticsPageView::create([
-            'visitor_hash' => AnalyticsIdentifier::hash($data['visitor_id']),
+            'visitor_hash' => AnalyticsIdentifier::hash($analyticsSession['visitor_id']),
             'session_hash' => $sessionHash,
             'user_id' => $request->user('sanctum')?->id,
             'path' => $data['path'],
@@ -117,6 +146,40 @@ class AnalyticsController extends Controller
     private function isBot(string $agent): bool
     {
         return $agent === '' || preg_match('/bot|crawler|spider|slurp|headless/i', $agent) === 1;
+    }
+
+    private function hasAllowedOrigin(Request $request): bool
+    {
+        $origin = rtrim((string) $request->headers->get('Origin'), '/');
+        $allowed = array_map(
+            fn (string $value) => rtrim($value, '/'),
+            (array) config('services.analytics.allowed_origins', [])
+        );
+
+        if ($origin !== '' && in_array($origin, $allowed, true)) {
+            return true;
+        }
+
+        $referer = (string) $request->headers->get('Referer');
+        $refererOrigin = $referer === '' ? '' : parse_url($referer, PHP_URL_SCHEME).'://'.parse_url($referer, PHP_URL_HOST);
+        $port = $referer === '' ? null : parse_url($referer, PHP_URL_PORT);
+        if ($port) {
+            $refererOrigin .= ':'.$port;
+        }
+
+        return $refererOrigin !== '' && in_array($refererOrigin, $allowed, true);
+    }
+
+    private function isAllowedPath(string $path): bool
+    {
+        $exact = [
+            '/', '/thongtincanhan', '/san-pham', '/gio-hang', '/thanh-toan',
+            '/dat-hang-thanh-cong', '/don-hang-cua-toi', '/yeu-thich', '/dang-nhap',
+            '/verify-email',
+        ];
+
+        return in_array($path, $exact, true)
+            || preg_match('#^/san-pham/chi-tiet/[1-9][0-9]*$#', $path) === 1;
     }
 
     private function device(string $agent): string

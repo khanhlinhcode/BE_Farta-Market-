@@ -66,6 +66,20 @@ return [
 
     'analytics' => [
         'retention_days' => (int) env('ANALYTICS_RETENTION_DAYS', 90),
+        'token_ttl_minutes' => (int) env('ANALYTICS_TOKEN_TTL_MINUTES', 30),
+        'allowed_origins' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('ANALYTICS_ALLOWED_ORIGINS', env('FRONTEND_URL', 'http://127.0.0.1:5173')))
+        ))),
+    ],
+
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+        'required' => env('APP_ENV', 'production') === 'production'
+            || filter_var(env('TURNSTILE_REQUIRED', false), FILTER_VALIDATE_BOOL),
+        'guest_order_ttl_minutes' => (int) env('GUEST_ORDER_TTL_MINUTES', 120),
     ],
 
     'slack' => [

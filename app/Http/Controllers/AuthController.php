@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
@@ -37,6 +38,8 @@ class AuthController extends Controller
 
             return $user;
         });
+
+        $user->sendEmailVerificationNotification();
 
         return response()->json([
             'user' => $user->fresh(),
@@ -91,29 +94,36 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials)) {
+        $user = User::query()->where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
                 'message' => 'Thông tin đăng nhập không đúng.',
             ], 401);
+        }
+
+        if (! in_array($user->role, ['admin', 'staff'], true)) {
+            return response()->json([
+                'message' => 'Thông tin đăng nhập không đúng.',
+            ], 401);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Tài khoản quản trị chưa xác minh email.',
+                'email_verification_required' => true,
+            ], 403);
         }
 
         $request->session()->regenerate();
-        $user = Auth::user();
-
-        if (! in_array($user->role, ['admin', 'staff'], true)) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return response()->json([
-                'message' => 'Thông tin đăng nhập không đúng.',
-            ], 401);
-        }
-
-        $this->bindSessionToPassword($request, $user);
+        $request->session()->put([
+            'admin_mfa_pending_user_id' => $user->id,
+            'admin_mfa_pending_at' => now()->timestamp,
+        ]);
 
         return response()->json([
-            'user' => $user,
+            'mfa_required' => (bool) $user->mfa_confirmed_at,
+            'mfa_enrollment_required' => ! $user->mfa_confirmed_at,
         ]);
     }
 

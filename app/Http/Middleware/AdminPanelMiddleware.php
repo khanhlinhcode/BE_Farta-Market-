@@ -16,6 +16,13 @@ class AdminPanelMiddleware
             ], 403);
         }
 
+        if (! $request->user()->mfa_confirmed_at) {
+            return response()->json([
+                'message' => 'Tài khoản quản trị phải thiết lập MFA.',
+                'mfa_enrollment_required' => true,
+            ], 403);
+        }
+
         return $next($request);
     }
 }

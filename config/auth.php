@@ -125,4 +125,9 @@ return [
 
     'password_uncompromised_timeout' => (int) env('PASSWORD_UNCOMPROMISED_TIMEOUT', 3),
 
+    'admin_login_ip_limit' => max(5, (int) env('ADMIN_LOGIN_IP_LIMIT', 5)),
+    'admin_login_account_limit' => max(5, (int) env('ADMIN_LOGIN_ACCOUNT_LIMIT', 5)),
+    'mfa_challenge_ip_limit' => max(5, (int) env('MFA_CHALLENGE_IP_LIMIT', 5)),
+    'mfa_challenge_session_limit' => max(5, (int) env('MFA_CHALLENGE_SESSION_LIMIT', 5)),
+
 ];

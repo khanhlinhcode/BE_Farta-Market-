@@ -1,11 +1,13 @@
 <?php
 
 use App\Models\User;
+use App\Services\AdminMfaService;
 use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use PragmaRX\Google2FA\Google2FA;
 
 uses(RefreshDatabase::class);
 
@@ -17,10 +19,35 @@ function spaHeaders(): array
     ];
 }
 
-test('login succeeds with valid credentials', function () {
-    $user = User::factory()->admin()->create([
-        'email' => 'admin@example.test',
+function mfaAdmin(array $attributes = []): array
+{
+    $totp = app(Google2FA::class);
+    $secret = $totp->generateSecretKey();
+    $user = User::factory()->admin()->create(array_merge([
         'password' => 'secret123',
+        'mfa_secret' => $secret,
+        'mfa_confirmed_at' => now(),
+        'mfa_last_used_timestep' => null,
+    ], $attributes));
+
+    return [$user, $secret];
+}
+
+function completeAdminMfaLogin($test, User $user, string $secret): void
+{
+    $test->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk()->assertJsonPath('mfa_required', true);
+
+    $test->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', [
+        'code' => app(Google2FA::class)->getCurrentOtp($secret),
+    ])->assertOk()->assertJsonPath('user.id', $user->id);
+}
+
+test('valid admin password requires mfa before creating an authenticated session', function () {
+    [$user] = mfaAdmin([
+        'email' => 'admin@example.test',
     ]);
 
     $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
@@ -28,8 +55,11 @@ test('login succeeds with valid credentials', function () {
         'password' => 'secret123',
     ])
         ->assertOk()
-        ->assertJsonStructure(['user'])
-        ->assertJsonPath('user.id', $user->id);
+        ->assertJsonPath('mfa_required', true)
+        ->assertJsonMissingPath('user');
+
+    $this->assertGuest('web');
+    $this->withHeaders(spaHeaders())->getJson('/api/admin/me')->assertUnauthorized();
 });
 
 test('login fails with wrong password', function () {
@@ -152,15 +182,11 @@ test('admin account cannot login through user auth', function () {
 });
 
 test('admin logout invalidates the browser session', function () {
-    User::factory()->admin()->create([
+    [$user, $secret] = mfaAdmin([
         'email' => 'logout-admin@example.test',
-        'password' => 'secret123',
     ]);
 
-    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
-        'email' => 'logout-admin@example.test',
-        'password' => 'secret123',
-    ])->assertOk();
+    completeAdminMfaLogin($this, $user, $secret);
 
     $this->withHeaders(spaHeaders())->getJson('/api/admin/me')
         ->assertOk()
@@ -177,15 +203,11 @@ test('admin logout invalidates the browser session', function () {
 });
 
 test('admin logout works even if the account no longer has admin panel access', function () {
-    $user = User::factory()->admin()->create([
+    [$user, $secret] = mfaAdmin([
         'email' => 'logout-role-changed@example.test',
-        'password' => 'secret123',
     ]);
 
-    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
-        'email' => 'logout-role-changed@example.test',
-        'password' => 'secret123',
-    ])->assertOk();
+    completeAdminMfaLogin($this, $user, $secret);
 
     $user->forceFill(['role' => 'customer'])->save();
 
@@ -193,6 +215,161 @@ test('admin logout works even if the account no longer has admin panel access', 
         ->assertNoContent();
 
     $this->withHeaders(spaHeaders())->getJson('/api/me')
+        ->assertUnauthorized();
+});
+
+test('legacy admin must enroll mfa and receives recovery codes only once', function () {
+    $user = User::factory()->admin()->create([
+        'email' => 'enroll@example.test',
+        'password' => 'secret123',
+        'mfa_secret' => null,
+        'mfa_confirmed_at' => null,
+    ]);
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk()->assertJsonPath('mfa_enrollment_required', true);
+    $this->withHeaders(spaHeaders())->getJson('/api/admin/dashboard')->assertUnauthorized();
+
+    $setup = $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/setup')
+        ->assertOk()
+        ->assertJsonStructure(['secret', 'provisioning_uri']);
+    $secret = $setup->json('secret');
+
+    $confirmation = $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/confirm', [
+        'code' => app(Google2FA::class)->getCurrentOtp($secret),
+    ])->assertOk()->assertJsonCount(8, 'recovery_codes');
+
+    $confirmation->assertJsonMissingPath('user.mfa_secret')
+        ->assertJsonMissingPath('user.mfa_recovery_codes');
+    $this->withHeaders(spaHeaders())->getJson('/api/admin/dashboard')->assertOk();
+});
+
+test('mfa rejects wrong and replayed recovery codes', function () {
+    [$user, $secret] = mfaAdmin(['email' => 'recovery@example.test']);
+    $recoveryCode = 'ABCDE-12345';
+    $user->forceFill([
+        'mfa_recovery_codes' => [hash_hmac('sha256', $recoveryCode, (string) config('app.key'))],
+    ])->save();
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['code' => '000000'])
+        ->assertUnprocessable();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['recovery_code' => $recoveryCode])
+        ->assertOk();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/logout')->assertNoContent();
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['recovery_code' => $recoveryCode])
+        ->assertUnprocessable();
+});
+
+test('totp code cannot be replayed in the same time window', function () {
+    [$user, $secret] = mfaAdmin(['email' => 'totp-replay@example.test']);
+    $code = app(Google2FA::class)->getCurrentOtp($secret);
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['code' => $code])->assertOk();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/logout')->assertNoContent();
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['code' => $code])
+        ->assertUnprocessable();
+});
+
+test('stale mfa models cannot claim the same totp or recovery code twice', function () {
+    [$user, $secret] = mfaAdmin(['email' => 'atomic-mfa@example.test']);
+    $mfa = app(AdminMfaService::class);
+    $staleTotpUser = User::query()->findOrFail($user->id);
+    $code = app(Google2FA::class)->getCurrentOtp($secret);
+
+    expect($mfa->consumeTotp($user, $code))->toBeInt()
+        ->and($mfa->consumeTotp($staleTotpUser, $code))->toBeFalse();
+
+    $recoveryCode = 'ATOMIC-RECOVERY';
+    $user->forceFill([
+        'mfa_recovery_codes' => $mfa->recoveryCodeHashes([$recoveryCode]),
+    ])->save();
+    $firstRecoveryUser = User::query()->findOrFail($user->id);
+    $staleRecoveryUser = User::query()->findOrFail($user->id);
+
+    expect($mfa->consumeRecoveryCode($firstRecoveryUser, $recoveryCode))->toBeTrue()
+        ->and($mfa->consumeRecoveryCode($staleRecoveryUser, $recoveryCode))->toBeFalse();
+});
+
+test('mfa challenge is rate limited', function () {
+    [$user] = mfaAdmin(['email' => 'mfa-rate@example.test']);
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+
+    foreach (range(1, 5) as $attempt) {
+        $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['code' => '000000'])
+            ->assertUnprocessable();
+    }
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['code' => '000000'])
+        ->assertTooManyRequests();
+});
+
+test('admin login account limiter still applies when attacker changes ip', function () {
+    User::factory()->admin()->create([
+        'email' => 'distributed@example.test',
+        'password' => 'secret123',
+    ]);
+
+    foreach (range(1, 5) as $attempt) {
+        $this->withServerVariables(['REMOTE_ADDR' => "192.0.2.{$attempt}"])
+            ->withHeaders(spaHeaders())
+            ->postJson('/api/admin/login', [
+                'email' => 'distributed@example.test',
+                'password' => 'wrong-password',
+            ])->assertUnauthorized();
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.99'])
+        ->withHeaders(spaHeaders())
+        ->postJson('/api/admin/login', [
+            'email' => 'distributed@example.test',
+            'password' => 'wrong-password',
+        ])->assertTooManyRequests();
+});
+
+test('admin login ip limiter applies when attacker changes email', function () {
+    foreach (range(1, 5) as $attempt) {
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.10'])
+            ->withHeaders(spaHeaders())
+            ->postJson('/api/admin/login', [
+                'email' => "unknown{$attempt}@example.test",
+                'password' => 'wrong-password',
+            ])->assertUnauthorized();
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.10'])
+        ->withHeaders(spaHeaders())
+        ->postJson('/api/admin/login', [
+            'email' => 'another@example.test',
+            'password' => 'wrong-password',
+        ])->assertTooManyRequests();
+});
+
+test('customer cannot use an admin mfa endpoint', function () {
+    $this->actingAs(User::factory()->customer()->create(), 'web')
+        ->withHeaders(spaHeaders())
+        ->postJson('/api/admin/mfa/setup')
         ->assertUnauthorized();
 });
 

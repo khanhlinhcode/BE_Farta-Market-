@@ -7,6 +7,7 @@ use App\Services\CloudinaryImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Throwable;
 
@@ -23,12 +24,21 @@ class ProfileController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($request->user()->id)],
             'phone' => ['nullable', 'string', 'regex:/^[0-9]{10,11}$/'],
             'default_address' => ['nullable', 'string', 'max:255'],
         ]);
 
         $user = $request->user();
+        $emailChanged = isset($data['email']) && $data['email'] !== $user->email;
+        if ($emailChanged) {
+            $user->forceFill(['email_verified_at' => null]);
+        }
         $user->update($data);
+
+        if ($emailChanged) {
+            $user->sendEmailVerificationNotification();
+        }
 
         return response()->json($this->profilePayload($user->fresh()));
     }
@@ -128,6 +138,7 @@ class ProfileController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'email_verified' => $user->hasVerifiedEmail(),
             'phone' => $user->phone,
             'avatar_url' => $user->avatar_url,
             'default_address' => $user->default_address,

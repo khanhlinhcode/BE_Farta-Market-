@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,10 +11,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, MustVerifyEmailTrait, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -40,6 +41,10 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'avatar_public_id',
+        'mfa_secret',
+        'mfa_recovery_codes',
+        'mfa_confirmed_at',
+        'mfa_last_used_timestep',
     ];
 
     /**
@@ -51,6 +56,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'mfa_secret' => 'encrypted',
+            'mfa_recovery_codes' => 'encrypted:array',
+            'mfa_confirmed_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -58,8 +66,14 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::updated(function (User $user) {
-            if ($user->wasChanged('password')) {
+            if ($user->wasChanged(['password', 'role'])) {
                 $user->tokens()->delete();
+
+                if (config('session.driver') === 'database') {
+                    \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))
+                        ->where('user_id', $user->id)
+                        ->delete();
+                }
             }
         });
     }

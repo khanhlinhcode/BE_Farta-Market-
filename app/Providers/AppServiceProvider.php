@@ -45,12 +45,37 @@ class AppServiceProvider extends ServiceProvider
                 : $rule->uncompromised();
         });
 
+        RateLimiter::for('user-login', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('user-login:ip:'.$request->ip()),
+                Limit::perMinute(7)->by('user-login:account:'.$this->loginAccountHash($request)),
+            ];
+        });
+
         RateLimiter::for('admin-login', function (Request $request) {
-            return Limit::perMinute(5)->by($request->input('email').'|'.$request->ip());
+            return [
+                Limit::perMinute((int) config('auth.admin_login_ip_limit', 5))->by('admin-login:ip:'.$request->ip()),
+                Limit::perMinute((int) config('auth.admin_login_account_limit', 5))->by('admin-login:account:'.$this->loginAccountHash($request)),
+            ];
+        });
+
+        RateLimiter::for('mfa-challenge', function (Request $request) {
+            return [
+                Limit::perMinute((int) config('auth.mfa_challenge_ip_limit', 5))->by('mfa:ip:'.$request->ip()),
+                Limit::perMinute((int) config('auth.mfa_challenge_session_limit', 5))->by('mfa:challenge:'.hash('sha256', (string) $request->session()->getId())),
+            ];
         });
 
         RateLimiter::for('guest-orders', function (Request $request) {
-            return Limit::perMinute(5)->by($request->ip());
+            $email = Str::lower(trim((string) $request->input('email')));
+            $phone = preg_replace('/\D+/', '', (string) ($request->input('customer_phone') ?: $request->input('phone')));
+
+            return [
+                Limit::perHour(5)->by('guest-orders:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perHour(5)->by('guest-orders:email:'.hash('sha256', $email)),
+                Limit::perHour(5)->by('guest-orders:phone:'.hash('sha256', $phone)),
+                Limit::perMinute(100)->by('guest-orders:global'),
+            ];
         });
 
         RateLimiter::for('register', function (Request $request) {
@@ -73,7 +98,26 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('analytics', function (Request $request) {
-            return Limit::perMinute(60)->by($request->ip());
+            return [
+                Limit::perMinute(60)->by('analytics:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perMinute(30)->by('analytics:token:'.hash('sha256', (string) $request->header('X-Analytics-Token'))),
+            ];
         });
+
+        RateLimiter::for('analytics-session', function (Request $request) {
+            return [
+                Limit::perHour(20)->by('analytics-session:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perMinute(200)->by('analytics-session:global'),
+            ];
+        });
+
+        RateLimiter::for('verification-resend', function (Request $request) {
+            return Limit::perMinute(3)->by('verification:'.($request->user()?->id ?? $request->ip()));
+        });
+    }
+
+    private function loginAccountHash(Request $request): string
+    {
+        return hash('sha256', Str::lower(trim((string) $request->input('email'))));
     }
 }

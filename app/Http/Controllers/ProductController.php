@@ -518,7 +518,7 @@ class ProductController extends Controller
                 $this->cloudinary->destroy($uploaded['public_id']);
             } catch (CloudinaryException $exception) {
                 Log::warning('Could not clean up a Cloudinary product image.', [
-                    'public_id' => $uploaded['public_id'],
+                    'public_id_hash' => hash('sha256', $uploaded['public_id']),
                     'error' => $exception->getMessage(),
                 ]);
             }

@@ -7,7 +7,7 @@ use Monolog\LogRecord;
 
 class RedactSensitiveLogContext
 {
-    private const SENSITIVE_KEY_PATTERN = '/(?:address|api[_-]?key|authorization|cookie|csrf|email|name|note|password|phone|recipient|request|secret|signature|token|user)/i';
+    private const SENSITIVE_KEY_PATTERN = '/(?:address|api[_-]?key|authorization|cookie|csrf|email|name|note|password|phone|public[_-]?id(?![_-]?hash)|recipient|request|secret|signature|token|user)/i';
 
     public function __invoke(Logger $logger): void
     {

@@ -132,7 +132,10 @@ class BannerController extends Controller
         try {
             $this->cloudinary->destroy($publicId);
         } catch (CloudinaryException $exception) {
-            Log::warning('Could not clean up a banner image.', ['public_id' => $publicId, 'error' => $exception->getMessage()]);
+            Log::warning('Could not clean up a banner image.', [
+                'public_id_hash' => hash('sha256', $publicId),
+                'error' => $exception->getMessage(),
+            ]);
         }
     }
 }

@@ -134,7 +134,7 @@ class CategoryController extends Controller
             $this->cloudinary->destroy($publicId);
         } catch (CloudinaryException $exception) {
             Log::warning('Could not clean up a category image.', [
-                'public_id' => $publicId,
+                'public_id_hash' => hash('sha256', $publicId),
                 'error' => $exception->getMessage(),
             ]);
         }

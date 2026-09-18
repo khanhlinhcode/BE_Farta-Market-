@@ -9,6 +9,7 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -36,7 +37,24 @@ class ChatController extends Controller
 
         try {
             [$products, $categories] = $this->catalog();
-            $response = $this->createGroundedCatalogResponse($request, $validated['message'], $products, $categories, $english);
+            $response = $request->hasSession()
+                ? Cache::lock($this->contextLockKey($request), 10)->block(
+                    5,
+                    fn () => $this->createGroundedCatalogResponse(
+                        $request,
+                        $validated['message'],
+                        $products,
+                        $categories,
+                        $english
+                    )
+                )
+                : $this->createGroundedCatalogResponse(
+                    $request,
+                    $validated['message'],
+                    $products,
+                    $categories,
+                    $english
+                );
             $source = 'catalog';
 
             if ($response === null) {
@@ -228,7 +246,7 @@ class ChatController extends Controller
         if (! $request->hasSession()) {
             return null;
         }
-        $context = $request->session()->get(self::CONTEXT_KEY);
+        $context = Cache::get($this->contextKey($request));
         if (! is_array($context)
             || ($context['owner_id'] ?? null) !== $this->ownerId($request)
             || ($context['expires_at'] ?? 0) <= now()->timestamp
@@ -252,21 +270,37 @@ class ChatController extends Controller
     private function remember(Request $request, Product $product, string $stage, ?int $quantity = null): void
     {
         if ($request->hasSession()) {
-            $request->session()->put(self::CONTEXT_KEY, [
+            Cache::put($this->contextKey($request), [
                 'product_id' => (int) $product->id,
                 'quantity' => $quantity,
                 'stage' => $stage,
                 'owner_id' => $this->ownerId($request),
                 'expires_at' => now()->timestamp + self::CONTEXT_SECONDS,
-            ]);
+            ], self::CONTEXT_SECONDS);
         }
     }
 
     private function clearContext(Request $request): void
     {
         if ($request->hasSession()) {
-            $request->session()->forget(self::CONTEXT_KEY);
+            Cache::forget($this->contextKey($request));
         }
+    }
+
+    private function contextKey(Request $request): string
+    {
+        $sessionToken = (string) $request->session()->token();
+
+        return self::CONTEXT_KEY.'.'.hash_hmac(
+            'sha256',
+            $sessionToken !== '' ? $sessionToken : (string) $request->session()->getId(),
+            (string) config('app.key')
+        );
+    }
+
+    private function contextLockKey(Request $request): string
+    {
+        return $this->contextKey($request).'.lock';
     }
 
     private function offer(Request $request, Product $product, int $quantity, bool $english): array

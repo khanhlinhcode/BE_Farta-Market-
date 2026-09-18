@@ -42,3 +42,77 @@ test('registration is rate limited by source ip', function () {
         'password_confirmation' => 'FartaPass123',
     ])->assertTooManyRequests();
 });
+
+test('production html responses enforce a restrictive content security policy', function () {
+    config(['app.env' => 'production']);
+
+    $response = $this->get('/')->assertOk()->assertHeader('content-security-policy');
+    $policy = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($policy)->toContain("default-src 'self'")
+        ->toContain("object-src 'none'")
+        ->toContain("frame-ancestors 'none'")
+        ->not->toContain('default-src *')
+        ->not->toContain('script-src *')
+        ->not->toContain("'unsafe-eval'");
+    expect($response->headers->has('Content-Security-Policy-Report-Only'))->toBeFalse();
+});
+
+test('local html responses use report only csp', function () {
+    config(['app.env' => 'local']);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertHeader('content-security-policy-report-only');
+});
+
+test('cors allows configured origins and does not authorize foreign origins', function () {
+    config(['cors.allowed_origins' => ['https://shop.example.test']]);
+
+    $this->withHeader('Origin', 'https://shop.example.test')
+        ->getJson('/api/products')
+        ->assertOk()
+        ->assertHeader('access-control-allow-origin', 'https://shop.example.test');
+
+    $foreign = $this->withHeader('Origin', 'https://attacker.example.test')
+        ->getJson('/api/products')
+        ->assertOk();
+    expect($foreign->headers->get('Access-Control-Allow-Origin'))
+        ->not->toBe('https://attacker.example.test');
+});
+
+test('production cors fails closed without an origin allowlist', function () {
+    config([
+        'app.env' => 'production',
+        'cors.allowed_origins' => [],
+    ]);
+
+    $response = $this->withHeader('Origin', 'http://127.0.0.1:5173')
+        ->getJson('/api/products')
+        ->assertOk();
+
+    expect($response->headers->has('Access-Control-Allow-Origin'))->toBeFalse();
+});
+
+test('cors preflight only permits the configured methods and headers', function () {
+    config(['cors.allowed_origins' => ['https://shop.example.test']]);
+
+    $this->withHeaders([
+        'Origin' => 'https://shop.example.test',
+        'Access-Control-Request-Method' => 'POST',
+        'Access-Control-Request-Headers' => 'Content-Type, X-Idempotency-Key',
+    ])->options('/api/order')
+        ->assertNoContent()
+        ->assertHeader('access-control-allow-origin', 'https://shop.example.test');
+
+    $unknownHeader = $this->withHeaders([
+        'Origin' => 'https://shop.example.test',
+        'Access-Control-Request-Method' => 'POST',
+        'Access-Control-Request-Headers' => 'X-Unapproved-Header',
+    ])->options('/api/order')->assertNoContent();
+
+    expect(config('cors.allowed_methods'))->not->toContain('*')
+        ->and(config('cors.allowed_headers'))->not->toContain('*')
+        ->and(strtolower((string) $unknownHeader->headers->get('Access-Control-Allow-Headers')))
+        ->not->toContain('x-unapproved-header');
+});

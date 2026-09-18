@@ -23,12 +23,18 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), geolocation=(), microphone=()');
 
         $contentType = strtolower((string) $response->headers->get('Content-Type', ''));
-        $csp = config('security.csp_report_only');
-        if (str_starts_with($contentType, 'text/html') && is_string($csp) && $csp !== '') {
-            $response->headers->set('Content-Security-Policy-Report-Only', $csp);
+        if (str_starts_with($contentType, 'text/html')) {
+            $production = config('app.env') === 'production';
+            $csp = config($production ? 'security.csp_enforced' : 'security.csp_report_only');
+            if (is_string($csp) && $csp !== '') {
+                $response->headers->set(
+                    $production ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only',
+                    $csp
+                );
+            }
         }
 
-        if (app()->environment('production') && $request->isSecure()) {
+        if (config('app.env') === 'production' && $request->isSecure()) {
             $response->headers->set(
                 'Strict-Transport-Security',
                 'max-age='.max(0, (int) config('security.hsts_max_age')).'; includeSubDomains'

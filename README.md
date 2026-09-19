@@ -9,9 +9,30 @@ cp .env.example .env
 composer install
 php artisan key:generate
 php artisan migrate --seed
-php artisan storage:link
 php artisan serve
 ```
+
+## Cloudinary images
+
+Product, category, banner, and avatar uploads are stored on Cloudinary. The
+application does not fall back to local image storage when Cloudinary is
+unavailable.
+
+Before removing legacy source files, inspect and migrate their database
+references:
+
+```bash
+php artisan images:migrate-to-cloudinary \
+  --source=/absolute/path/to/websivi/public \
+  --dry-run
+
+php artisan images:migrate-to-cloudinary \
+  --source=/absolute/path/to/websivi/public
+```
+
+The command can be run again safely. It skips managed Cloudinary images, keeps
+source files for rollback, and returns a failure status if any legacy file is
+missing or cannot be migrated.
 
 ## AI assistant
 
@@ -84,9 +105,9 @@ Guest order creation is limited to five requests per minute per IP.
 
 - Set a real `APP_URL`, database credentials, and `APP_KEY`.
 - Set the AI driver, model, base URL, and provider secret.
+- Set the Cloudinary cloud name, API key, and API secret.
 - Keep `SEED_ADMIN_ENABLED=false`; create admins using controlled deployment tooling.
 - Configure a shared cache store so rate limits and idempotency locks work across servers.
-- Route `/storage` correctly after running `php artisan storage:link`.
 
 ## Verification
 

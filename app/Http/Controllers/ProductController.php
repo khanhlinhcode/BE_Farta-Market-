@@ -12,7 +12,6 @@ use App\Services\CloudinaryImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -270,11 +269,7 @@ class ProductController extends Controller
 
         $images = $product->images()->get();
 
-        foreach ($images->where('provider', 'cloudinary') as $image) {
-            $this->destroyStoredImage($image);
-        }
-
-        foreach ($images->where('provider', '!=', 'cloudinary') as $image) {
+        foreach ($images as $image) {
             $this->destroyStoredImage($image);
         }
 
@@ -434,7 +429,6 @@ class ProductController extends Controller
         return $request->validate([
             'name' => [$required, 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
-            'img' => [$required, 'string', 'max:255'],
             'price' => [$required, 'integer', 'min:0'],
             'inventory' => [$required, 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
@@ -450,6 +444,10 @@ class ProductController extends Controller
 
     private function prepareProductData(array $data, ?ProductModel $product = null): array
     {
+        if ($product === null) {
+            $data['img'] = '';
+        }
+
         $data = $this->normalizeSocialLinks($data, $product !== null);
 
         if (array_key_exists('name', $data) || array_key_exists('slug', $data)) {
@@ -500,15 +498,11 @@ class ProductController extends Controller
 
     private function destroyStoredImage(ProductImage $image): void
     {
-        if ($image->provider === 'cloudinary') {
-            $this->cloudinary->destroy((string) $image->public_id);
-
-            return;
+        if ($image->provider !== 'cloudinary' || ! $image->public_id) {
+            throw new CloudinaryException('Legacy product images must be migrated before deletion.');
         }
 
-        if ($image->path) {
-            Storage::disk('public')->delete($image->path);
-        }
+        $this->cloudinary->destroy($image->public_id);
     }
 
     private function cleanupCloudinaryUploads(array $uploads): void

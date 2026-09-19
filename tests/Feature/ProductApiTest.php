@@ -26,6 +26,7 @@ test('admin can create a product with a long short description', function () {
         'category_id' => $category->id,
     ])
         ->assertCreated()
+        ->assertJsonPath('img', '')
         ->assertJsonPath('sort_description', $shortDescription);
 });
 

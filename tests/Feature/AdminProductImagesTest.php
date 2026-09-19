@@ -157,7 +157,7 @@ test('missing Cloudinary configuration fails without a local fallback', function
     Http::assertNothingSent();
 });
 
-test('legacy local images remain deletable after the Cloudinary migration', function () {
+test('legacy local images must be migrated before deletion', function () {
     Sanctum::actingAs(User::factory()->admin()->create());
     Storage::disk('public')->put('products/legacy.jpg', 'legacy');
     $image = ProductImage::create([
@@ -170,10 +170,12 @@ test('legacy local images remain deletable after the Cloudinary migration', func
     ]);
     $this->product->update(['img' => $image->url]);
 
-    $this->deleteJson('/api/admin/product-images/'.$image->id)->assertOk();
+    $this->deleteJson('/api/admin/product-images/'.$image->id)
+        ->assertStatus(502)
+        ->assertJsonPath('message', 'Không thể xử lý ảnh trên Cloudinary. Vui lòng thử lại.');
 
-    Storage::disk('public')->assertMissing('products/legacy.jpg');
-    $this->assertDatabaseMissing('product_images', ['id' => $image->id]);
+    Storage::disk('public')->assertExists('products/legacy.jpg');
+    $this->assertDatabaseHas('product_images', ['id' => $image->id]);
     Http::assertNothingSent();
 });
 

@@ -81,13 +81,12 @@ class ProductSeeder extends Seeder
         </li>
       </ul>';
 
-        $img = '/assets/users/images/featured/feature-';
         $marketSortDescription = 'Farta Market cung cấp thực phẩm tươi sạch, chọn lọc kỹ mỗi ngày và phù hợp cho bữa ăn gia đình.';
         $categoryIds = Category::pluck('id', 'name');
         $products = [
             [
                 'name' => 'Thịt bò nạt',
-                'img' => $img.'1.png',
+                'img' => '',
                 'price' => 200000,
                 'inventory' => 20,
                 'description' => 'Thịt bò nạt Úc đông lạnh, ít mỡ, phù hợp nấu lẩu hoặc áp chảo.',
@@ -100,7 +99,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Chuối',
-                'img' => $img.'2.png',
+                'img' => '',
                 'price' => 17800,
                 'inventory' => 20,
                 'description' => $desc,
@@ -113,7 +112,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Ổi',
-                'img' => $img.'3.png',
+                'img' => '',
                 'price' => 25000,
                 'inventory' => 20,
                 'description' => $desc,
@@ -126,7 +125,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Dưa hấu',
-                'img' => $img.'4.png',
+                'img' => '',
                 'price' => 44020,
                 'inventory' => 20,
                 'description' => $desc,
@@ -139,7 +138,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Nho tím',
-                'img' => $img.'5.png',
+                'img' => '',
                 'price' => 120000,
                 'inventory' => 20,
                 'description' => $desc,
@@ -152,7 +151,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Hamburger',
-                'img' => $img.'6.png',
+                'img' => '',
                 'price' => 86000,
                 'inventory' => 20,
                 'description' => 'Burger bò tươi, kẹp rau và sốt đặc biệt, ăn liền tiện lợi.',
@@ -165,7 +164,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Xoài keo',
-                'img' => $img.'7.png',
+                'img' => '',
                 'price' => 69000,
                 'inventory' => 20,
                 'description' => $desc,
@@ -178,7 +177,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Táo Úc',
-                'img' => $img.'8.png',
+                'img' => '',
                 'price' => 53000,
                 'inventory' => 20,
                 'description' => $desc,
@@ -191,7 +190,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Cam Tươi',
-                'img' => $img.'1.png',
+                'img' => '',
                 'price' => 45000,
                 'inventory' => 30,
                 'description' => 'Cam tươi nhập khẩu, vỏ mỏng, nhiều nước, ngọt tự nhiên.',
@@ -204,7 +203,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Rau Củ Tươi',
-                'img' => $img.'3.png',
+                'img' => '',
                 'price' => 65000,
                 'inventory' => 25,
                 'description' => $desc,
@@ -217,7 +216,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Sữa Hộp',
-                'img' => $img.'4.png',
+                'img' => '',
                 'price' => 32000,
                 'inventory' => 40,
                 'description' => 'Sữa hộp nguyên chất, giàu canxi và vitamin D, phù hợp cho cả gia đình.',
@@ -230,7 +229,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => '[QA] Sản phẩm hết hàng mẫu',
-                'img' => $img.'2.png',
+                'img' => '',
                 'price' => 39000,
                 'inventory' => 0,
                 'is_active' => true,
@@ -244,7 +243,7 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => '[QA] Sữa hết hàng mẫu',
-                'img' => $img.'4.png',
+                'img' => '',
                 'price' => 32000,
                 'inventory' => 0,
                 'is_active' => true,

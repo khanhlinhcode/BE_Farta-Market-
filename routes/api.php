@@ -89,7 +89,7 @@ Route::prefix('')->group(function () {
         ->middleware('throttle:30,1');
 });
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->block(35, 1)
         ->middleware('throttle:admin-login');

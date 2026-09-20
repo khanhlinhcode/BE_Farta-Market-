@@ -1,85 +1,67 @@
-# Staging deployment
+# Farta staging deployment
 
-This runbook deploys the Laravel API, Storefront, and Admin as separate services. Keep all credentials in provider environment variables; never commit them or paste them into an issue or chat.
+This runbook describes the staging environment deployed on 20 September 2026. It is not a production release checklist. Keep credentials in Northflank/Cloudflare secrets or a local private vault; never put them in Git, logs, or chat.
 
-## Prerequisites
+## Current topology
 
-- A Railway account/project, a Cloudflare account, and a domain you control. Use three HTTPS subdomains under that domain, such as `api.example.com`, `shop.example.com`, and `admin.example.com`. Sanctum's cookie-based SPA authentication requires the API and both SPAs to share the same top-level domain. `*.railway.app` plus `*.pages.dev` is not a reliable authenticated staging configuration.
-- Rotate credentials that may have appeared in the old storefront Git history before using them on staging: Cloudinary, database, VNPay, mail, AI provider, and any other tokens.
-- Decide whether staging uses a fresh database or a private, reviewed catalog-only import. Do not import local users, sessions, orders, or payment data into public staging. Product image Cloudinary URLs and public IDs live in the database, not in Git. `ProductSeeder` alone creates products without images.
-
-## Railway: API, MySQL, worker, scheduler
-
-1. Create a Railway project with a MySQL service and an API service from `khanhlinhcode/BE_Farta-Market-` branch `main`. Railway detects Laravel and starts PHP-FPM/Caddy. Set API health check to `/up`.
-2. Set the API pre-deploy command to `bash railway/init-app.sh`. It runs migrations and caches configuration/routes/views. Do not run `db:seed` automatically on deployment.
-3. Create a worker service from the same repository/commit with start command `bash railway/run-worker.sh`. Create a scheduler service from the same repository/commit with start command `php artisan schedule:run --no-interaction` and cron schedule `*/5 * * * *` (UTC). Only the API needs a public domain.
-4. Set the same `APP_KEY`, MySQL connection, mail, Cloudinary, queue, and relevant app variables on API, worker, and scheduler. Use Railway reference variables for MySQL host, port, database, user, and password. Generate a new `APP_KEY` for a fresh database; preserve the original key only if importing encrypted records that must remain readable.
-5. Configure the API custom domain in Railway, then add **both** DNS records Railway supplies (`CNAME` and verification `TXT`). Wait for HTTPS and `/up` to work before building the frontends.
-
-Use `.env.production.example` as the variable inventory. Key non-secret settings for `example.com` are:
-
-```dotenv
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://api.example.com
-FRONTEND_URL=https://shop.example.com
-CORS_ALLOWED_ORIGINS=https://shop.example.com,https://admin.example.com
-SESSION_DRIVER=database
-SESSION_DOMAIN=.example.com
-SESSION_SECURE_COOKIE=true
-SESSION_SAME_SITE=lax
-SANCTUM_STATEFUL_DOMAINS=shop.example.com,admin.example.com
-QUEUE_CONNECTION=database
-CACHE_STORE=database
-DB_QUEUE_RETRY_AFTER=120
-ANALYTICS_ALLOWED_ORIGINS=https://shop.example.com
-TURNSTILE_REQUIRED=true
-VNPAY_RETURN_URL=https://api.example.com/api/payment/vnpay-return
-```
-
-Set the remaining required values from `.env.production.example` privately in Railway. Do not put server secrets in any `VITE_` variable. Create a dedicated staging admin, verify its email, and enroll MFA; do not seed QA accounts in production mode.
-Replace the domain placeholders inside `SECURITY_CSP` as well. Configure a working mail provider before testing email verification, and use separate sandbox credentials for VNPay.
-
-## Cloudflare Pages: Storefront and Admin
-
-Create two Pages projects connected to `main`:
-
-| Project | GitHub repository | Build command | Output directory |
+| Component | Provider | Resource | Public URL |
 | --- | --- | --- | --- |
-| Storefront | `khanhlinhcode/Farta_Market` | `npm run build` | `build` |
-| Admin | `khanhlinhcode/websivi-admin` | `npm run build` | `build` |
+| Laravel API | Northflank, farta-staging (London) | farta-api | https://site--farta-api--45n45kqfhjvs.code.run |
+| Queue worker | Northflank | farta-worker | Private |
+| Scheduler | Northflank | farta-scheduler cron job, every 5 minutes | Private |
+| MySQL | Northflank | farta-mysql, private networking and TLS | Private |
+| Storefront | Cloudflare Pages | farta-storefront | https://farta-storefront.pages.dev |
+| Admin | Cloudflare Pages | farta-admin | https://farta-admin.pages.dev |
 
-Set Node.js to a version supported by the lockfile/Vite (at least 22.12). Set these build-time public variables, then rebuild after any change:
+Both Pages projects are Direct Upload projects. Their GitHub repositories hold the source code, but pushing Git does not deploy Pages. Build and upload each frontend with Wrangler after review. A Direct Upload project cannot be switched to Git integration in place; create a new Pages project if automatic Git deployment is needed.
 
-```dotenv
-# Storefront
-VITE_API_URL=https://api.example.com/api
-VITE_SITE_URL=https://shop.example.com
-VITE_ANALYTICS_ENABLED=true
-VITE_TURNSTILE_SITE_KEY=<public site key>
+Each Pages project uses its own _worker.js and _routes.json to proxy only /api/* and /sanctum/csrf-cookie to the fixed HTTPS API_ORIGIN runtime secret. The browser calls /api on its own Pages hostname, so Sanctum/XSRF cookies stay first-party without a custom domain. The backend remains publicly reachable at its Northflank URL. Set API_ORIGIN on both Pages projects to the full origin without an /api suffix. Never put APP_KEY, DB, Cloudinary, payment, mail, or AI secrets in a VITE_ variable.
 
-# Admin
-VITE_API_URL=https://api.example.com/api
-VITE_STOREFRONT_URL=https://shop.example.com
-```
+## Inspect with CLI
 
-Associate `shop.example.com` and `admin.example.com` with their Pages projects using Pages **Custom domains** before relying on their DNS records. Keep SPA fallback to `index.html` and verify deep-link refreshes.
+    northflank list services --projectId farta-staging
+    northflank list jobs --projectId farta-staging
+    northflank get service --projectId farta-staging --serviceId farta-api
+    northflank get service --projectId farta-staging --serviceId farta-worker
+    northflank get job builds --projectId farta-staging --jobId farta-scheduler
+    northflank get job runs --projectId farta-staging --jobId farta-scheduler
 
-## Data and acceptance checks
+Do not print runtime-environment, secret groups, or addon connection details to a shared terminal. The farta-db-runtime secret group links MySQL aliases DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, and DB_PASSWORD. Its resource restrictions include API, worker, and scheduler. The farta-cloudinary-runtime group is restricted to API. API, worker, and scheduler use the same APP_KEY and QUEUE_CONNECTION=database. Only API exposes port 8080.
 
-After the API is healthy, run `php artisan migrate:status` in the Railway API environment. For a fresh staging database, import only reviewed public catalog/CMS data if sample images are needed; keep that dump outside Git. Verify product and banner Cloudinary URLs before testing uploads. Never assume a local database migration or image upload is included in a Git push.
+The worker runs bash railway/run-worker.sh and consumes emails,default queues. The cron job runs php artisan schedule:run --no-interaction every five minutes. A controlled queue probe was processed and a manual scheduler run succeeded on 20 September 2026. Recheck both after changes; queued email delivery still requires a real mail provider.
 
-Run these checks through the actual staging domains:
+## Deploy frontends
 
-1. Open Storefront and Admin on HTTPS; refresh a deep link on each.
-2. Sign in to Admin, complete MFA, reload the page, and sign out. Confirm wrong-role access is rejected.
-3. Create a temporary product, upload/replace/delete its Cloudinary image, and verify Storefront reflects each change; then remove the temporary data.
-4. Edit a banner and a site setting, verify Storefront updates, then restore the original values.
-5. Place a test COD order, advance statuses, inspect customer order history, and check that the worker processes email. Test VNPay only with sandbox credentials and a signed callback.
-6. Confirm guest checkout Turnstile, analytics, queue health, and scheduler logs. Check API security headers and CORS from the two allowed origins.
+From the storefront repository:
 
-Keep a database backup before importing data. If a deployment fails, roll back the affected Git/Pages/Railway deployment; restore the database only from a reviewed backup compatible with the running code. Do not delete the pre-history-rewrite Git backup until staging is verified.
+    VITE_API_URL=/api npm run build
+    npx wrangler pages deploy build --project-name=farta-storefront --branch=main
 
-Railway trial credit is temporary; monitor resource usage before committing to an always-on setup. Cloudflare Pages static hosting has a free tier, subject to current provider limits.
+From the admin repository:
 
-Provider references: [Laravel Sanctum SPA authentication](https://laravel.com/docs/12.x/sanctum#spa-authentication), [Railway Laravel deployment](https://docs.railway.com/guides/laravel), [Railway custom domains](https://docs.railway.com/networking/domains/working-with-domains), and [Cloudflare Pages custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
+    VITE_API_URL=/api VITE_STOREFRONT_URL=https://farta-storefront.pages.dev npm run build
+    npx wrangler pages deploy build --project-name=farta-admin --branch=main
+
+The Pages API_ORIGIN secret is a runtime setting on each project. Verify each main alias after upload, including a deep-link refresh. Changing a build-time VITE_ value requires a rebuild and upload.
+
+## Backend and data
+
+Northflank builds khanhlinhcode/BE_Farta-Market- branch main with Heroku 24 buildpacks. The API health endpoint is /up. Run new migrations against staging before using a new backend revision; do not run db:seed automatically on every deployment. Check php artisan migrate:status inside the API runtime. Back up MySQL before importing or changing data, then verify the backup completed. The manual backup made before the catalog image sync does not include later image/admin changes; make a fresh backup after the platform's backup cooldown or configure a schedule.
+
+This staging database was created fresh. Its public catalog has 13 products and 11 Cloudinary-hosted product images. Do not import local users, sessions, orders, payment data, or other personal information. A dedicated staging admin was created with MFA; its generated credentials and recovery codes exist only in a private local file outside all repositories. Its email was marked verified for staging because no mail provider is configured. Do not copy this shortcut or account into production.
+
+The Northflank MySQL credentials exposed during setup should be rotated before any real customer data is used. A prior attempt to rotate via the addon API was rejected because the feature is unavailable for this account; use a supported provider rotation path or recreate the addon with fresh credentials and migrate reviewed data. Historical credential exposure also requires rotation of affected Cloudinary, payment, mail, and AI secrets. Rewriting Git history does not revoke them.
+
+## Acceptance checks and remaining integrations
+
+1. Confirm API /up, Storefront /, and Admin / return 200 over HTTPS. Storefront /api/products must show 13 products; all 11 image URLs must load from Cloudinary.
+2. On each Pages hostname, request /sanctum/csrf-cookie. Browser cookies must be Secure, SameSite Lax, and scoped to that Pages hostname. A deliberately wrong login should return 401, not 419. Admin login must complete MFA and persist after reload.
+3. Repeat product create/upload/replace/delete through Admin; confirm Storefront reflects changes and remove QA data. Inspect Cloudinary cleanup after deletion.
+4. Run backend tests/Pint/Composer validate and audit, and each frontend's unit tests, Playwright E2E, build, and npm audit before pushing. Check git status, GitHub Actions, and deployed revisions.
+5. Verify worker database connectivity and consumption of a controlled queue job. Verify a successful scheduler run and inspect failed jobs.
+6. Configure outbound mail and test email verification plus queued mail. Configure Cloudflare Turnstile before requiring guest checkout protection. Use VNPay sandbox credentials and a signed callback before enabling online payment. Supply an AI provider or reachable Ollama endpoint before enabling chat; /api/chat/health currently returns 503.
+7. Make a fresh backup and test restore before accepting real orders. Keep database private and monitor free-plan usage and quotas.
+
+Until mail, Turnstile, VNPay sandbox, AI, credential rotation, backup-after-sync, and end-to-end payment/order checks are complete, this is a staging/demo environment, not production-ready.
+
+Provider references: [Northflank CLI](https://northflank.com/docs/v1/application/getting-started/use-the-cli), [Northflank jobs](https://northflank.com/docs/v1/application/run/run-an-image-once-or-on-a-schedule), [Cloudflare Pages Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [Cloudflare Pages Functions](https://developers.cloudflare.com/pages/functions/), and [Laravel Sanctum SPA authentication](https://laravel.com/docs/12.x/sanctum#spa-authentication).

@@ -34,7 +34,7 @@ The worker runs bash railway/run-worker.sh and consumes emails,default queues. T
 
 From the storefront repository:
 
-    VITE_API_URL=/api npm run build
+    VITE_API_URL=/api VITE_ANALYTICS_ENABLED=true VITE_TURNSTILE_SITE_KEY=replace-with-public-site-key npm run build
     npx wrangler pages deploy build --project-name=farta-storefront --branch=main
 
 From the admin repository:
@@ -46,7 +46,7 @@ The Pages API_ORIGIN secret is a runtime setting on each project. Verify each ma
 
 ## Backend and data
 
-Northflank builds khanhlinhcode/BE_Farta-Market- branch main with Heroku 24 buildpacks. The API health endpoint is /up. Run new migrations against staging before using a new backend revision; do not run db:seed automatically on every deployment. Check php artisan migrate:status inside the API runtime. Back up MySQL before importing or changing data, then verify the backup completed. The manual backup made before the catalog image sync does not include later image/admin changes. A weekly Monday 02:30 UTC compressed dump with seven-day retention is configured; the free account rejected a daily schedule. Make a fresh manual backup after the platform's cooldown to capture the latest data.
+Northflank builds khanhlinhcode/BE_Farta-Market- branch main with Heroku 24 buildpacks. The API health endpoint is /up. Run new migrations against staging before using a new backend revision; do not run db:seed automatically on every deployment. Check php artisan migrate:status inside the API runtime. Back up MySQL before importing or changing data, then verify the backup completed. The post-sync compressed dump `post-sync-staging-backup` completed after the catalog image and admin setup on 20 September 2026. A weekly Monday 02:30 UTC compressed dump with seven-day retention is also configured; the free account rejected a daily schedule.
 
 This staging database was created fresh. Its public catalog has 13 products and 11 Cloudinary-hosted product images. Do not import local users, sessions, orders, payment data, or other personal information. A dedicated staging admin was created with MFA; its generated credentials and recovery codes exist only in a private local file outside all repositories. Its email was marked verified for staging because no mail provider is configured. Do not copy this shortcut or account into production.
 

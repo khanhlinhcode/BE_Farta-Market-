@@ -6,6 +6,8 @@ use Anthropic\Client;
 use Anthropic\Messages\TextBlock;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -61,8 +63,24 @@ class ChatController extends Controller
                 $messages = array_merge($validated['history'] ?? [], [
                     ['role' => 'user', 'content' => $validated['message']],
                 ]);
-                $response = $this->createReply($messages, $this->buildSystemPrompt($products), $english);
-                $source = 'ai';
+                try {
+                    $response = $this->createReply($messages, $this->buildSystemPrompt($products), $english);
+                    $source = 'ai';
+                } catch (RuntimeException|RequestException|ConnectionException $exception) {
+                    if (config('services.ai_chat.driver') !== 'groq') {
+                        throw $exception;
+                    }
+                    Log::warning('Groq chat fell back to the catalog.', [
+                        'exception' => $exception::class,
+                    ]);
+                    $response = [
+                        'reply' => $english
+                            ? 'AI recommendations are temporarily unavailable. I can still check a product’s price or stock if you give me its name.'
+                            : 'Tư vấn AI đang tạm gián đoạn. Tôi vẫn có thể kiểm tra giá hoặc tồn kho nếu bạn cho biết tên sản phẩm.',
+                        'action' => ['type' => 'none'],
+                    ];
+                    $source = 'catalog_fallback';
+                }
             }
 
             // Keep complete facts intact and compatible with the history validation boundary.
@@ -98,6 +116,7 @@ class ChatController extends Controller
             match (config('services.ai_chat.driver')) {
                 'ollama' => $this->ensureOllamaModelAvailable(),
                 'anthropic' => $this->ensureAnthropicAvailable(),
+                'groq' => $this->ensureGroqAvailable(),
                 default => throw new RuntimeException('AI_MODEL_UNAVAILABLE:Invalid driver.'),
             };
 
@@ -534,11 +553,25 @@ class ChatController extends Controller
             .'Use unknown when the catalog cannot answer. <CATALOG_JSON>'.$catalog.'</CATALOG_JSON>';
     }
 
+    private function recommendationSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'kind' => ['type' => 'string', 'enum' => ['recommendation', 'unknown']],
+                'product_ids' => ['type' => 'array', 'items' => ['type' => 'integer']],
+            ],
+            'required' => ['kind', 'product_ids'],
+            'additionalProperties' => false,
+        ];
+    }
+
     private function createReply(array $messages, string $systemPrompt, bool $english): array
     {
         $raw = match (config('services.ai_chat.driver')) {
             'ollama' => $this->createOllamaReply($messages, $systemPrompt),
             'anthropic' => $this->createAnthropicReply($messages, $systemPrompt),
+            'groq' => $this->createGroqReply($messages, $systemPrompt),
             default => throw new RuntimeException('AI_MODEL_UNAVAILABLE:Invalid driver.'),
         };
 
@@ -560,15 +593,7 @@ class ChatController extends Controller
             ->post($this->aiBaseUrl().'/api/chat', [
                 'model' => config('services.ai_chat.model'), 'stream' => false, 'think' => false,
                 'keep_alive' => config('services.ai_chat.keep_alive', '30m'),
-                'format' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'kind' => ['type' => 'string', 'enum' => ['recommendation', 'unknown']],
-                        'product_ids' => ['type' => 'array', 'maxItems' => 3, 'uniqueItems' => true,
-                            'items' => ['type' => 'integer', 'minimum' => 1]],
-                    ],
-                    'required' => ['kind', 'product_ids'], 'additionalProperties' => false,
-                ],
+                'format' => $this->recommendationSchema(),
                 'messages' => $messages, 'options' => ['temperature' => 0.1, 'num_predict' => 80],
             ])->throw();
 
@@ -593,6 +618,32 @@ class ChatController extends Controller
             ->map(fn ($block) => $block->text)->join("\n");
     }
 
+    private function createGroqReply(array $messages, string $systemPrompt): string
+    {
+        $key = config('services.ai_chat.key');
+        if (! is_string($key) || $key === '') {
+            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Groq key.');
+        }
+        $response = Http::acceptJson()->withToken($key)->connectTimeout(3)->timeout($this->providerTimeout())
+            ->post($this->aiBaseUrl().'/chat/completions', [
+                'model' => config('services.ai_chat.model'),
+                'messages' => array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages),
+                'temperature' => 0.1,
+                'max_completion_tokens' => 512,
+                'reasoning_effort' => 'low',
+                'response_format' => [
+                    'type' => 'json_schema',
+                    'json_schema' => [
+                        'name' => 'catalog_recommendation',
+                        'strict' => true,
+                        'schema' => $this->recommendationSchema(),
+                    ],
+                ],
+            ])->throw();
+
+        return trim((string) $response->json('choices.0.message.content'));
+    }
+
     private function ensureOllamaModelAvailable(): void
     {
         $models = Http::acceptJson()->connectTimeout(2)->timeout(3)
@@ -610,6 +661,19 @@ class ChatController extends Controller
         }
         Http::acceptJson()->withHeaders(['x-api-key' => $key, 'anthropic-version' => '2023-06-01'])
             ->connectTimeout(2)->timeout(3)->get($this->aiBaseUrl().'/v1/models/'.urlencode(config('services.ai_chat.model')))->throw();
+    }
+
+    private function ensureGroqAvailable(): void
+    {
+        $key = config('services.ai_chat.key');
+        if (! is_string($key) || $key === '') {
+            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Groq key.');
+        }
+        $models = Http::acceptJson()->withToken($key)->connectTimeout(2)->timeout(3)
+            ->get($this->aiBaseUrl().'/models')->throw()->json('data', []);
+        if (! collect($models)->pluck('id')->contains(config('services.ai_chat.model'))) {
+            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Groq model.');
+        }
     }
 
     private function aiBaseUrl(): string

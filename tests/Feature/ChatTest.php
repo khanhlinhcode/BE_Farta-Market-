@@ -264,6 +264,109 @@ it('uses the configured Ollama model and parses its structured reply', function 
             && $request['stream'] === false);
 });
 
+it('uses Groq strict structured output and verifies product facts from the database', function () {
+    $product = createChatProduct([
+        'name' => 'Ổi',
+        'price' => 25000,
+        'inventory' => 20,
+    ]);
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', 'test-key');
+    config()->set('services.ai_chat.model', 'openai/gpt-oss-20b');
+    config()->set('services.ai_chat.base_url', 'https://api.groq.test/openai/v1');
+
+    Http::fake([
+        'https://api.groq.test/openai/v1/chat/completions' => Http::response([
+            'choices' => [[
+                'message' => [
+                    'content' => json_encode(['kind' => 'recommendation', 'product_ids' => [$product->id]]),
+                ],
+            ]],
+        ]),
+    ]);
+
+    $this->postJson('/api/chat', [
+        'message' => 'Bạn có thể tư vấn món ăn sáng phù hợp không?',
+    ])
+        ->assertOk()
+        ->assertExactJson([
+            'action' => ['type' => 'none'],
+            'reply' => "Gợi ý từ danh mục:\nỔi có giá 25.000đ, tồn kho chính xác 20 sản phẩm, trạng thái còn hàng, thuộc danh mục Trái Cây.",
+            'source' => 'ai',
+        ]);
+
+    Http::assertSent(fn ($request) => $request->url() === 'https://api.groq.test/openai/v1/chat/completions'
+        && $request->hasHeader('Authorization', 'Bearer test-key')
+        && $request['model'] === 'openai/gpt-oss-20b'
+        && $request['reasoning_effort'] === 'low'
+        && $request['response_format']['type'] === 'json_schema'
+        && $request['response_format']['json_schema']['strict'] === true
+        && $request['response_format']['json_schema']['schema']['additionalProperties'] === false);
+});
+
+it('keeps catalog answers available without a Groq key', function () {
+    createChatProduct();
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', null);
+    Http::preventStrayRequests();
+
+    $this->postJson('/api/chat', ['message' => 'Cam Tươi còn bao nhiêu?'])
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog')
+        ->assertJsonPath('action.type', 'none');
+
+    $this->postJson('/api/chat', ['message' => 'Gợi ý bữa sáng phù hợp'])
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog_fallback')
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonPath('reply', 'Tư vấn AI đang tạm gián đoạn. Tôi vẫn có thể kiểm tra giá hoặc tồn kho nếu bạn cho biết tên sản phẩm.');
+
+    Http::assertNothingSent();
+});
+
+it('falls back to the catalog when Groq is unavailable or out of quota', function () {
+    createChatProduct();
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', 'test-key');
+    config()->set('services.ai_chat.model', 'openai/gpt-oss-20b');
+    config()->set('services.ai_chat.base_url', 'https://api.groq.test/openai/v1');
+
+    Http::fake([
+        'https://api.groq.test/openai/v1/chat/completions' => Http::response([
+            'error' => ['message' => 'Rate limit reached'],
+        ], 429),
+    ]);
+
+    $this->postJson('/api/chat', [
+        'message' => 'Gợi ý bữa sáng phù hợp',
+    ])
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog_fallback')
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonPath('reply', 'Tư vấn AI đang tạm gián đoạn. Tôi vẫn có thể kiểm tra giá hoặc tồn kho nếu bạn cho biết tên sản phẩm.');
+});
+
+it('reports Groq health only when the configured model is available', function () {
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', 'test-key');
+    config()->set('services.ai_chat.model', 'openai/gpt-oss-20b');
+    config()->set('services.ai_chat.base_url', 'https://api.groq.test/openai/v1');
+
+    Http::fake([
+        'https://api.groq.test/openai/v1/models' => Http::response([
+            'data' => [['id' => 'openai/gpt-oss-20b']],
+        ]),
+    ]);
+
+    $this->getJson('/api/chat/health')
+        ->assertOk()
+        ->assertJson([
+            'status' => 'online',
+            'driver' => 'groq',
+            'model' => 'openai/gpt-oss-20b',
+        ]);
+});
+
 test('chat returns safe fallback on malformed JSON from model', function () {
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'qwen3:4b');

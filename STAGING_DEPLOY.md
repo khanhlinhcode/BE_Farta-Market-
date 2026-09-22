@@ -61,9 +61,21 @@ The Northflank MySQL credentials exposed during setup should be rotated before a
 5. Verify worker database connectivity and consumption of a controlled queue job. Verify a successful scheduler run and inspect failed jobs.
 6. Cloudflare Turnstile is enabled for guest checkout on farta-storefront.pages.dev. Its secret is stored outside Git and injected only into the API; the public site key is included only at storefront build time. A fake token returns 422 without changing inventory. On 21 September 2026, a normal-browser Turnstile challenge completed and a guest COD checkout created a pending order, cleared the cart, and decremented inventory. The QA order was then cancelled and deleted through a database transaction; the final checks showed zero QA orders, zero total orders, and the product inventory restored from 29 to 30. Configure outbound mail and test email verification plus queued mail. The local SMTP entries are placeholders and a safe authentication probe returned SMTP 535, so they were not copied to staging; staging continues to use the log mailer.
 7. VNPay sandbox credentials are restricted to API. CLI smoke tests created a hosted payment URL, loaded the sandbox page, rejected a signed failed payment, accepted a signed successful payment, and verified the final failed/paid order states. Each QA order and user was removed after inventory restoration. Complete one hosted sandbox payment through the normal browser UI before production.
-8. Anthropic credentials and a verified model are restricted to API, and /api/chat/health returns 200. Catalog-only replies still work. A real inference request currently returns the safe 503 fallback because the Anthropic account has insufficient credit; add credit and repeat the grounded recommendation test before enabling AI for users.
+8. The previous Anthropic credentials and verified model are restricted to API. Catalog-only replies work, while a real Anthropic inference request returned 503 because that account lacked credit. The next staging integration is Groq; follow the section below and verify a real recommendation before enabling AI claims in the UI.
 9. The completed post-sync data was exported through the API runtime and restored into an isolated local MySQL database. The drill verified 41 migrations, 13 products, 5 categories, 11 product images, and 0 orders, then deleted the temporary database and dump. Keep the production database private and monitor provider backup, usage, and quota alerts.
 
-Until mail delivery, one hosted VNPay sandbox payment, funded AI inference, and credential rotation are complete, this is a staging/demo environment, not production-ready.
+## Switch chat to Groq
+
+The backend supports Groq with `openai/gpt-oss-20b` and strict JSON output. The storefront requires no rebuild for this backend-only change. After the backend commit is deployed, add these **runtime** variables to an API-restricted Northflank secret group (never to Git or a `VITE_` variable):
+
+    AI_CHAT_DRIVER=groq
+    AI_CHAT_MODEL=openai/gpt-oss-20b
+    AI_CHAT_BASE_URL=https://api.groq.com/openai/v1
+    AI_CHAT_TIMEOUT=15
+    GROQ_API_KEY=<paste-your-key-in-Northflank-only>
+
+Check for conflicting `AI_CHAT_*` variables in the API service and other secret groups; the effective model and base URL must match Groq. Restart/redeploy only `farta-api` after saving the runtime variables. Do not inject the Groq key into the worker or scheduler. Test `GET /api/chat/health` and a recommendation query through the Storefront proxy. The health endpoint checks key/model availability, **not** remaining inference quota. If Groq rejects a request or its quota is exhausted, catalog questions and add-to-cart still use the database, while open-ended recommendations return a safe `catalog_fallback` response. Confirm a successful recommendation returns `source: ai` before claiming that AI inference works. Existing Anthropic settings can stay in their restricted secret group until the Groq smoke test passes, then remove the unused key from the API runtime.
+
+Until mail delivery, one hosted VNPay sandbox payment, a successful Groq inference smoke test, and credential rotation are complete, this is a staging/demo environment, not production-ready.
 
 Provider references: [Northflank CLI](https://northflank.com/docs/v1/application/getting-started/use-the-cli), [Northflank jobs](https://northflank.com/docs/v1/application/run/run-an-image-once-or-on-a-schedule), [Cloudflare Pages Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/), [Cloudflare Pages Functions](https://developers.cloudflare.com/pages/functions/), and [Laravel Sanctum SPA authentication](https://laravel.com/docs/12.x/sanctum#spa-authentication).

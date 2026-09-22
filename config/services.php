@@ -1,5 +1,17 @@
 <?php
 
+$aiChatDriver = env('AI_CHAT_DRIVER', 'groq');
+$aiChatModel = match ($aiChatDriver) {
+    'groq' => 'openai/gpt-oss-20b',
+    'ollama' => 'qwen3:4b',
+    default => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
+};
+$aiChatBaseUrl = match ($aiChatDriver) {
+    'groq' => 'https://api.groq.com/openai/v1',
+    'ollama' => 'http://127.0.0.1:11434',
+    default => env('ANTHROPIC_API_URL', 'https://api.anthropic.com'),
+};
+
 return [
 
     /*
@@ -43,10 +55,10 @@ return [
     ],
 
     'ai_chat' => [
-        'driver' => env('AI_CHAT_DRIVER', 'anthropic'),
-        'key' => env('ANTHROPIC_API_KEY'),
-        'model' => env('AI_CHAT_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-4-6')),
-        'base_url' => env('AI_CHAT_BASE_URL', env('ANTHROPIC_API_URL', 'https://api.anthropic.com')),
+        'driver' => $aiChatDriver,
+        'key' => $aiChatDriver === 'groq' ? env('GROQ_API_KEY') : env('ANTHROPIC_API_KEY'),
+        'model' => env('AI_CHAT_MODEL', $aiChatModel),
+        'base_url' => env('AI_CHAT_BASE_URL', $aiChatBaseUrl),
         'timeout' => (int) env('AI_CHAT_TIMEOUT', 15),
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
     ],

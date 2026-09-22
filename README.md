@@ -60,16 +60,18 @@ curl http://127.0.0.1:11434/api/generate \
   -d '{"model":"qwen3:4b","keep_alive":"30m"}'
 ```
 
-Anthropic configuration:
+Groq configuration for hosted environments:
 
 ```dotenv
-AI_CHAT_DRIVER=anthropic
-AI_CHAT_MODEL=claude-sonnet-4-6
-AI_CHAT_BASE_URL=https://api.anthropic.com
-ANTHROPIC_API_KEY=
+AI_CHAT_DRIVER=groq
+AI_CHAT_MODEL=openai/gpt-oss-20b
+AI_CHAT_BASE_URL=https://api.groq.com/openai/v1
+GROQ_API_KEY=
 ```
 
-The API never exposes the provider key to the frontend.
+Groq responses use a strict JSON schema and are treated only as product ID suggestions. Laravel reloads every suggested product from the database before returning its name, price, or inventory. If Groq is unavailable or out of quota, the endpoint returns a safe catalog fallback instead of exposing a provider error. The API never exposes the provider key to the frontend.
+
+Anthropic remains supported by setting `AI_CHAT_DRIVER=anthropic`, its model and base URL, and `ANTHROPIC_API_KEY`.
 
 ## Local/QA seed accounts
 

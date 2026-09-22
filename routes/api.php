@@ -14,6 +14,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -34,6 +35,12 @@ Route::prefix('')->group(function () {
     Route::post('/login', [AuthController::class, 'userLogin'])
         ->block(35, 1)
         ->middleware('throttle:user-login');
+    Route::post('/forgot-password', [PasswordResetController::class, 'requestLink'])
+        ->block(35, 1)
+        ->middleware('throttle:forgot-password');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+        ->block(35, 1)
+        ->middleware('throttle:reset-password');
     Route::post('/logout', [AuthController::class, 'logout'])
         ->block(35, 1)
         ->middleware('auth:sanctum');

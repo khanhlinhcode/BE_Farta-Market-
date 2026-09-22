@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Http\Request;
@@ -37,6 +38,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        ResetPassword::createUrlUsing(function ($user, string $token): string {
+            $query = http_build_query([
+                'token' => $token,
+                'email' => $user->getEmailForPasswordReset(),
+            ], '', '&', PHP_QUERY_RFC3986);
+
+            return rtrim((string) config('services.frontend.url'), '/').'/reset-password?'.$query;
+        });
+
         Password::defaults(function () {
             $rule = Password::min(8)->mixedCase()->numbers();
 
@@ -91,6 +101,19 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('password-change', function (Request $request) {
             return Limit::perMinute(5)->by('password:'.($request->user()?->id ?? $request->ip()));
+        });
+
+        RateLimiter::for('forgot-password', function (Request $request) {
+            $email = Str::lower(trim((string) $request->input('email')));
+
+            return [
+                Limit::perMinute(5)->by('forgot-password:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perMinute(3)->by('forgot-password:email:'.hash('sha256', $email)),
+            ];
+        });
+
+        RateLimiter::for('reset-password', function (Request $request) {
+            return Limit::perMinute(10)->by('reset-password:ip:'.hash('sha256', (string) $request->ip()));
         });
 
         RateLimiter::for('uploads', function (Request $request) {

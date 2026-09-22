@@ -66,12 +66,15 @@ completed before this rollout; retain it until staging has worked for at least
 status separately in the API runtime.
 
 Before deploying these branches, verify `fartamarket.company` with Resend and
-install exactly the DNS records it provides in the authoritative DNS zone. Check
-SPF and DKIM, add a monitoring DMARC record, and use a mailbox you control for
-the delivery test. Create `farta-mail-runtime` with SMTP variables and restrict
-it to the sending service(s). Keep `MAIL_PASSWORD` in the secret group only. Do
-not enable the SMTP mailer until the domain and credential work; the old staging
-log mailer is deliberately unable to deliver password resets.
+install exactly the DNS records it provides in the authoritative Cloudflare DNS
+zone (Name.com is the registrar). Check SPF and DKIM, add a monitoring DMARC
+record, and use a mailbox you control for the delivery test. The
+`farta-mail-runtime` secret group was created on 22 September 2026 with runtime
+scope restricted to `farta-api`; it currently contains only non-sensitive SMTP
+settings. `MAIL_PASSWORD` and `MAIL_MAILER=smtp` have **not** been set. Keep the
+password in this group only. Do not enable the SMTP mailer until the domain and
+credential work; the old staging log mailer is deliberately unable to deliver
+password resets.
 
 After all local and CI checks pass, deploy the backend and both Pages builds to
 staging, confirm email registration/verification/recovery, then enable

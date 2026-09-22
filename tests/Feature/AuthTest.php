@@ -205,6 +205,8 @@ test('production registration reports that a log mailer cannot deliver verificat
     ])
         ->assertCreated()
         ->assertJsonPath('verification_email_sent', false);
+
+    Notification::assertNothingSent();
 });
 
 test('admin account cannot login through user auth', function () {

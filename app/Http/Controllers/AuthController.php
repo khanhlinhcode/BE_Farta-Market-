@@ -43,14 +43,16 @@ class AuthController extends Controller
 
         $verificationEmailSent = ! $this->usesNonDeliveryMailer();
 
-        try {
-            $user->sendEmailVerificationNotification();
-        } catch (Throwable $exception) {
-            $verificationEmailSent = false;
-            Log::warning('Could not send the registration verification email.', [
-                'user_id_hash' => hash('sha256', (string) $user->id),
-                'error_type' => $exception::class,
-            ]);
+        if ($verificationEmailSent) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (Throwable $exception) {
+                $verificationEmailSent = false;
+                Log::warning('Could not send the registration verification email.', [
+                    'user_id_hash' => hash('sha256', (string) $user->id),
+                    'error_type' => $exception::class,
+                ]);
+            }
         }
 
         return response()->json([

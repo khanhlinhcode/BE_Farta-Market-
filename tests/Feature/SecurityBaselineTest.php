@@ -43,6 +43,25 @@ test('registration is rate limited by source ip', function () {
     ])->assertTooManyRequests();
 });
 
+test('public chat is rate limited per ip and across the deployment', function () {
+    $ip = '192.0.2.30';
+    $this->withServerVariables(['REMOTE_ADDR' => $ip]);
+    RateLimiter::clear('chat:ip:'.hash('sha256', $ip));
+    RateLimiter::clear('chat:global');
+
+    for ($attempt = 0; $attempt < 20; $attempt++) {
+        $this->postJson('/api/chat', ['message' => 'Alo'])->assertOk();
+    }
+    $this->postJson('/api/chat', ['message' => 'Alo'])->assertTooManyRequests();
+
+    RateLimiter::clear('chat:ip:'.hash('sha256', $ip));
+    RateLimiter::clear('chat:global');
+    for ($attempt = 0; $attempt < 60; $attempt++) {
+        RateLimiter::hit('chat:global', 60);
+    }
+    $this->postJson('/api/chat', ['message' => 'Alo'])->assertTooManyRequests();
+});
+
 test('production html responses enforce a restrictive content security policy', function () {
     config(['app.env' => 'production']);
 

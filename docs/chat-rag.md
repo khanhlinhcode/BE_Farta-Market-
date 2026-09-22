@@ -8,6 +8,8 @@ Each product is one source document, built from its current database ID, name, c
 
 The prompt contains only the retrieved source documents. Groq returns strict JSON with `kind` and up to three product IDs. The server rejects extra fields, invalid IDs, IDs outside the retrieved set, and IDs that are no longer active. It then re-queries the database and formats all user-visible product facts itself. Model prose, prices, quantities, discounts, and cart actions are never rendered or authorized. The existing `/api/chat` response contract is unchanged.
 
+The browser may submit chat history for its own display, but recommendation inference forwards only the current question to the provider. The retriever also uses only that question, so sending earlier messages would add private data without improving retrieval. The public chat endpoint is limited to 20 requests per minute per IP and 60 requests per minute across the API deployment; the shared cache must remain available for the global limit to work across instances.
+
 This design is grounded by a structural allowlist and deterministic database facts. It does **not** claim independent semantic verification of arbitrary model-generated prose or visible citations. If the product data itself contains an unsupported marketing claim, this mechanism cannot validate that claim; catalog editors remain responsible for source quality.
 
 ## Evaluation and limits

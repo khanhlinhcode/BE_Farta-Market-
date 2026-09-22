@@ -71,9 +71,8 @@ class ChatController extends Controller
                         'source' => 'catalog',
                     ]);
                 }
-                $messages = array_merge($validated['history'] ?? [], [
-                    ['role' => 'user', 'content' => $validated['message']],
-                ]);
+                // Retrieval uses only the current question; client history adds no evidence and may contain private data.
+                $messages = [['role' => 'user', 'content' => $validated['message']]];
                 try {
                     $response = $this->createReply($messages, $this->buildSystemPrompt($retrieved), $retrieved, $english);
                     $source = 'ai';

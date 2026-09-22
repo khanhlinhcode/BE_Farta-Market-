@@ -114,6 +114,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('verification-resend', function (Request $request) {
             return Limit::perMinute(3)->by('verification:'.($request->user()?->id ?? $request->ip()));
         });
+
+        RateLimiter::for('chat', function (Request $request) {
+            return [
+                Limit::perMinute(20)->by('chat:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perMinute(60)->by('chat:global'),
+            ];
+        });
     }
 
     private function loginAccountHash(Request $request): string

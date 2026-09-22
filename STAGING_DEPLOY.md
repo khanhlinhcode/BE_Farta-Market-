@@ -6,16 +6,18 @@ This runbook describes the staging environment deployed on 20 September 2026. It
 
 | Component | Provider | Resource | Public URL |
 | --- | --- | --- | --- |
-| Laravel API | Northflank, farta-staging (London) | farta-api | https://site--farta-api--45n45kqfhjvs.code.run |
+| Laravel API | Northflank, farta-staging (London) | farta-api | https://api.fartamarket.company |
 | Queue worker | Northflank | farta-worker | Private |
 | Scheduler | Northflank | farta-scheduler cron job, every 5 minutes | Private |
 | MySQL | Northflank | farta-mysql, private networking and TLS | Private |
-| Storefront | Cloudflare Pages | farta-storefront | https://farta-storefront.pages.dev |
-| Admin | Cloudflare Pages | farta-admin | https://farta-admin.pages.dev |
+| Storefront | Cloudflare Pages | farta-storefront | https://fartamarket.company |
+| Admin | Cloudflare Pages | farta-admin | https://admin.fartamarket.company |
 
 Both Pages projects are Direct Upload projects. Their GitHub repositories hold the source code, but pushing Git does not deploy Pages. Build and upload each frontend with Wrangler after review. A Direct Upload project cannot be switched to Git integration in place; create a new Pages project if automatic Git deployment is needed.
 
-Each Pages project uses its own _worker.js and _routes.json to proxy only /api/* and /sanctum/csrf-cookie to the fixed HTTPS API_ORIGIN runtime secret. The browser calls /api on its own Pages hostname, so Sanctum/XSRF cookies stay first-party without a custom domain. The backend remains publicly reachable at its Northflank URL. Set API_ORIGIN on both Pages projects to the full origin without an /api suffix. Never put APP_KEY, DB, Cloudinary, payment, mail, or AI secrets in a VITE_ variable.
+On 22 September 2026, the Cloudflare Pages custom domains became active. In the Cloudflare DNS zone, the proxied apex CNAME points to `farta-storefront.pages.dev` and the proxied `admin` CNAME points to `farta-admin.pages.dev`; the `api` CNAME still points to Northflank. The API runtime allows both custom origins and the legacy Pages origins for CORS/Sanctum, and analytics accepts both storefront origins. The Turnstile widget allows `fartamarket.company` and the legacy storefront hostname. DNS changes required the Cloudflare dashboard because Wrangler's OAuth token lacks DNS record permissions; Pages domain association and Turnstile were configured through the Cloudflare API, and the API runtime through Northflank CLI.
+
+Each Pages project uses its own _worker.js and _routes.json to proxy only /api/* and /sanctum/csrf-cookie to the fixed HTTPS API_ORIGIN runtime secret. The browser calls /api on its own storefront or admin hostname, so Sanctum/XSRF requests stay same-origin. The backend remains publicly reachable at its Northflank URL and at api.fartamarket.company. Set API_ORIGIN on both Pages projects to the full origin without an /api suffix. Never put APP_KEY, DB, Cloudinary, payment, mail, or AI secrets in a VITE_ variable.
 
 ## Inspect with CLI
 
@@ -39,7 +41,7 @@ From the storefront repository:
 
 From the admin repository:
 
-    VITE_API_URL=/api VITE_STOREFRONT_URL=https://farta-storefront.pages.dev npm run build
+    VITE_API_URL=/api VITE_STOREFRONT_URL=https://fartamarket.company npm run build
     npx wrangler pages deploy build --project-name=farta-admin --branch=main
 
 The Pages API_ORIGIN secret is a runtime setting on each project. Verify each main alias after upload, including a deep-link refresh. Changing a build-time VITE_ value requires a rebuild and upload.
@@ -55,11 +57,11 @@ The Northflank MySQL credentials exposed during setup should be rotated before a
 ## Acceptance checks and remaining integrations
 
 1. Confirm API /up, Storefront /, and Admin / return 200 over HTTPS. Storefront /api/products must show 13 products; all 11 image URLs must load from Cloudinary.
-2. On each Pages hostname, request /sanctum/csrf-cookie. Browser cookies must be Secure, SameSite Lax, and scoped to that Pages hostname. A deliberately wrong login should return 401, not 419. Admin login must complete MFA and persist after reload.
+2. On each custom hostname, request /sanctum/csrf-cookie. Browser cookies must be Secure and SameSite Lax; the session cookie uses the shared `fartamarket.company` domain. A deliberately wrong login should return 401, not 419. Admin login must complete MFA and persist after reload.
 3. Repeat product create/upload/replace/delete through Admin; confirm Storefront reflects changes and remove QA data. Inspect Cloudinary cleanup after deletion.
 4. Run backend tests/Pint/Composer validate and audit, and each frontend's unit tests, Playwright E2E, build, and npm audit before pushing. Check git status, GitHub Actions, and deployed revisions.
 5. Verify worker database connectivity and consumption of a controlled queue job. Verify a successful scheduler run and inspect failed jobs.
-6. Cloudflare Turnstile is enabled for guest checkout on farta-storefront.pages.dev. Its secret is stored outside Git and injected only into the API; the public site key is included only at storefront build time. A fake token returns 422 without changing inventory. On 21 September 2026, a normal-browser Turnstile challenge completed and a guest COD checkout created a pending order, cleared the cart, and decremented inventory. The QA order was then cancelled and deleted through a database transaction; the final checks showed zero QA orders, zero total orders, and the product inventory restored from 29 to 30. Configure outbound mail and test email verification plus queued mail. The local SMTP entries are placeholders and a safe authentication probe returned SMTP 535, so they were not copied to staging; staging continues to use the log mailer.
+6. Cloudflare Turnstile is enabled for guest checkout on fartamarket.company and the legacy farta-storefront.pages.dev hostname. Its secret is stored outside Git and injected only into the API; the public site key is included only at storefront build time. A fake token returns 422 without changing inventory. On 21 September 2026, a normal-browser Turnstile challenge completed on the legacy hostname and a guest COD checkout created a pending order, cleared the cart, and decremented inventory. The QA order was then cancelled and deleted through a database transaction; the final checks showed zero QA orders, zero total orders, and the product inventory restored from 29 to 30. Repeat this browser checkout check on the custom domain before production. Configure outbound mail and test email verification plus queued mail. The local SMTP entries are placeholders and a safe authentication probe returned SMTP 535, so they were not copied to staging; staging continues to use the log mailer.
 7. VNPay sandbox credentials are restricted to API. CLI smoke tests created a hosted payment URL, loaded the sandbox page, rejected a signed failed payment, accepted a signed successful payment, and verified the final failed/paid order states. Each QA order and user was removed after inventory restoration. Complete one hosted sandbox payment through the normal browser UI before production.
 8. Groq inference is configured for the API. On 22 September 2026, a real recommendation through the Storefront proxy returned `source: ai`; an unsupported query returned `source: catalog`, and an explicit purchase request still returned `add_to_cart`. Repeat the inference smoke test after changing the key, model, catalog, or backend revision. The recommendation path now uses bounded sparse retrieval; see [docs/chat-rag.md](docs/chat-rag.md).
 9. The completed post-sync data was exported through the API runtime and restored into an isolated local MySQL database. The drill verified 41 migrations, 13 products, 5 categories, 11 product images, and 0 orders, then deleted the temporary database and dump. Keep the production database private and monitor provider backup, usage, and quota alerts.

@@ -333,6 +333,29 @@ it('retrieves only relevant active product evidence before calling Groq', functi
     });
 });
 
+it('does not forward browser chat history to the AI provider', function () {
+    $product = createChatProduct(['sort_description' => 'Phù hợp bữa sáng']);
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', 'test-key');
+    config()->set('services.ai_chat.base_url', 'https://api.groq.test/openai/v1');
+    Http::fake([
+        'https://api.groq.test/openai/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'kind' => 'recommendation', 'product_ids' => [$product->id],
+            ])]]],
+        ]),
+    ]);
+
+    $this->postJson('/api/chat', [
+        'message' => 'Gợi ý bữa sáng',
+        'history' => [['role' => 'user', 'content' => 'Private note: person@example.test']],
+    ])->assertOk()->assertJsonPath('source', 'ai');
+
+    Http::assertSent(fn ($request) => count($request['messages']) === 2
+        && $request['messages'][1] === ['role' => 'user', 'content' => 'Gợi ý bữa sáng']
+        && ! str_contains($request->body(), 'person@example.test'));
+});
+
 it('rejects an active product ID that was not retrieved as evidence', function () {
     createChatProduct(['name' => 'Ổi', 'sort_description' => 'Phù hợp bữa sáng']);
     $unrelated = createChatProduct(['name' => 'Nho tím', 'sort_description' => 'Trái cây ngọt']);

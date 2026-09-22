@@ -4,7 +4,7 @@ The recommendation path now follows retrieval, augmentation, generation, and ver
 
 ## Evidence and answer boundary
 
-Each product is one source document, built from its current database ID, name, category, short description (capped at 300 characters), price, and inventory. The retriever normalizes accents and case, removes common query words, and scores token overlap with weights of 5 for name, 3 for category, and 1 for description. A zero-score query returns no sources and makes no model request. The corpus is read on each request, so product edits and deactivation do not depend on an embedding refresh or background index.
+Each product is one source document, built from its current database ID, name, category, short description (capped at 300 characters), price, and inventory. The retriever normalizes accents and case, removes common query words, and scores token overlap with weights of 5 for name, 3 for category, and 1 for description. Multi-term queries require at least two weighted points, so an incidental match to one description word does not trigger generation. A query without enough evidence returns no sources and makes no model request. The corpus is read on each request, so product edits and deactivation do not depend on an embedding refresh or background index.
 
 The prompt contains only the retrieved source documents. Groq returns strict JSON with `kind` and up to three product IDs. The server rejects extra fields, invalid IDs, IDs outside the retrieved set, and IDs that are no longer active. It then re-queries the database and formats all user-visible product facts itself. Model prose, prices, quantities, discounts, and cart actions are never rendered or authorized. The existing `/api/chat` response contract is unchanged.
 

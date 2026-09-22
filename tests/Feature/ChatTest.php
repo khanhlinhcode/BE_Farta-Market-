@@ -29,7 +29,7 @@ function createChatProduct(array $overrides = []): Product
         'price' => 45000,
         'inventory' => 30,
         'description' => 'Cam tươi ngon',
-        'sort_description' => 'Cam tươi giàu vitamin C, phù hợp bữa sáng',
+        'sort_description' => 'Trái cây phù hợp món ăn sáng và bữa sáng',
         'facebook' => '',
         'twitter' => '',
         'instagram' => '',
@@ -355,6 +355,7 @@ it('rejects an active product ID that was not retrieved as evidence', function (
 
 it('does not call a model when retrieval has no supporting product', function () {
     createChatProduct();
+    createChatProduct(['name' => 'Mẫu QA', 'sort_description' => 'Kiểm thử nghiệp vụ tồn kho']);
     Http::preventStrayRequests();
 
     $this->postJson('/api/chat', ['message' => 'Gợi ý robot vũ trụ'])

@@ -27,6 +27,7 @@ final class ChatProductRetriever
         if ($terms === []) {
             return collect();
         }
+        $minimumScore = count($terms) > 1 ? 2 : 1;
 
         return $products->filter(fn (Product $product) => $product->is_active)
             ->map(function (Product $product) use ($terms) {
@@ -37,7 +38,7 @@ final class ChatProductRetriever
 
                 return ['product' => $product, 'score' => $score];
             })
-            ->filter(fn (array $result) => $result['score'] > 0)
+            ->filter(fn (array $result) => $result['score'] >= $minimumScore)
             ->sort(fn (array $a, array $b) => ($b['score'] <=> $a['score'])
                 ?: ($a['product']->id <=> $b['product']->id))
             ->take(self::MAX_RESULTS)

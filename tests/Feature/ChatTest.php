@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\ChatProductRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -28,7 +29,7 @@ function createChatProduct(array $overrides = []): Product
         'price' => 45000,
         'inventory' => 30,
         'description' => 'Cam tươi ngon',
-        'sort_description' => 'Cam tươi giàu vitamin C',
+        'sort_description' => 'Cam tươi giàu vitamin C, phù hợp bữa sáng',
         'facebook' => '',
         'twitter' => '',
         'instagram' => '',
@@ -304,6 +305,80 @@ it('uses Groq strict structured output and verifies product facts from the datab
         && $request['response_format']['json_schema']['schema']['additionalProperties'] === false);
 });
 
+it('retrieves only relevant active product evidence before calling Groq', function () {
+    $relevant = createChatProduct(['name' => 'Ổi', 'sort_description' => 'Phù hợp bữa sáng']);
+    $unrelated = createChatProduct(['name' => 'Nho tím', 'sort_description' => 'Trái cây ngọt']);
+    createChatProduct(['name' => 'Táo ẩn', 'sort_description' => 'Phù hợp bữa sáng', 'is_active' => false]);
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', 'test-key');
+    config()->set('services.ai_chat.base_url', 'https://api.groq.test/openai/v1');
+    Http::fake([
+        'https://api.groq.test/openai/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'kind' => 'recommendation', 'product_ids' => [$relevant->id],
+            ])]]],
+        ]),
+    ]);
+
+    $this->postJson('/api/chat', ['message' => 'Gợi ý bữa sáng'])
+        ->assertOk()->assertJsonPath('source', 'ai');
+    Http::assertSent(function ($request) use ($relevant, $unrelated) {
+        $system = $request['messages'][0]['content'];
+        preg_match('/<RETRIEVED_PRODUCTS_JSON>(.*?)<\/RETRIEVED_PRODUCTS_JSON>/s', $system, $matches);
+        $sources = json_decode($matches[1] ?? '', true);
+
+        return is_array($sources) && array_column($sources, 'id') === [$relevant->id]
+            && ! str_contains($system, $unrelated->name)
+            && ! str_contains($system, 'Táo ẩn');
+    });
+});
+
+it('rejects an active product ID that was not retrieved as evidence', function () {
+    createChatProduct(['name' => 'Ổi', 'sort_description' => 'Phù hợp bữa sáng']);
+    $unrelated = createChatProduct(['name' => 'Nho tím', 'sort_description' => 'Trái cây ngọt']);
+    config()->set('services.ai_chat.driver', 'groq');
+    config()->set('services.ai_chat.key', 'test-key');
+    config()->set('services.ai_chat.base_url', 'https://api.groq.test/openai/v1');
+    Http::fake([
+        'https://api.groq.test/openai/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'kind' => 'recommendation', 'product_ids' => [$unrelated->id],
+            ])]]],
+        ]),
+    ]);
+
+    $this->postJson('/api/chat', ['message' => 'Gợi ý bữa sáng'])
+        ->assertOk()
+        ->assertJsonPath('source', 'ai')
+        ->assertJsonPath('reply', 'Farta Market chưa có thông tin phù hợp. Bạn hãy hỏi tên sản phẩm, giá hoặc tồn kho.');
+});
+
+it('does not call a model when retrieval has no supporting product', function () {
+    createChatProduct();
+    Http::preventStrayRequests();
+
+    $this->postJson('/api/chat', ['message' => 'Gợi ý robot vũ trụ'])
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog')
+        ->assertJsonPath('reply', 'Farta Market chưa có thông tin phù hợp. Bạn hãy hỏi tên sản phẩm, giá hoặc tồn kho.');
+    Http::assertNothingSent();
+});
+
+it('bounds retrieval and uses current catalog descriptions', function () {
+    $products = collect(range(1, 7))->map(fn ($i) => createChatProduct([
+        'name' => "Món sáng {$i}", 'sort_description' => 'Phù hợp bữa sáng',
+    ]));
+    $retriever = app(ChatProductRetriever::class);
+    $catalog = Product::query()->with('category')->where('is_active', true)->get();
+
+    expect($retriever->retrieve($catalog, 'Gợi ý bữa sáng')->pluck('id')->all())
+        ->toBe($products->take(ChatProductRetriever::MAX_RESULTS)->pluck('id')->all());
+
+    $products->last()->update(['sort_description' => 'Món ăn trưa nóng']);
+    expect($retriever->retrieve(Product::query()->with('category')->get(), 'Gợi ý ăn trưa')->first()->id)
+        ->toBe($products->last()->id);
+});
+
 it('keeps catalog answers available without a Groq key', function () {
     createChatProduct();
     config()->set('services.ai_chat.driver', 'groq');
@@ -368,6 +443,7 @@ it('reports Groq health only when the configured model is available', function (
 });
 
 test('chat returns safe fallback on malformed JSON from model', function () {
+    createChatProduct();
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'qwen3:4b');
     config()->set('services.ai_chat.base_url', 'http://127.0.0.1:11434');
@@ -386,7 +462,7 @@ test('chat returns safe fallback on malformed JSON from model', function () {
         ]),
     ]);
 
-    $this->postJson('/api/chat', ['message' => '###INVALID###'])
+    $this->postJson('/api/chat', ['message' => 'Gợi ý bữa sáng'])
         ->assertOk()
         ->assertJsonStructure(['reply'])
         ->assertJsonPath('reply', 'Farta Market chưa có thông tin phù hợp. Bạn hãy hỏi tên sản phẩm, giá hoặc tồn kho.')
@@ -394,6 +470,7 @@ test('chat returns safe fallback on malformed JSON from model', function () {
 });
 
 it('returns a clear error when the configured Ollama model is unavailable', function () {
+    createChatProduct();
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'missing-model:latest');
     config()->set('services.ai_chat.base_url', 'http://127.0.0.1:11434');
@@ -415,6 +492,7 @@ it('returns a clear error when the configured Ollama model is unavailable', func
 });
 
 it('returns a clear error when the AI provider times out', function () {
+    createChatProduct();
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'qwen3:4b');
     config()->set('services.ai_chat.base_url', 'http://127.0.0.1:11434');

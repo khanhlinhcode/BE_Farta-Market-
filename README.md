@@ -71,6 +71,8 @@ GROQ_API_KEY=
 
 Groq responses use a strict JSON schema and are treated only as product ID suggestions. Laravel reloads every suggested product from the database before returning its name, price, or inventory. If Groq is unavailable or out of quota, the endpoint returns a safe catalog fallback instead of exposing a provider error. The API never exposes the provider key to the frontend.
 
+The recommendation path uses bounded sparse retrieval before generation. Its evidence boundary, evaluation checks, and limitations are documented in [docs/chat-rag.md](docs/chat-rag.md).
+
 Anthropic remains supported by setting `AI_CHAT_DRIVER=anthropic`, its model and base URL, and `ANTHROPIC_API_KEY`.
 
 ## Local/QA seed accounts

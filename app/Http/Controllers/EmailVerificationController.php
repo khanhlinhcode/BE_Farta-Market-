@@ -7,6 +7,8 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class EmailVerificationController extends Controller
 {
@@ -34,7 +36,26 @@ class EmailVerificationController extends Controller
             return response()->json(['email_verified' => true]);
         }
 
-        $request->user()->sendEmailVerificationNotification();
+        if ($this->usesNonDeliveryMailer()) {
+            return response()->json([
+                'message' => 'Dịch vụ email xác minh chưa được cấu hình. Vui lòng thử lại sau.',
+                'email_verified' => false,
+            ], 503);
+        }
+
+        try {
+            $request->user()->sendEmailVerificationNotification();
+        } catch (Throwable $exception) {
+            Log::warning('Could not resend the email verification notification.', [
+                'user_id_hash' => hash('sha256', (string) $request->user()->id),
+                'error_type' => $exception::class,
+            ]);
+
+            return response()->json([
+                'message' => 'Không gửi được email xác minh. Vui lòng thử lại sau.',
+                'email_verified' => false,
+            ], 503);
+        }
 
         return response()->json([
             'message' => 'Đã gửi lại email xác minh.',
@@ -47,5 +68,11 @@ class EmailVerificationController extends Controller
         return response()->json([
             'email_verified' => $request->user()->hasVerifiedEmail(),
         ]);
+    }
+
+    private function usesNonDeliveryMailer(): bool
+    {
+        return config('app.env') === 'production'
+            && in_array(config('mail.default'), ['array', 'log'], true);
     }
 }

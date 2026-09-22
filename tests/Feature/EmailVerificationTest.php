@@ -60,6 +60,20 @@ test('verification resend is rate limited without exposing email', function () {
     Notification::assertSentToTimes($user, VerifyEmail::class, 3);
 });
 
+test('production verification resend fails clearly with a non delivery mailer', function () {
+    config(['app.env' => 'production', 'mail.default' => 'log']);
+    Notification::fake();
+    $user = User::factory()->customer()->unverified()->create();
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/email/verification-notification')
+        ->assertStatus(503)
+        ->assertJsonPath('email_verified', false)
+        ->assertJsonMissingPath('email');
+
+    Notification::assertNothingSent();
+});
+
 test('changing email requires verification again and sends a new notice', function () {
     Notification::fake();
     $user = User::factory()->customer()->create();

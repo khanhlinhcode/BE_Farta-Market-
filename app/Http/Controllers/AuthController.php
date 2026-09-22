@@ -8,7 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -39,10 +41,21 @@ class AuthController extends Controller
             return $user;
         });
 
-        $user->sendEmailVerificationNotification();
+        $verificationEmailSent = ! $this->usesNonDeliveryMailer();
+
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (Throwable $exception) {
+            $verificationEmailSent = false;
+            Log::warning('Could not send the registration verification email.', [
+                'user_id_hash' => hash('sha256', (string) $user->id),
+                'error_type' => $exception::class,
+            ]);
+        }
 
         return response()->json([
             'user' => $user->fresh(),
+            'verification_email_sent' => $verificationEmailSent,
         ], 201);
     }
 
@@ -174,5 +187,11 @@ class AuthController extends Controller
             'password_hash_'.Auth::getDefaultDriver(),
             $user->getAuthPassword()
         );
+    }
+
+    private function usesNonDeliveryMailer(): bool
+    {
+        return config('app.env') === 'production'
+            && in_array(config('mail.default'), ['array', 'log'], true);
     }
 }

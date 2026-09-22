@@ -2,9 +2,11 @@
 
 use App\Models\User;
 use App\Services\AdminMfaService;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use PragmaRX\Google2FA\Google2FA;
@@ -167,6 +169,42 @@ test('customer can register and login through user auth only', function () {
         'email' => 'customer@example.test',
         'password' => 'FartaPass123',
     ])->assertUnauthorized();
+});
+
+test('registration succeeds when the verification email transport is unavailable', function () {
+    $this->mock(Dispatcher::class, function ($mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->andThrow(new RuntimeException('Mail transport unavailable'));
+    });
+
+    $this->withHeaders(spaHeaders())->postJson('/api/register', [
+        'name' => 'Mail Failure Customer',
+        'email' => 'mail-failure@example.test',
+        'password' => 'FartaPass123',
+        'password_confirmation' => 'FartaPass123',
+    ])
+        ->assertCreated()
+        ->assertJsonPath('user.email', 'mail-failure@example.test')
+        ->assertJsonPath('verification_email_sent', false);
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'mail-failure@example.test',
+    ]);
+});
+
+test('production registration reports that a log mailer cannot deliver verification email', function () {
+    config(['app.env' => 'production', 'mail.default' => 'log']);
+    Notification::fake();
+
+    $this->withHeaders(spaHeaders())->postJson('/api/register', [
+        'name' => 'Log Mailer Customer',
+        'email' => 'log-mailer@example.test',
+        'password' => 'FartaPass123',
+        'password_confirmation' => 'FartaPass123',
+    ])
+        ->assertCreated()
+        ->assertJsonPath('verification_email_sent', false);
 });
 
 test('admin account cannot login through user auth', function () {

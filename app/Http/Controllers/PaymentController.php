@@ -11,12 +11,11 @@ use App\Models\SiteSetting;
 use App\Services\AnalyticsSessionService;
 use App\Services\CouponService;
 use App\Services\OrderStatusService;
-use App\Services\VNPayService;
+use App\Services\SepayService;
 use App\Support\AnalyticsIdentifier;
 use App\Support\IdempotencyHasher;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -28,13 +27,13 @@ class PaymentController extends Controller
 {
     public function create(
         Request $request,
-        VNPayService $vnPayService,
+        SepayService $sepayService,
         CouponService $couponService,
         AnalyticsSessionService $analyticsSessions
     ) {
         if ($request->user()->role !== 'customer') {
             return response()->json([
-                'message' => 'Vui lòng đăng nhập bằng tài khoản khách hàng để thanh toán VNPay.',
+                'message' => 'Vui lòng đăng nhập bằng tài khoản khách hàng để thanh toán SePay.',
             ], 403);
         }
 
@@ -46,14 +45,13 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $request->merge([
-            'idempotency_key' => $idempotencyKey,
-        ]);
+        $request->merge(['idempotency_key' => $idempotencyKey]);
 
         $data = $this->validatedCheckoutData($request);
-        $data['payment_method'] = Order::PAYMENT_METHOD_VNPAY;
+        $data['payment_method'] = Order::PAYMENT_METHOD_SEPAY;
         $payloadHash = IdempotencyHasher::hash($data);
         $userId = $request->user()->id;
+        $idempotencyScope = "user:{$userId}";
         $analyticsBinding = $request->hasSession() ? (string) $request->session()->token() : '';
         $analyticsSession = $analyticsBinding !== ''
             ? $analyticsSessions->verify($request->header('X-Analytics-Token'), $analyticsBinding)
@@ -63,20 +61,20 @@ class PaymentController extends Controller
             : null;
 
         try {
-            [$order, $isReplay, $paymentUrl] = Cache::lock(
-                'payment:create:'.hash('sha256', "user:{$userId}|{$data['idempotency_key']}"),
+            [$order, $isReplay] = Cache::lock(
+                'payment:create:'.hash('sha256', $idempotencyScope.'|'.$data['idempotency_key']),
                 15
-            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $vnPayService, $analyticsSessionHash) {
-                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $vnPayService, $analyticsSessionHash) {
+            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $sepayService, $analyticsSessionHash, $idempotencyScope) {
+                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $sepayService, $analyticsSessionHash, $idempotencyScope) {
                     IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
-                        ->where('user_id', $userId)
+                        ->where('scope', $idempotencyScope)
                         ->where('expires_at', '<=', now())
                         ->delete();
 
                     $existingKey = IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
-                        ->where('user_id', $userId)
+                        ->where('scope', $idempotencyScope)
                         ->where('expires_at', '>', now())
                         ->lockForUpdate()
                         ->first();
@@ -93,7 +91,9 @@ class PaymentController extends Controller
                             ->find($existingKey->order_id);
 
                         if ($existingOrder) {
-                            return [$existingOrder, true, $vnPayService->createPaymentUrl($existingOrder)];
+                            $sepayService->paymentDetails($existingOrder);
+
+                            return [$existingOrder, true];
                         }
 
                         $existingKey->delete();
@@ -107,7 +107,7 @@ class PaymentController extends Controller
                         'email' => $data['email'],
                         'note' => $data['note'] ?? null,
                         'status' => Order::STATUS_PENDING,
-                        'payment_method' => Order::PAYMENT_METHOD_VNPAY,
+                        'payment_method' => Order::PAYMENT_METHOD_SEPAY,
                         'payment_status' => Order::PAYMENT_STATUS_PENDING,
                         'idempotency_key' => $data['idempotency_key'],
                     ]);
@@ -180,6 +180,11 @@ class PaymentController extends Controller
                     }
 
                     $this->updateOrderTotals($order, $subtotal, $discountAmount);
+                    $order->forceFill([
+                        'payment_reference' => $sepayService->createPaymentReference($order),
+                        'payment_expires_at' => now()->addMinutes(max(1, (int) config('services.sepay.payment_ttl_minutes', 30))),
+                    ])->save();
+                    $sepayService->paymentDetails($order);
 
                     if ($couponResult) {
                         CouponUsage::create([
@@ -195,17 +200,18 @@ class PaymentController extends Controller
 
                     IdempotencyKey::create([
                         'idempotency_key' => $data['idempotency_key'],
+                        'scope' => $idempotencyScope,
                         'payload_hash' => $payloadHash,
                         'user_id' => $userId,
                         'order_id' => $order->id,
                         'expires_at' => now()->addHours(24),
                     ]);
 
-                    return [$order, false, $vnPayService->createPaymentUrl($order)];
+                    return [$order, false];
                 }, 3);
             });
         } catch (LockTimeoutException $exception) {
-            Log::warning('VNPay idempotency lock timed out.', [
+            Log::warning('SePay idempotency lock timed out.', [
                 'idempotency_key_hash' => hash('sha256', $data['idempotency_key']),
             ]);
 
@@ -213,61 +219,131 @@ class PaymentController extends Controller
                 'message' => 'Thanh toán đang được xử lý. Vui lòng thử lại sau.',
             ], 409);
         } catch (RuntimeException $exception) {
-            if (! str_starts_with($exception->getMessage(), 'VNPAY_')) {
+            if (! str_starts_with($exception->getMessage(), 'SEPAY_')) {
                 throw $exception;
             }
 
-            return response()->json(['message' => 'VNPay hiện không khả dụng. Vui lòng chọn phương thức khác.'], 503);
+            return response()->json(['message' => 'SePay chưa được cấu hình hoặc hiện không khả dụng.'], 503);
         }
 
         $order->load(['details.product.category', 'coupon'])->loadSum('details as total', 'line_total');
 
         return response()->json([
             'data' => $order,
-            'payment_url' => $paymentUrl,
+            'payment' => $sepayService->paymentDetails($order),
             'idempotent_replay' => $isReplay,
         ], $isReplay ? 200 : 201);
     }
 
-    public function vnpayReturn(Request $request, VNPayService $vnPayService): RedirectResponse
+    public function status(Request $request, Order $order, SepayService $sepayService)
     {
-        $params = $request->query();
-        $order = Order::with('details')
-            ->whereKey($params['vnp_TxnRef'] ?? null)
-            ->first();
-        $frontendUrl = $this->frontendUrl();
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
+        abort_unless($order->payment_method === Order::PAYMENT_METHOD_SEPAY, 404);
 
-        if (! $order || $order->payment_method !== Order::PAYMENT_METHOD_VNPAY || ! $vnPayService->verifyReturn($params)) {
-            return redirect()->away($frontendUrl.'/thanh-toan?error=payment_failed');
-        }
+        $order->load(['details.product.category', 'coupon'])->loadSum('details as total', 'line_total');
 
-        $amountMatches = (int) ($params['vnp_Amount'] ?? 0) === (int) round($vnPayService->orderTotal($order) * 100);
-        if (! $amountMatches) {
-            return redirect()->away($frontendUrl.'/thanh-toan?error=invalid_payment_signature');
-        }
+        return response()->json([
+            'data' => $order,
+            'payment' => $sepayService->paymentDetails($order),
+        ]);
+    }
 
-        $isPaid = ($params['vnp_ResponseCode'] ?? '') === '00'
-            && ($params['vnp_TransactionStatus'] ?? '') === '00';
-
-        if ($isPaid) {
-            [$accepted, $changed] = $this->markPaymentPaid($order);
-            if (! $accepted) {
-                return redirect()->away($frontendUrl.'/thanh-toan?error=payment_failed&orderId='.$order->id);
-            }
-            if ($changed) {
-                SendOrderConfirmationEmail::dispatch($order->id)->onQueue('emails');
-            }
-
-            return redirect()->away(
-                $frontendUrl.'/dat-hang-thanh-cong?orderId='.$order->id.'&payment=vnpay'
+    public function webhook(Request $request, SepayService $sepayService)
+    {
+        try {
+            $verified = $sepayService->verifyWebhook(
+                $request->getContent(),
+                $request->header('X-SePay-Timestamp'),
+                $request->header('X-SePay-Signature')
             );
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => 'SePay webhook chưa được cấu hình.'], 503);
         }
 
-        $this->markPaymentFailed($order);
+        if (! $verified) {
+            return response()->json(['message' => 'Chữ ký webhook không hợp lệ.'], 401);
+        }
 
-        return redirect()->away(
-            $frontendUrl.'/thanh-toan?error=payment_failed&orderId='.$order->id
-        );
+        $data = $request->validate([
+            'id' => ['required', 'integer'],
+            'accountNumber' => ['required', 'string', 'max:50'],
+            'transferType' => ['required', Rule::in(['in'])],
+            'transferAmount' => ['required', 'integer', 'min:1'],
+            'code' => ['nullable', 'string', 'max:40'],
+            'content' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $configuredAccount = trim((string) config('services.sepay.account_number'));
+        $incomingAccount = trim($data['accountNumber']);
+        if ($configuredAccount === '' || ! hash_equals($configuredAccount, $incomingAccount)) {
+            return response()->json(['message' => 'Tài khoản nhận tiền không hợp lệ.'], 422);
+        }
+
+        $references = collect([
+            $data['code'] ?? null,
+            ...preg_split('/[^A-Z0-9]+/', strtoupper($data['content']), -1, PREG_SPLIT_NO_EMPTY),
+        ])->filter(fn ($value) => is_string($value) && strlen($value) >= 4 && strlen($value) <= 40)
+            ->map(fn ($value) => strtoupper(trim($value)))
+            ->unique()
+            ->values();
+        $transactionId = trim((string) $data['id']);
+
+        [$order, $changed] = DB::transaction(function () use ($references, $transactionId, $data) {
+            $orders = Order::query()
+                ->whereIn('payment_reference', $references)
+                ->lockForUpdate()
+                ->get();
+
+            if ($orders->count() !== 1) {
+                abort(404, 'Không tìm thấy đơn thanh toán SePay.');
+            }
+
+            $order = $orders->first();
+
+            if ($order->payment_method !== Order::PAYMENT_METHOD_SEPAY) {
+                abort(404, 'Không tìm thấy đơn thanh toán SePay.');
+            }
+
+            if ($order->payment_transaction_id === $transactionId
+                && $order->payment_status === Order::PAYMENT_STATUS_PAID) {
+                return [$order, false];
+            }
+
+            if (Order::query()
+                ->where('payment_transaction_id', $transactionId)
+                ->where('id', '!=', $order->id)
+                ->exists()) {
+                abort(409, 'Giao dịch SePay đã được sử dụng.');
+            }
+
+            if ($order->payment_status !== Order::PAYMENT_STATUS_PENDING
+                || $order->status !== Order::STATUS_PENDING
+                || optional($order->payment_expires_at)->isPast()) {
+                abort(409, 'Đơn hàng không còn chờ thanh toán.');
+            }
+
+            if ((int) $data['transferAmount'] !== (int) round((float) $order->grand_total)) {
+                abort(422, 'Số tiền thanh toán không khớp.');
+            }
+
+            $order->forceFill([
+                'payment_status' => Order::PAYMENT_STATUS_PAID,
+                'payment_transaction_id' => $transactionId,
+            ])->save();
+            app(OrderStatusService::class)->transition(
+                $order,
+                Order::STATUS_CONFIRMED,
+                'SePay payment confirmed.'
+            );
+
+            return [$order->refresh(), true];
+        }, 3);
+
+        if ($changed) {
+            SendOrderConfirmationEmail::dispatch($order->id)->onQueue('emails');
+        }
+
+        return response()->json(['success' => true]);
     }
 
     private function validatedCheckoutData(Request $request): array
@@ -308,41 +384,6 @@ class PaymentController extends Controller
         return $data;
     }
 
-    private function markPaymentFailed(Order $order): void
-    {
-        DB::transaction(function () use ($order) {
-            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
-            if ($lockedOrder->payment_status !== Order::PAYMENT_STATUS_PENDING) {
-                return;
-            }
-            if ($lockedOrder->status === Order::STATUS_PENDING) {
-                $lockedOrder = app(OrderStatusService::class)->transition(
-                    $lockedOrder, Order::STATUS_CANCELLED, 'VNPay payment failed or was cancelled.'
-                );
-            }
-            if ($lockedOrder->status === Order::STATUS_CANCELLED) {
-                $lockedOrder->update(['payment_status' => Order::PAYMENT_STATUS_FAILED]);
-            }
-        }, 3);
-    }
-
-    private function markPaymentPaid(Order $order): array
-    {
-        return DB::transaction(function () use ($order) {
-            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
-            if ($lockedOrder->payment_status === Order::PAYMENT_STATUS_PAID) {
-                return [$lockedOrder->status !== Order::STATUS_CANCELLED, false];
-            }
-            if ($lockedOrder->payment_status !== Order::PAYMENT_STATUS_PENDING || $lockedOrder->status !== Order::STATUS_PENDING) {
-                return [false, false];
-            }
-            $lockedOrder->update(['payment_status' => Order::PAYMENT_STATUS_PAID]);
-            app(OrderStatusService::class)->transition($lockedOrder, Order::STATUS_CONFIRMED, 'VNPay payment confirmed.');
-
-            return [true, true];
-        }, 3);
-    }
-
     private function updateOrderTotals(Order $order, float $subtotal, float $discountAmount = 0): void
     {
         $settings = SiteSetting::current();
@@ -357,27 +398,5 @@ class PaymentController extends Controller
             'discount_amount' => $discountAmount,
             'grand_total' => $subtotal + $shippingFee - $discountAmount,
         ])->save();
-    }
-
-    private function frontendUrl(): string
-    {
-        $frontendUrl = (string) config('services.vnpay.frontend_url', '');
-
-        if ($frontendUrl === '') {
-            $frontendUrl = app()->environment('production') ? '' : 'http://127.0.0.1:5173';
-        }
-
-        $host = parse_url($frontendUrl, PHP_URL_HOST);
-        $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '0.0.0.0'], true);
-
-        if (app()->environment('production') && ($frontendUrl === '' || $isLocalhost)) {
-            Log::critical('FRONTEND_URL is not configured for production VNPay redirect.', [
-                'frontend_url' => $frontendUrl,
-            ]);
-
-            abort(500, 'FRONTEND_URL chưa được cấu hình cho production.');
-        }
-
-        return rtrim($frontendUrl, '/');
     }
 }

@@ -63,13 +63,15 @@ return [
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
     ],
 
-    'vnpay' => [
-        'tmn_code' => env('VNPAY_TMN_CODE'),
-        'hash_secret' => env('VNPAY_HASH_SECRET'),
-        'url' => env('VNPAY_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
-        'return_url' => env('VNPAY_RETURN_URL')
-            ?: rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/').'/api/payment/vnpay-return',
-        'frontend_url' => env('FRONTEND_URL'),
+    'sepay' => [
+        'bank_code' => env('SEPAY_BANK_CODE'),
+        'account_number' => env('SEPAY_ACCOUNT_NUMBER'),
+        'account_holder' => env('SEPAY_ACCOUNT_HOLDER'),
+        'webhook_secret' => env('SEPAY_WEBHOOK_SECRET'),
+        'payment_prefix' => env('SEPAY_PAYMENT_PREFIX', 'FM'),
+        'payment_ttl_minutes' => (int) env('SEPAY_PAYMENT_TTL_MINUTES', 30),
+        'webhook_tolerance_seconds' => (int) env('SEPAY_WEBHOOK_TOLERANCE_SECONDS', 300),
+        'qr_base_url' => env('SEPAY_QR_BASE_URL', 'https://vietqr.app/img'),
     ],
 
     'frontend' => [

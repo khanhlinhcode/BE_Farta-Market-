@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -37,6 +40,43 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $passwordResetUrl = function ($user, string $token): string {
+            $query = http_build_query([
+                'token' => $token,
+                'email' => $user->getEmailForPasswordReset(),
+            ], '', '&', PHP_QUERY_RFC3986);
+
+            return rtrim((string) config('services.frontend.url'), '/').'/reset-password?'.$query;
+        };
+
+        ResetPassword::createUrlUsing($passwordResetUrl);
+
+        VerifyEmail::toMailUsing(function ($notifiable, string $verificationUrl): MailMessage {
+            return $this->brandedAuthMail(
+                subject: 'Xác minh email Farta Market',
+                preheader: 'Hoàn tất xác minh để bảo vệ tài khoản Farta Market của bạn.',
+                title: 'Xác minh địa chỉ email',
+                intro: 'Chỉ còn một bước để hoàn tất tài khoản. Hãy xác minh email để sử dụng đầy đủ tính năng thanh toán, ưu đãi và đánh giá sản phẩm.',
+                actionText: 'Xác minh email',
+                actionUrl: $verificationUrl,
+                notice: 'Liên kết này sẽ hết hạn sau '.config('auth.verification.expire', 60).' phút.',
+                securityNote: 'Nếu bạn không tạo tài khoản Farta Market, hãy bỏ qua email này.'
+            );
+        });
+
+        ResetPassword::toMailUsing(function ($notifiable, string $token) use ($passwordResetUrl): MailMessage {
+            return $this->brandedAuthMail(
+                subject: 'Đặt lại mật khẩu Farta Market',
+                preheader: 'Sử dụng liên kết bảo mật để đặt lại mật khẩu Farta Market.',
+                title: 'Đặt lại mật khẩu',
+                intro: 'Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Hãy dùng nút bên dưới để tạo mật khẩu mới.',
+                actionText: 'Đặt lại mật khẩu',
+                actionUrl: $passwordResetUrl($notifiable, $token),
+                notice: 'Liên kết này sẽ hết hạn sau '.config('auth.passwords.'.config('auth.defaults.passwords').'.expire').' phút và chỉ sử dụng được một lần.',
+                securityNote: 'Nếu bạn không yêu cầu đặt lại mật khẩu, tài khoản vẫn an toàn và bạn không cần thực hiện thêm thao tác nào.'
+            );
+        });
+
         Password::defaults(function () {
             $rule = Password::min(8)->mixedCase()->numbers();
 
@@ -93,6 +133,19 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('password:'.($request->user()?->id ?? $request->ip()));
         });
 
+        RateLimiter::for('forgot-password', function (Request $request) {
+            $email = Str::lower(trim((string) $request->input('email')));
+
+            return [
+                Limit::perMinute(5)->by('forgot-password:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perMinute(3)->by('forgot-password:email:'.hash('sha256', $email)),
+            ];
+        });
+
+        RateLimiter::for('reset-password', function (Request $request) {
+            return Limit::perMinute(10)->by('reset-password:ip:'.hash('sha256', (string) $request->ip()));
+        });
+
         RateLimiter::for('uploads', function (Request $request) {
             return Limit::perMinute(10)->by('upload:'.($request->user()?->id ?? $request->ip()));
         });
@@ -121,6 +174,33 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(60)->by('chat:global'),
             ];
         });
+    }
+
+    private function brandedAuthMail(
+        string $subject,
+        string $preheader,
+        string $title,
+        string $intro,
+        string $actionText,
+        string $actionUrl,
+        string $notice,
+        string $securityNote
+    ): MailMessage {
+        $data = compact(
+            'preheader',
+            'title',
+            'intro',
+            'actionText',
+            'actionUrl',
+            'notice',
+            'securityNote'
+        );
+
+        return (new MailMessage)
+            ->subject($subject)
+            ->action($actionText, $actionUrl)
+            ->view('emails.auth-notification', $data)
+            ->text('emails.auth-notification-text', $data);
     }
 
     private function loginAccountHash(Request $request): string

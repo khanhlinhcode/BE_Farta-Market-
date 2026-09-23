@@ -12,7 +12,7 @@ class ExpirePendingPayments extends Command
 {
     protected $signature = 'payments:expire-pending {--minutes=30 : Pending payment age in minutes before expiration}';
 
-    protected $description = 'Expire stale VNPay pending orders and restore reserved inventory';
+    protected $description = 'Expire stale online payment orders and restore reserved inventory';
 
     public function handle(): int
     {
@@ -22,7 +22,7 @@ class ExpirePendingPayments extends Command
 
         Order::query()
             ->where('status', Order::STATUS_PENDING)
-            ->where('payment_method', Order::PAYMENT_METHOD_VNPAY)
+            ->whereIn('payment_method', [Order::PAYMENT_METHOD_SEPAY, Order::PAYMENT_METHOD_VNPAY])
             ->where('payment_status', Order::PAYMENT_STATUS_PENDING)
             ->where('created_at', '<', $cutoff)
             ->orderBy('id')
@@ -33,7 +33,7 @@ class ExpirePendingPayments extends Command
                 }
             });
 
-        $this->info("Expired {$expiredCount} pending VNPay order(s).");
+        $this->info("Expired {$expiredCount} pending online payment order(s).");
 
         return self::SUCCESS;
     }
@@ -49,7 +49,7 @@ class ExpirePendingPayments extends Command
             if (
                 ! $order
                 || $order->status !== Order::STATUS_PENDING
-                || $order->payment_method !== Order::PAYMENT_METHOD_VNPAY
+                || ! in_array($order->payment_method, [Order::PAYMENT_METHOD_SEPAY, Order::PAYMENT_METHOD_VNPAY], true)
                 || $order->payment_status !== Order::PAYMENT_STATUS_PENDING
                 || ! $order->created_at
                 || $order->created_at->greaterThanOrEqualTo($cutoff)
@@ -74,7 +74,7 @@ class ExpirePendingPayments extends Command
                 'from_status' => $order->status,
                 'to_status' => Order::STATUS_CANCELLED,
                 'changed_by' => null,
-                'note' => 'Pending VNPay payment expired.',
+                'note' => 'Pending online payment expired.',
             ]);
 
             $order->update([

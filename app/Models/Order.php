@@ -37,6 +37,8 @@ class Order extends Model
 
     public const PAYMENT_METHOD_VNPAY = 'vnpay';
 
+    public const PAYMENT_METHOD_SEPAY = 'sepay';
+
     public const PAYMENT_STATUS_PENDING = 'pending';
 
     public const PAYMENT_STATUS_PAID = 'paid';
@@ -62,6 +64,9 @@ class Order extends Model
         'status',
         'payment_method',
         'payment_status',
+        'payment_reference',
+        'payment_expires_at',
+        'payment_transaction_id',
         'coupon_id',
         'discount_amount',
         'subtotal',
@@ -78,6 +83,7 @@ class Order extends Model
         'idempotency_key',
         'analytics_session_hash',
         'checkout_ip_hash',
+        'payment_transaction_id',
     ];
 
     protected $casts = [
@@ -88,6 +94,7 @@ class Order extends Model
         'shipping_fee' => 'decimal:2',
         'grand_total' => 'decimal:2',
         'guest_expires_at' => 'datetime',
+        'payment_expires_at' => 'datetime',
     ];
 
     public function details(): HasMany

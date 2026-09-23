@@ -14,6 +14,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -34,6 +35,12 @@ Route::prefix('')->group(function () {
     Route::post('/login', [AuthController::class, 'userLogin'])
         ->block(35, 1)
         ->middleware('throttle:user-login');
+    Route::post('/forgot-password', [PasswordResetController::class, 'requestLink'])
+        ->block(35, 1)
+        ->middleware('throttle:forgot-password');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+        ->block(35, 1)
+        ->middleware('throttle:reset-password');
     Route::post('/logout', [AuthController::class, 'logout'])
         ->block(35, 1)
         ->middleware('auth:sanctum');
@@ -51,7 +58,8 @@ Route::prefix('')->group(function () {
     Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
     Route::post('/order', [OrderController::class, 'store'])
         ->middleware('throttle:guest-orders');
-    Route::get('/payment/vnpay-return', [PaymentController::class, 'vnpayReturn']);
+    Route::post('/payment/sepay/webhook', [PaymentController::class, 'webhook'])
+        ->middleware('throttle:120,1');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
@@ -72,7 +80,10 @@ Route::prefix('')->group(function () {
         Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
             ->middleware('throttle:verification-resend');
         Route::post('/coupons/validate', [CouponController::class, 'validateCoupon'])->middleware('verified');
-        Route::post('/payment/create', [PaymentController::class, 'create'])->middleware('verified');
+        Route::post('/payment/create', [PaymentController::class, 'create'])
+            ->middleware(['verified', 'throttle:10,1']);
+        Route::get('/payment/{order}/status', [PaymentController::class, 'status'])
+            ->middleware(['verified', 'throttle:60,1']);
         Route::get('/my-orders', [OrderController::class, 'myOrders']);
         Route::get('/my-orders/{order}', [OrderController::class, 'myOrder']);
         Route::patch('/my-orders/{order}/cancel', [OrderController::class, 'cancelMyOrder']);
@@ -83,7 +94,6 @@ Route::prefix('')->group(function () {
         Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->middleware('verified');
     });
     Route::post('/chat', [ChatController::class, 'send'])
-        ->block(35, 1)
         ->middleware('throttle:chat');
     Route::get('/chat/health', [ChatController::class, 'health'])
         ->middleware('throttle:30,1');

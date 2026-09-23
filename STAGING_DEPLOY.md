@@ -56,6 +56,52 @@ The Northflank MySQL credentials exposed during setup should be rotated before a
 
 ## Acceptance checks and remaining integrations
 
+### Authentication/mail hardening rollout (22 September 2026)
+
+The `security/auth-mail-hardening-20260922` branches contain password recovery,
+session encryption preparation, and HTTP header changes. They are **not** the
+currently deployed revisions. Northflank backup `auth-hardening-20260922`
+completed before this rollout; retain it until staging has worked for at least
+24 hours. The local 41 migrations are all applied; check the staging migration
+status separately in the API runtime.
+
+Before deploying these branches, verify `fartamarket.company` with Resend and
+install exactly the DNS records it provides in the authoritative Cloudflare DNS
+zone (Name.com is the registrar). Check SPF and DKIM, add a monitoring DMARC
+record, and use a mailbox you control for the delivery test. The
+`farta-mail-runtime` secret group was created on 22 September 2026 with runtime
+scope restricted to `farta-api`; it currently contains only non-sensitive SMTP
+settings. `MAIL_PASSWORD` and `MAIL_MAILER=smtp` have **not** been set. Keep the
+password in this group only. Do not enable the SMTP mailer until the domain and
+credential work; the old staging log mailer is deliberately unable to deliver
+password resets.
+
+After all local and CI checks pass, deploy the backend and both Pages builds to
+staging, confirm email registration/verification/recovery, then enable
+`SESSION_ENCRYPT=true` with database sessions, secure/HTTP-only/Lax cookies and
+the narrowest cookie domain compatible with the same-origin proxy. Expire old
+sessions and verify customer login/logout and admin MFA again. Confirm HSTS on
+HTML, assets, proxied API responses, and `/up`; the two frontends did not return
+HSTS before this deployment. Do not merge to main or claim production readiness
+until runtime checks pass.
+
+Rotate exposed credentials one provider at a time: create replacement, update
+only the restricted service secret group, redeploy and verify, then revoke the
+old credential. Rotate `APP_KEY` last, simultaneously for API, worker and
+scheduler. Put the former key in `APP_PREVIOUS_KEYS` temporarily, run
+`php artisan security:reencrypt-user-secrets --dry-run`, then the write command;
+verify admin MFA and one-time recovery codes. Remove the previous key only
+after the command and MFA checks succeed, redeploy all three workloads, and
+expire prior sessions. On a failure, restore the previous key and stop the
+rollout; never output any key or plaintext MFA data. The re-encryption command
+rolls back its writes on failure.
+
+The free Northflank plan previously rejected in-place MySQL credential rotation.
+If that remains true, prepare a fresh private/TLS addon and test a restore before
+switching connections; do not revoke the working credential first. Run an
+isolated restore drill for the new backup before destructive changes. Record
+backup/deployment IDs and rotation timestamps without storing credential values.
+
 1. Confirm API /up, Storefront /, and Admin / return 200 over HTTPS. Storefront /api/products must show 13 products; all 11 image URLs must load from Cloudinary.
 2. On each custom hostname, request /sanctum/csrf-cookie. Browser cookies must be Secure and SameSite Lax; the session cookie uses the shared `fartamarket.company` domain. A deliberately wrong login should return 401, not 419. Admin login must complete MFA and persist after reload.
 3. Repeat product create/upload/replace/delete through Admin; confirm Storefront reflects changes and remove QA data. Inspect Cloudinary cleanup after deletion.

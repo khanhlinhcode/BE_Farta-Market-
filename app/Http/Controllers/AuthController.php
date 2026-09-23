@@ -41,17 +41,7 @@ class AuthController extends Controller
             return $user;
         });
 
-        $verificationEmailSent = ! $this->usesNonDeliveryMailer();
-
-        try {
-            $user->sendEmailVerificationNotification();
-        } catch (Throwable $exception) {
-            $verificationEmailSent = false;
-            Log::warning('Could not send the registration verification email.', [
-                'user_id_hash' => hash('sha256', (string) $user->id),
-                'error_type' => $exception::class,
-            ]);
-        }
+        $verificationEmailSent = $this->sendVerificationEmail($user, 'registration');
 
         return response()->json([
             'user' => $user->fresh(),
@@ -91,9 +81,12 @@ class AuthController extends Controller
 
         $this->bindSessionToPassword($request, $user);
 
-        return response()->json([
-            'user' => $user,
-        ]);
+        $response = ['user' => $user];
+        if (! $user->hasVerifiedEmail()) {
+            $response['verification_email_sent'] = $this->sendVerificationEmail($user, 'login');
+        }
+
+        return response()->json($response);
     }
 
     public function login(Request $request)
@@ -187,6 +180,27 @@ class AuthController extends Controller
             'password_hash_'.Auth::getDefaultDriver(),
             $user->getAuthPassword()
         );
+    }
+
+    private function sendVerificationEmail(User $user, string $context): bool
+    {
+        if ($this->usesNonDeliveryMailer()) {
+            return false;
+        }
+
+        try {
+            $user->sendEmailVerificationNotification();
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::warning('Could not send the email verification notification.', [
+                'context' => $context,
+                'user_id_hash' => hash('sha256', (string) $user->id),
+                'error_type' => $exception::class,
+            ]);
+
+            return false;
+        }
     }
 
     private function usesNonDeliveryMailer(): bool

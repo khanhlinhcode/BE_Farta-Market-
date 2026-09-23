@@ -194,6 +194,27 @@ test('replaying an idempotency key returns the same order without decrementing s
     expect($product->fresh()->inventory)->toBe(8);
 });
 
+test('guest idempotency keys have a database enforced scope', function () {
+    $product = createOrderProduct();
+    $key = 'order-guest-scope-test-0001';
+
+    $this->withHeader('X-Idempotency-Key', $key)
+        ->postJson('/api/order', orderPayload($product))
+        ->assertCreated();
+
+    $storedKey = IdempotencyKey::query()->sole();
+
+    expect($storedKey->scope)->toBe('guest');
+
+    expect(fn () => IdempotencyKey::query()->create([
+        'idempotency_key' => $key,
+        'scope' => 'guest',
+        'payload_hash' => str_repeat('a', 64),
+        'order_id' => $storedKey->order_id,
+        'expires_at' => now()->addHour(),
+    ]))->toThrow(\Illuminate\Database\QueryException::class);
+});
+
 test('reusing an idempotency key with a different payload returns conflict', function () {
     $product = createOrderProduct();
     $headers = ['X-Idempotency-Key' => 'order-conflict-test-0001'];

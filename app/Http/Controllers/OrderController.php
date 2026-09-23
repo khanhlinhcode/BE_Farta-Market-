@@ -31,7 +31,11 @@ class OrderController extends Controller
     {
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(Order::STATUSES)],
-            'payment_method' => ['nullable', Rule::in([Order::PAYMENT_METHOD_COD, Order::PAYMENT_METHOD_VNPAY])],
+            'payment_method' => ['nullable', Rule::in([
+                Order::PAYMENT_METHOD_COD,
+                Order::PAYMENT_METHOD_SEPAY,
+                Order::PAYMENT_METHOD_VNPAY,
+            ])],
             'payment_status' => ['nullable', Rule::in([
                 Order::PAYMENT_STATUS_PENDING,
                 Order::PAYMENT_STATUS_PAID,
@@ -76,7 +80,11 @@ class OrderController extends Controller
     {
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(Order::STATUSES)],
-            'payment_method' => ['nullable', Rule::in([Order::PAYMENT_METHOD_COD, Order::PAYMENT_METHOD_VNPAY])],
+            'payment_method' => ['nullable', Rule::in([
+                Order::PAYMENT_METHOD_COD,
+                Order::PAYMENT_METHOD_SEPAY,
+                Order::PAYMENT_METHOD_VNPAY,
+            ])],
             'payment_status' => ['nullable', Rule::in([
                 Order::PAYMENT_STATUS_PENDING,
                 Order::PAYMENT_STATUS_PAID,
@@ -264,17 +272,17 @@ class OrderController extends Controller
             [$order, $isReplay] = Cache::lock(
                 'order:create:'.hash('sha256', $idempotencyScope.'|'.$data['idempotency_key']),
                 15
-            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash) {
-                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash) {
+            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash, $idempotencyScope) {
+                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash, $idempotencyScope) {
                     IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
-                        ->where('user_id', $userId)
+                        ->where('scope', $idempotencyScope)
                         ->where('expires_at', '<=', now())
                         ->delete();
 
                     $existingKey = IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
-                        ->where('user_id', $userId)
+                        ->where('scope', $idempotencyScope)
                         ->where('expires_at', '>', now())
                         ->lockForUpdate()
                         ->first();
@@ -397,6 +405,7 @@ class OrderController extends Controller
 
                     IdempotencyKey::create([
                         'idempotency_key' => $data['idempotency_key'],
+                        'scope' => $idempotencyScope,
                         'payload_hash' => $payloadHash,
                         'user_id' => $userId,
                         'order_id' => $order->id,

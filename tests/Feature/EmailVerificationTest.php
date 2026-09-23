@@ -60,6 +60,27 @@ test('verification resend is rate limited without exposing email', function () {
     Notification::assertSentToTimes($user, VerifyEmail::class, 3);
 });
 
+test('verification notification uses the branded template and official https api url', function () {
+    config(['app.url' => 'https://api.fartamarket.company']);
+    URL::forceRootUrl('https://api.fartamarket.company');
+    URL::forceScheme('https');
+    Notification::fake();
+    $user = User::factory()->customer()->unverified()->create();
+
+    $user->sendEmailVerificationNotification();
+
+    Notification::assertSentTo($user, VerifyEmail::class, function (VerifyEmail $notification) use ($user): bool {
+        $mail = $notification->toMail($user);
+        $url = parse_url((string) $mail->actionUrl);
+
+        return $mail->subject === 'Xác minh email Farta Market'
+            && ($mail->view['html'] ?? null) === 'emails.auth-notification'
+            && ($mail->view['text'] ?? null) === 'emails.auth-notification-text'
+            && ($url['scheme'] ?? null) === 'https'
+            && ($url['host'] ?? null) === 'api.fartamarket.company';
+    });
+});
+
 test('production verification resend fails clearly with a non delivery mailer', function () {
     config(['app.env' => 'production', 'mail.default' => 'log']);
     Notification::fake();

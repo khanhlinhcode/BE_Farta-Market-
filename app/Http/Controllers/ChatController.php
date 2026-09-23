@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Anthropic\Client;
-use Anthropic\Messages\TextBlock;
+use App\Enums\ChatIntent;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\Chat\ChatCartTool;
+use App\Services\Chat\ChatIntentRouter;
+use App\Services\Chat\ChatOrderTool;
+use App\Services\Chat\ChatProductTool;
+use App\Services\Chat\ChatProvider;
 use App\Services\ChatProductRetriever;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -13,7 +17,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -25,22 +28,53 @@ class ChatController extends Controller
 
     private const CONTEXT_SECONDS = 300;
 
-    public function __construct(private readonly ChatProductRetriever $retriever) {}
+    public function __construct(
+        private readonly ChatProductRetriever $retriever,
+        private readonly ChatIntentRouter $router,
+        private readonly ChatProductTool $productTool,
+        private readonly ChatCartTool $cartTool,
+        private readonly ChatOrderTool $orderTool,
+        private readonly ChatProvider $provider,
+    ) {}
 
     public function send(Request $request): JsonResponse
     {
+        $startedAt = microtime(true);
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:500'],
             'history' => ['nullable', 'array', 'max:10'],
             'history.*' => ['array:role,content'],
             'history.*.role' => ['required', 'string', 'in:user,assistant'],
             'history.*.content' => ['required', 'string', 'max:2000'],
+            'cart' => ['nullable', 'array', 'max:'.ChatCartTool::MAX_ITEMS],
+            'cart.*' => ['array:product_id,quantity'],
+            'cart.*.product_id' => ['required', 'integer', 'min:1', 'distinct'],
+            'cart.*.quantity' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
         $english = $request->header('Accept-Language')
             ? $request->getPreferredLanguage(['vi', 'en']) === 'en'
             : $this->isEnglish($this->normalize($validated['message']));
+        $route = $this->router->route($validated['message']);
+
+        if (! config('services.ai_chat.enabled', true)) {
+            return response()->json([
+                'message' => $english ? 'The assistant is currently disabled.' : 'Trợ lý hiện đang tạm tắt.',
+                'code' => 'AI_CHAT_DISABLED',
+            ], 503);
+        }
 
         try {
+            if ($route['intent'] === ChatIntent::OrderQuery) {
+                return $this->orderResponse($request, $validated['message'], $route, $english, $startedAt);
+            }
+            if ($route['intent'] === ChatIntent::CartQuery) {
+                return $this->cartResponse($request, $validated['cart'] ?? [], $route, $english, $startedAt);
+            }
+            if ($route['intent'] === ChatIntent::ProductSearch
+                && collect($route['filters'])->contains(fn ($value) => $value !== null)) {
+                return $this->filteredProductResponse($request, $route, $english, $startedAt);
+            }
+
             [$products, $categories] = $this->catalog();
             $response = $request->hasSession()
                 ? Cache::lock($this->contextLockKey($request), 10)->block(
@@ -63,13 +97,19 @@ class ChatController extends Controller
             $source = 'catalog';
 
             if ($response === null) {
-                $retrieved = $this->retriever->retrieve($products, $validated['message']);
+                $retrievalStartedAt = microtime(true);
+                $retrieved = $this->productTool->search([
+                    'query' => $validated['message'],
+                    ...$route['filters'],
+                    'limit' => ChatProductTool::MAX_OUTPUT,
+                ]);
+                $retrievalMs = (int) round((microtime(true) - $retrievalStartedAt) * 1000);
                 if ($retrieved->isEmpty()) {
-                    return response()->json([
+                    return $this->respond($request, [
                         'action' => ['type' => 'none'],
                         ...$this->fallback($english),
                         'source' => 'catalog',
-                    ]);
+                    ], $route, $startedAt, $retrievalMs);
                 }
                 // Retrieval uses only the current question; client history adds no evidence and may contain private data.
                 $messages = [['role' => 'user', 'content' => $validated['message']]];
@@ -77,10 +117,8 @@ class ChatController extends Controller
                     $response = $this->createReply($messages, $this->buildSystemPrompt($retrieved), $retrieved, $english);
                     $source = 'ai';
                 } catch (RuntimeException|RequestException|ConnectionException $exception) {
-                    if (config('services.ai_chat.driver') !== 'groq') {
-                        throw $exception;
-                    }
-                    Log::warning('Groq chat fell back to the catalog.', [
+                    Log::warning('AI chat provider fell back to the catalog.', [
+                        'driver' => config('services.ai_chat.driver'),
                         'exception' => $exception::class,
                     ]);
                     $response = [
@@ -99,11 +137,11 @@ class ChatController extends Controller
                 $response = $this->fallback($english);
             }
 
-            return response()->json([
+            return $this->respond($request, [
                 'action' => ['type' => 'none'],
                 ...$response,
                 'source' => $source,
-            ]);
+            ], $route, $startedAt, $retrievalMs ?? 0);
         } catch (Throwable $exception) {
             Log::warning('AI chat request failed.', [
                 'driver' => config('services.ai_chat.driver'),
@@ -123,27 +161,205 @@ class ChatController extends Controller
     public function health(): JsonResponse
     {
         try {
-            match (config('services.ai_chat.driver')) {
-                'ollama' => $this->ensureOllamaModelAvailable(),
-                'anthropic' => $this->ensureAnthropicAvailable(),
-                'groq' => $this->ensureGroqAvailable(),
-                default => throw new RuntimeException('AI_MODEL_UNAVAILABLE:Invalid driver.'),
-            };
+            $this->provider->ensureAvailable();
 
             return response()->json([
                 'status' => 'online',
                 'driver' => config('services.ai_chat.driver'),
                 'model' => config('services.ai_chat.model'),
+                'capabilities' => $this->provider->capabilities(),
             ]);
         } catch (Throwable) {
             return response()->json(['status' => 'offline'], 503);
         }
     }
 
+    /** @param array<string, mixed> $route */
+    private function filteredProductResponse(
+        Request $request,
+        array $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        $retrievalStartedAt = microtime(true);
+        $products = $this->productTool->search([
+            'query' => $route['query'],
+            ...$route['filters'],
+            'limit' => ChatProductTool::MAX_OUTPUT,
+        ]);
+        $retrievalMs = (int) round((microtime(true) - $retrievalStartedAt) * 1000);
+
+        if ($products->isEmpty()) {
+            return $this->respond($request, [
+                ...$this->fallback($english),
+                'source' => 'catalog',
+            ], $route, $startedAt, $retrievalMs);
+        }
+
+        $names = $products->pluck('name')->join(', ');
+
+        return $this->respond($request, [
+            'reply' => $english ? "Matching catalog products: {$names}." : "Sản phẩm phù hợp trong danh mục: {$names}.",
+            'products' => $products->map(fn (Product $product) => $this->productTool->card($product))->all(),
+            'source' => 'catalog',
+        ], $route, $startedAt, $retrievalMs);
+    }
+
+    /** @param array<string, mixed> $route */
+    private function cartResponse(
+        Request $request,
+        array $cart,
+        array $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        $context = $this->cartTool->resolve($cart);
+        $cards = collect($context['items'])->pluck('product')->filter()->unique('id')->values()->all();
+
+        if ($context['items'] === []) {
+            $reply = $english ? 'Your cart is currently empty.' : 'Giỏ hàng của bạn hiện đang trống.';
+        } elseif ($context['unavailable_count'] > 0) {
+            $reply = $english
+                ? "Your cart has {$context['total_quantity']} item(s); {$context['unavailable_count']} line(s) are unavailable or exceed current stock."
+                : "Giỏ hàng có {$context['total_quantity']} sản phẩm; {$context['unavailable_count']} dòng hiện không khả dụng hoặc vượt tồn kho.";
+        } else {
+            $names = collect($context['items'])->map(function (array $item) {
+                return $item['quantity'].' × '.$item['product']['name'];
+            })->join(', ');
+            $reply = $english ? "Your verified cart contains: {$names}." : "Giỏ hàng đã xác minh gồm: {$names}.";
+        }
+
+        return $this->respond($request, [
+            'reply' => $reply,
+            'products' => $cards,
+            'source' => 'cart',
+        ], $route, $startedAt);
+    }
+
+    /** @param array<string, mixed> $route */
+    private function orderResponse(
+        Request $request,
+        string $message,
+        array $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        $normalized = $this->normalize($message);
+        preg_match('/(?:don|order|#)\s*#?\s*(\d{1,18})\b/', $normalized, $matches);
+        $result = isset($matches[1])
+            ? $this->orderTool->getCustomerOrder($request->user('sanctum'), (int) $matches[1])
+            : $this->orderTool->getCustomerRecentOrder($request->user('sanctum'));
+
+        if ($result['status'] === 'auth_required') {
+            return $this->respond($request, [
+                'reply' => $english
+                    ? 'Please sign in with a customer account to view your order.'
+                    : 'Vui lòng đăng nhập tài khoản khách hàng để xem đơn hàng của bạn.',
+                'source' => 'orders',
+                'code' => 'AUTH_REQUIRED',
+            ], $route, $startedAt, 0, 401);
+        }
+        if ($result['status'] === 'customer_only') {
+            return $this->respond($request, [
+                'reply' => $english
+                    ? 'Order assistance is available only to signed-in customer accounts.'
+                    : 'Tra cứu đơn qua trợ lý chỉ dành cho tài khoản khách hàng đã đăng nhập.',
+                'source' => 'orders',
+                'code' => 'CUSTOMER_ONLY',
+            ], $route, $startedAt, 0, 403);
+        }
+        if ($result['status'] === 'not_found') {
+            return $this->respond($request, [
+                'reply' => $english
+                    ? 'I could not find that order in your account.'
+                    : 'Tôi không tìm thấy đơn hàng đó trong tài khoản của bạn.',
+                'source' => 'orders',
+            ], $route, $startedAt);
+        }
+
+        $order = $result['order'];
+        $total = number_format((int) $order['grand_total'], 0, ',', '.');
+        $reply = $english
+            ? "Order #{$order['id']} is {$order['status']}; payment is {$order['payment_status']}; total {$total} VND."
+            : "Đơn #{$order['id']} đang ở trạng thái {$order['status']}; thanh toán {$order['payment_status']}; tổng tiền {$total}đ.";
+
+        return $this->respond($request, [
+            'reply' => $reply,
+            'order' => $order,
+            'source' => 'orders',
+        ], $route, $startedAt);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $route
+     */
+    private function respond(
+        Request $request,
+        array $payload,
+        array $route,
+        float $startedAt,
+        int $retrievalMs = 0,
+        int $status = 200,
+    ): JsonResponse {
+        $reply = (string) ($payload['reply'] ?? $payload['message'] ?? '');
+        $products = array_slice(array_values($payload['products'] ?? []), 0, ChatProductTool::MAX_OUTPUT);
+        $productIds = array_map(fn (array $product) => $product['id'] ?? null, $products);
+        $actions = collect($payload['suggested_actions'] ?? [])->filter(function ($action) use ($productIds) {
+            return is_array($action)
+                && count($action) === 3
+                && ($action['type'] ?? null) === 'ADD_TO_CART'
+                && is_int($action['product_id'] ?? null)
+                && in_array($action['product_id'], $productIds, true)
+                && is_int($action['quantity'] ?? null)
+                && $action['quantity'] >= 1
+                && $action['quantity'] <= 100;
+        })->take(3)->values()->all();
+        $sessionIdentity = $request->hasSession()
+            ? (string) ($request->session()->token() ?: $request->session()->getId())
+            : (string) $request->attributes->get('request_id', Str::uuid());
+        $conversationId = substr(hash_hmac('sha256', $sessionIdentity, (string) config('app.key')), 0, 32);
+        $userId = $request->user('sanctum')?->getAuthIdentifier();
+
+        $response = [
+            'message' => $reply,
+            'reply' => $reply,
+            'intent' => $route['intent']->value,
+            'products' => $products,
+            'suggested_actions' => $actions,
+            'conversation' => ['id' => $conversationId],
+            // Legacy field is intentionally inert; cart writes require a visible user click.
+            'action' => ['type' => 'none'],
+            'source' => $payload['source'] ?? 'catalog',
+        ];
+        foreach (['code', 'order'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $response[$key] = $payload[$key];
+            }
+        }
+
+        Log::info('Grounded chat request completed.', [
+            'request_id' => $request->attributes->get('request_id'),
+            'user_hash' => $userId ? hash_hmac('sha256', (string) $userId, (string) config('app.key')) : null,
+            'intent' => $route['intent']->value,
+            'router_confidence' => $route['confidence'],
+            'source' => $response['source'],
+            'provider' => config('services.ai_chat.driver'),
+            'prompt_version' => config('services.ai_chat.prompt_version'),
+            'product_count' => count($products),
+            'suggested_action_count' => count($actions),
+            'retrieval_ms' => $retrievalMs,
+            'total_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            'status' => $status,
+        ]);
+
+        return response()->json($response, $status);
+    }
+
     private function catalog(): array
     {
         $products = Product::query()->with('category:id,name')
-            ->select(['id', 'name', 'img', 'price', 'inventory', 'is_active', 'category_id', 'sort_description'])
+            ->select(['id', 'slug', 'name', 'img', 'price', 'inventory', 'is_active', 'category_id', 'sort_description'])
             ->where('is_active', true)->orderBy('name')->get();
         $categories = Category::query()->select(['id', 'name'])->orderBy('name')->get();
 
@@ -239,7 +455,10 @@ class ChatController extends Controller
         if ($product && $matches->isNotEmpty()) {
             $this->remember($request, $product, 'context');
 
-            return ['reply' => $this->productFacts($product, $english)];
+            return [
+                'reply' => $this->productFacts($product, $english),
+                'products' => [$this->productTool->card($product)],
+            ];
         }
 
         $this->clearContext($request);
@@ -252,11 +471,14 @@ class ChatController extends Controller
         $category = $categories->sortByDesc(fn ($category) => mb_strlen($category->name))
             ->first(fn ($category) => $this->containsPhrase($message, $this->normalize($category->name)));
         if ($category) {
-            $names = $products->where('category_id', $category->id)->take(3)->pluck('name')->join(', ');
+            $categoryProducts = $products->where('category_id', $category->id)->take(3)->values();
+            $names = $categoryProducts->pluck('name')->join(', ');
 
             return ['reply' => $english
                 ? ($names === '' ? "The {$category->name} category currently has no products." : "The {$category->name} category currently includes: {$names}.")
-                : ($names === '' ? "Danh mục {$category->name} hiện chưa có sản phẩm." : "Danh mục {$category->name} hiện có: {$names}.")];
+                : ($names === '' ? "Danh mục {$category->name} hiện chưa có sản phẩm." : "Danh mục {$category->name} hiện có: {$names}."),
+                'products' => $categoryProducts->map(fn (Product $item) => $this->productTool->card($item))->all(),
+            ];
         }
 
         if ($this->isCatalogQuestion($message)) {
@@ -335,16 +557,19 @@ class ChatController extends Controller
     private function offer(Request $request, Product $product, int $quantity, bool $english): array
     {
         $checked = $this->buildAddToCartResponse($product->id, $quantity, $english);
-        if (($checked['action']['type'] ?? '') !== 'add_to_cart') {
+        if (($checked['suggested_actions'][0]['type'] ?? '') !== 'ADD_TO_CART') {
             $this->clearContext($request);
 
             return $checked;
         }
         $this->remember($request, $product, 'confirmation', $quantity);
 
-        return ['reply' => $this->productFacts($product, $english).' '.($english
-            ? "Would you like to buy {$quantity} {$product->name}? Reply yes to confirm."
-            : "Bạn muốn mua {$quantity} {$product->name} không? Trả lời có để xác nhận.")];
+        return [
+            'reply' => $this->productFacts($product, $english).' '.($english
+                ? "Would you like to buy {$quantity} {$product->name}? Reply yes to continue."
+                : "Bạn muốn mua {$quantity} {$product->name} không? Trả lời có để tiếp tục."),
+            'products' => [$this->productTool->card($product)],
+        ];
     }
 
     private function askQuantity(Product $product, bool $english): array
@@ -425,16 +650,15 @@ class ChatController extends Controller
 
         return [
             'reply' => $english
-                ? "Please add {$quantity} {$product->name} and review your cart before checkout."
-                : "Vui lòng thêm {$quantity} {$product->name} và kiểm tra giỏ hàng trước khi thanh toán.",
-            'action' => [
-                'type' => 'add_to_cart', 'product_id' => (int) $product->id, 'quantity' => $quantity,
-                'product' => [
-                    'id' => (int) $product->id, 'name' => $product->name, 'img' => $product->img,
-                    'price' => (int) $product->price, 'inventory' => $inventory, 'category_id' => $product->category_id,
-                    'category' => $product->category ? ['id' => $product->category->id, 'name' => $product->category->name] : null,
-                ],
-            ],
+                ? "I found {$product->name}. Confirm below to add {$quantity} to your cart."
+                : "Tôi đã tìm thấy {$product->name}. Hãy xác nhận bên dưới để thêm {$quantity} sản phẩm vào giỏ.",
+            'products' => [$this->productTool->card($product)],
+            'suggested_actions' => [[
+                'type' => 'ADD_TO_CART',
+                'product_id' => (int) $product->id,
+                'quantity' => $quantity,
+            ]],
+            'action' => ['type' => 'none'],
         ];
     }
 
@@ -577,117 +801,9 @@ class ChatController extends Controller
 
     private function createReply(array $messages, string $systemPrompt, Collection $retrieved, bool $english): array
     {
-        $raw = match (config('services.ai_chat.driver')) {
-            'ollama' => $this->createOllamaReply($messages, $systemPrompt),
-            'anthropic' => $this->createAnthropicReply($messages, $systemPrompt),
-            'groq' => $this->createGroqReply($messages, $systemPrompt),
-            default => throw new RuntimeException('AI_MODEL_UNAVAILABLE:Invalid driver.'),
-        };
+        $raw = $this->provider->structured($messages, $systemPrompt, $this->recommendationSchema());
 
         return $this->parseActionResponse($raw, $retrieved, $english);
-    }
-
-    private function providerTimeout(): int
-    {
-        // 3s tags + at most 20s generation fits the 30s client deadline, including bounded CSRF.
-        return min(20, max(1, (int) config('services.ai_chat.timeout', 20)));
-    }
-
-    private function createOllamaReply(array $messages, string $systemPrompt): string
-    {
-        $this->ensureOllamaModelAvailable();
-        $messages = array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages);
-        $messages[array_key_last($messages)]['content'] .= "\n/no_think";
-        $response = Http::acceptJson()->connectTimeout(3)->timeout($this->providerTimeout())
-            ->post($this->aiBaseUrl().'/api/chat', [
-                'model' => config('services.ai_chat.model'), 'stream' => false, 'think' => false,
-                'keep_alive' => config('services.ai_chat.keep_alive', '30m'),
-                'format' => $this->recommendationSchema(),
-                'messages' => $messages, 'options' => ['temperature' => 0.1, 'num_predict' => 80],
-            ])->throw();
-
-        return trim((string) $response->json('message.content'));
-    }
-
-    private function createAnthropicReply(array $messages, string $systemPrompt): string
-    {
-        $key = config('services.ai_chat.key');
-        if (! is_string($key) || $key === '') {
-            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Anthropic key.');
-        }
-        $client = app(Client::class, [
-            'apiKey' => $key, 'authToken' => '', 'baseUrl' => $this->aiBaseUrl(),
-            'requestOptions' => ['timeout' => (float) $this->providerTimeout(), 'maxRetries' => 0,
-                'transporter' => new \GuzzleHttp\Client(['timeout' => $this->providerTimeout(), 'connect_timeout' => 3])],
-        ]);
-        $response = $client->messages->create(maxTokens: 100, messages: $messages,
-            model: (string) config('services.ai_chat.model'), system: $systemPrompt);
-
-        return collect($response->content)->filter(fn ($block) => $block instanceof TextBlock)
-            ->map(fn ($block) => $block->text)->join("\n");
-    }
-
-    private function createGroqReply(array $messages, string $systemPrompt): string
-    {
-        $key = config('services.ai_chat.key');
-        if (! is_string($key) || $key === '') {
-            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Groq key.');
-        }
-        $response = Http::acceptJson()->withToken($key)->connectTimeout(3)->timeout($this->providerTimeout())
-            ->post($this->aiBaseUrl().'/chat/completions', [
-                'model' => config('services.ai_chat.model'),
-                'messages' => array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages),
-                'temperature' => 0.1,
-                'max_completion_tokens' => 512,
-                'reasoning_effort' => 'low',
-                'response_format' => [
-                    'type' => 'json_schema',
-                    'json_schema' => [
-                        'name' => 'catalog_recommendation',
-                        'strict' => true,
-                        'schema' => $this->recommendationSchema(),
-                    ],
-                ],
-            ])->throw();
-
-        return trim((string) $response->json('choices.0.message.content'));
-    }
-
-    private function ensureOllamaModelAvailable(): void
-    {
-        $models = Http::acceptJson()->connectTimeout(2)->timeout(3)
-            ->get($this->aiBaseUrl().'/api/tags')->throw()->json('models', []);
-        if (! collect($models)->pluck('name')->contains(config('services.ai_chat.model'))) {
-            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Ollama model.');
-        }
-    }
-
-    private function ensureAnthropicAvailable(): void
-    {
-        $key = config('services.ai_chat.key');
-        if (! is_string($key) || $key === '') {
-            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Anthropic key.');
-        }
-        Http::acceptJson()->withHeaders(['x-api-key' => $key, 'anthropic-version' => '2023-06-01'])
-            ->connectTimeout(2)->timeout(3)->get($this->aiBaseUrl().'/v1/models/'.urlencode(config('services.ai_chat.model')))->throw();
-    }
-
-    private function ensureGroqAvailable(): void
-    {
-        $key = config('services.ai_chat.key');
-        if (! is_string($key) || $key === '') {
-            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Groq key.');
-        }
-        $models = Http::acceptJson()->withToken($key)->connectTimeout(2)->timeout(3)
-            ->get($this->aiBaseUrl().'/models')->throw()->json('data', []);
-        if (! collect($models)->pluck('id')->contains(config('services.ai_chat.model'))) {
-            throw new RuntimeException('AI_MODEL_UNAVAILABLE:Missing Groq model.');
-        }
-    }
-
-    private function aiBaseUrl(): string
-    {
-        return rtrim((string) config('services.ai_chat.base_url'), '/');
     }
 
     private function parseActionResponse(string $raw, Collection $retrieved, bool $english = false): array
@@ -711,10 +827,11 @@ class ChatController extends Controller
                 return $this->fallback($english);
             }
         }
-        $products = Product::query()->with('category:id,name')->where('is_active', true)->whereIn('id', $ids)->get()->keyBy('id');
-        if ($products->count() !== count($ids)) {
+        $verified = $this->productTool->reloadVerified($ids);
+        if ($verified->count() !== count($ids)) {
             return $this->fallback($english);
         }
+        $products = $verified->keyBy('id');
         $reply = $english ? 'Catalog suggestions:' : 'Gợi ý từ danh mục:';
         foreach ($ids as $id) {
             $line = $this->productFacts($products[$id], $english);
@@ -724,7 +841,11 @@ class ChatController extends Controller
             $reply .= "\n".$line;
         }
 
-        return ['reply' => $reply, 'action' => ['type' => 'none']];
+        return [
+            'reply' => $reply,
+            'action' => ['type' => 'none'],
+            'products' => $verified->map(fn (Product $product) => $this->productTool->card($product))->all(),
+        ];
     }
 
     private function fallback(bool $english): array

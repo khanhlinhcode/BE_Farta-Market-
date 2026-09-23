@@ -55,12 +55,18 @@ return [
     ],
 
     'ai_chat' => [
+        'enabled' => filter_var(env('AI_CHAT_ENABLED', true), FILTER_VALIDATE_BOOL),
         'driver' => $aiChatDriver,
         'key' => $aiChatDriver === 'groq' ? env('GROQ_API_KEY') : env('ANTHROPIC_API_KEY'),
         'model' => env('AI_CHAT_MODEL', $aiChatModel),
         'base_url' => env('AI_CHAT_BASE_URL', $aiChatBaseUrl),
         'timeout' => (int) env('AI_CHAT_TIMEOUT', 15),
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
+        'orchestration' => env('AI_CHAT_ORCHESTRATION', 'router'),
+        'product_search_mode' => env('AI_PRODUCT_SEARCH_MODE', 'database'),
+        'vector_search_enabled' => filter_var(env('AI_VECTOR_SEARCH_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'prompt_version' => env('AI_CHAT_PROMPT_VERSION', 'catalog-v2'),
+        'debug_log' => filter_var(env('AI_CHAT_DEBUG_LOG', false), FILTER_VALIDATE_BOOL),
     ],
 
     'sepay' => [

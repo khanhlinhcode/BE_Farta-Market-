@@ -138,7 +138,7 @@ test('chat understands short product alias', function () {
     Http::assertNothingSent();
 });
 
-it('returns a cart action for an explicit product and quantity request', function () {
+it('returns a user-confirmed cart proposal for an explicit product and quantity request', function () {
     $product = createChatProduct();
     Http::preventStrayRequests();
 
@@ -147,11 +147,12 @@ it('returns a cart action for an explicit product and quantity request', functio
     ])
         ->assertOk()
         ->assertJsonPath('source', 'catalog')
-        ->assertJsonPath('action.type', 'add_to_cart')
-        ->assertJsonPath('action.quantity', 2)
-        ->assertJsonPath('action.product.id', $product->id)
-        ->assertJsonPath('action.product.name', 'Cam Tươi')
-        ->assertJsonPath('action.product.inventory', 30);
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonPath('suggested_actions.0.type', 'ADD_TO_CART')
+        ->assertJsonPath('suggested_actions.0.quantity', 2)
+        ->assertJsonPath('suggested_actions.0.product_id', $product->id)
+        ->assertJsonPath('products.0.name', 'Cam Tươi')
+        ->assertJsonPath('products.0.inventory', 30);
 
     Http::assertNothingSent();
 });
@@ -163,8 +164,8 @@ test('chat confirms a purchase offer created by the server exactly once', functi
         ->assertOk()->assertJsonPath('action.type', 'none');
     $this->withCookie(config('session.cookie'), session()->getId());
     $this->postJson('/api/chat', ['message' => 'có'])->assertOk()
-        ->assertJsonPath('action.type', 'add_to_cart')->assertJsonPath('action.quantity', 1)
-        ->assertJsonPath('action.product.id', $product->id);
+        ->assertJsonPath('action.type', 'none')->assertJsonPath('suggested_actions.0.quantity', 1)
+        ->assertJsonPath('suggested_actions.0.product_id', $product->id);
     $this->postJson('/api/chat', ['message' => 'có'])->assertOk()->assertJsonPath('action.type', 'none');
     Http::assertNothingSent();
 });
@@ -175,8 +176,8 @@ it('uses server context when the purchase request omits the product name', funct
     $this->withHeaders(chatSpaHeaders())->postJson('/api/chat', ['message' => 'Cam còn không?'])->assertOk();
     $this->withCookie(config('session.cookie'), session()->getId());
     $this->postJson('/api/chat', ['message' => 'Có, đặt hộ tôi 2 quả'])->assertOk()
-        ->assertJsonPath('action.type', 'add_to_cart')->assertJsonPath('action.quantity', 2)
-        ->assertJsonPath('action.product.id', $product->id);
+        ->assertJsonPath('action.type', 'none')->assertJsonPath('suggested_actions.0.quantity', 2)
+        ->assertJsonPath('suggested_actions.0.product_id', $product->id);
     Http::assertNothingSent();
 });
 
@@ -188,8 +189,8 @@ it('asks quantity then confirms the exact server offer', function () {
     $this->withCookie(config('session.cookie'), session()->getId());
     $this->postJson('/api/chat', ['message' => '2'])->assertOk()->assertJsonPath('action.type', 'none');
     $this->postJson('/api/chat', ['message' => 'Có'])->assertOk()
-        ->assertJsonPath('action.type', 'add_to_cart')->assertJsonPath('action.quantity', 2)
-        ->assertJsonPath('action.product.id', $product->id);
+        ->assertJsonPath('action.type', 'none')->assertJsonPath('suggested_actions.0.quantity', 2)
+        ->assertJsonPath('suggested_actions.0.product_id', $product->id);
     Http::assertNothingSent();
 });
 
@@ -252,11 +253,14 @@ it('uses the configured Ollama model and parses its structured reply', function 
         'message' => 'Bạn có thể tư vấn món ăn sáng phù hợp không?',
     ])
         ->assertOk()
-        ->assertExactJson([
+        ->assertJson([
             'action' => ['type' => 'none'],
+            'message' => "Gợi ý từ danh mục:\nỔi có giá 25.000đ, tồn kho chính xác 20 sản phẩm, trạng thái còn hàng, thuộc danh mục Trái Cây.",
             'reply' => "Gợi ý từ danh mục:\nỔi có giá 25.000đ, tồn kho chính xác 20 sản phẩm, trạng thái còn hàng, thuộc danh mục Trái Cây.",
             'source' => 'ai',
-        ]);
+        ])
+        ->assertJsonPath('products.0.id', $product->id)
+        ->assertJsonPath('products.0.price', 25000);
 
     Http::assertSent(fn ($request) => $request->url() === 'http://127.0.0.1:11434/api/chat'
         && $request['model'] === 'qwen3:4b'
@@ -290,11 +294,14 @@ it('uses Groq strict structured output and verifies product facts from the datab
         'message' => 'Bạn có thể tư vấn món ăn sáng phù hợp không?',
     ])
         ->assertOk()
-        ->assertExactJson([
+        ->assertJson([
             'action' => ['type' => 'none'],
+            'message' => "Gợi ý từ danh mục:\nỔi có giá 25.000đ, tồn kho chính xác 20 sản phẩm, trạng thái còn hàng, thuộc danh mục Trái Cây.",
             'reply' => "Gợi ý từ danh mục:\nỔi có giá 25.000đ, tồn kho chính xác 20 sản phẩm, trạng thái còn hàng, thuộc danh mục Trái Cây.",
             'source' => 'ai',
-        ]);
+        ])
+        ->assertJsonPath('products.0.id', $product->id)
+        ->assertJsonPath('products.0.price', 25000);
 
     Http::assertSent(fn ($request) => $request->url() === 'https://api.groq.test/openai/v1/chat/completions'
         && $request->hasHeader('Authorization', 'Bearer test-key')
@@ -493,7 +500,7 @@ test('chat returns safe fallback on malformed JSON from model', function () {
         ->assertJsonPath('action.type', 'none');
 });
 
-it('returns a clear error when the configured Ollama model is unavailable', function () {
+it('falls back safely when the configured Ollama model is unavailable', function () {
     createChatProduct();
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'missing-model:latest');
@@ -510,12 +517,12 @@ it('returns a clear error when the configured Ollama model is unavailable', func
     $this->postJson('/api/chat', [
         'message' => 'Bạn có thể tư vấn món ăn sáng phù hợp không?',
     ])
-        ->assertServiceUnavailable()
-        ->assertJsonPath('code', 'AI_MODEL_UNAVAILABLE')
-        ->assertJsonPath('message', 'Xin lỗi, trợ lý đang bận. Vui lòng thử lại sau.');
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog_fallback')
+        ->assertJsonPath('message', 'Tư vấn AI đang tạm gián đoạn. Tôi vẫn có thể kiểm tra giá hoặc tồn kho nếu bạn cho biết tên sản phẩm.');
 });
 
-it('returns a clear error when the AI provider times out', function () {
+it('falls back safely when the AI provider times out', function () {
     createChatProduct();
     config()->set('services.ai_chat.driver', 'ollama');
     config()->set('services.ai_chat.model', 'qwen3:4b');
@@ -534,9 +541,9 @@ it('returns a clear error when the AI provider times out', function () {
     $this->postJson('/api/chat', [
         'message' => 'Bạn có thể tư vấn món ăn sáng phù hợp không?',
     ])
-        ->assertServiceUnavailable()
-        ->assertJsonPath('code', 'AI_UNAVAILABLE')
-        ->assertJsonPath('message', 'Xin lỗi, trợ lý đang bận. Vui lòng thử lại sau.');
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog_fallback')
+        ->assertJsonPath('message', 'Tư vấn AI đang tạm gián đoạn. Tôi vẫn có thể kiểm tra giá hoặc tồn kho nếu bạn cho biết tên sản phẩm.');
 });
 
 it('reports chat health only when the configured model is available', function () {
@@ -575,7 +582,9 @@ it('parses whole Vietnamese and English quantities correctly', function (string 
     createChatProduct(['inventory' => 1000]);
     Http::preventStrayRequests();
     $this->postJson('/api/chat', ['message' => "Mua {$quantity} Cam"])
-        ->assertOk()->assertJsonPath('action.type', 'add_to_cart')->assertJsonPath('action.quantity', $expected);
+        ->assertOk()->assertJsonPath('action.type', 'none')
+        ->assertJsonPath('suggested_actions.0.type', 'ADD_TO_CART')
+        ->assertJsonPath('suggested_actions.0.quantity', $expected);
 })->with([['1', 1], ['100', 100], ['một', 1], ['hai', 2], ['hai mươi', 20], ['hai mươi mốt', 21],
     ['mười lăm', 15], ['một trăm', 100], ['one', 1], ['two', 2], ['twenty one', 21], ['one hundred', 100]]);
 
@@ -610,7 +619,9 @@ it('does not choose the first product for shared aliases or multiple names', fun
     foreach (['Mua 2 Cam', 'Mua 2 Cam Tươi và 3 Cam Hộp'] as $message) {
         $this->postJson('/api/chat', compact('message'))->assertOk()->assertJsonPath('action.type', 'none');
     }
-    $this->postJson('/api/chat', ['message' => 'Mua 2 Cam Tươi'])->assertOk()->assertJsonPath('action.type', 'add_to_cart');
+    $this->postJson('/api/chat', ['message' => 'Mua 2 Cam Tươi'])->assertOk()
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonPath('suggested_actions.0.type', 'ADD_TO_CART');
 });
 
 it('rechecks active stock expiry and owner before consuming a pending offer', function (string $change) {

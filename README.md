@@ -1,8 +1,46 @@
 # Farta Market API
 
-Laravel 12 API for products, orders, admin management, and the AI assistant.
+Laravel 12 API for the Farta Market storefront and administration portal. It
+owns authentication, catalog data, orders, payments, Cloudinary media,
+analytics, coupons, reviews, and grounded AI product recommendations.
+
+## Current release status
+
+The reviewed authentication, storefront loading, and SePay integration changes
+were merged into `main` on 24 September 2026. The public domains are currently
+used as a staging/demo environment, not as a completed production release.
+
+- Storefront: <https://fartamarket.company>
+- Admin: <https://admin.fartamarket.company>
+- API health: <https://api.fartamarket.company/up>
+- Deployment details and remaining gates: [STAGING_DEPLOY.md](STAGING_DEPLOY.md)
+
+SePay code and its database migration are deployed to staging, but the staging
+runtime does not yet contain the real bank-account and webhook-secret settings.
+Until those settings and an end-to-end simulated payment are verified, SePay
+checkout intentionally fails closed with HTTP `503`.
+
+## Main capabilities
+
+- Laravel Sanctum cookie authentication with CSRF protection.
+- Encrypted database-backed sessions, password recovery, email verification,
+  and separate Admin MFA using TOTP or one-time recovery codes.
+- Admin, staff, and customer authorization with order-ownership checks.
+- Product, category, banner, site-content, review, coupon, user, order, and
+  analytics APIs.
+- Cloudinary-backed product, category, banner, and avatar media.
+- COD and SePay VietQR checkout with scoped idempotency keys and inventory
+  locking. VNPay values remain readable only for historical orders.
+- Pending online-payment expiration with inventory restoration.
+- Grounded AI product recommendations: model output is treated as product-ID
+  suggestions and every returned product is reloaded from the database.
+- Rate limits, CORS allowlists, security headers, CSV-injection protection, and
+  bounded analytics/session retention.
 
 ## Local development
+
+Requirements: PHP 8.2 or newer, Composer, MySQL, and Node.js when Laravel's Vite
+assets are required.
 
 ```bash
 cp .env.example .env
@@ -11,6 +49,80 @@ php artisan key:generate
 php artisan migrate --seed
 php artisan serve
 ```
+
+Run the database queue worker and scheduler in separate terminals when testing
+queued mail or scheduled cleanup:
+
+```bash
+php artisan queue:work --queue=emails,default
+php artisan schedule:work
+```
+
+Use the matching local frontend origins and keep `SESSION_SECURE_COOKIE=false`
+only for local HTTP development. Hosted environments must use HTTPS, secure and
+HTTP-only cookies, an explicit CORS allowlist, and the correct Sanctum stateful
+domains.
+
+## Authentication and sessions
+
+The storefront and Admin portal use Sanctum session cookies rather than JWTs.
+The default project configuration uses database sessions with encrypted payloads:
+
+```dotenv
+SESSION_DRIVER=database
+SESSION_ENCRYPT=true
+SESSION_LIFETIME=120
+SESSION_HTTP_ONLY=true
+SESSION_SAME_SITE=lax
+```
+
+Admin password authentication never creates a privileged session by itself. An
+admin must complete the MFA enrollment or challenge before Admin routes become
+available. Customer accounts are not sent through the Admin MFA flow.
+
+## Payments
+
+### COD
+
+`POST /api/order` creates COD orders. Every request requires a unique
+`X-Idempotency-Key`; replaying the same scoped key returns the existing order
+instead of decrementing inventory again. Guest order creation is rate-limited
+and protected by Turnstile when it is required by the environment.
+
+### SePay VietQR
+
+Authenticated and email-verified customers create a SePay order through
+`POST /api/payment/create`. The API generates the amount, transfer reference,
+expiry time, and VietQR URL. The browser never marks an order as paid.
+
+SePay calls `POST /api/payment/sepay/webhook`. The API verifies the timestamped
+HMAC signature, configured recipient account, inbound transfer type, exact
+amount, payment reference, and unique transaction ID inside a locked database
+transaction. Customers poll `GET /api/payment/{order}/status`, which is protected
+by order ownership.
+
+Required backend-only configuration:
+
+```dotenv
+SEPAY_BANK_CODE=
+SEPAY_ACCOUNT_NUMBER=
+SEPAY_ACCOUNT_HOLDER=
+SEPAY_WEBHOOK_SECRET=
+SEPAY_PAYMENT_PREFIX=FM
+SEPAY_PAYMENT_TTL_MINUTES=30
+SEPAY_WEBHOOK_TOLERANCE_SECONDS=300
+SEPAY_QR_BASE_URL=https://vietqr.app/img
+```
+
+Never expose these values through a `VITE_` variable or commit them to Git. The
+staging webhook URL is:
+
+```text
+https://api.fartamarket.company/api/payment/sepay/webhook
+```
+
+`php artisan payments:expire-pending` cancels stale online-payment orders and
+restores reserved inventory. The scheduler runs it every ten minutes.
 
 ## Cloudinary images
 
@@ -30,9 +142,8 @@ php artisan images:migrate-to-cloudinary \
   --source=/absolute/path/to/websivi/public
 ```
 
-The command can be run again safely. It skips managed Cloudinary images, keeps
-source files for rollback, and returns a failure status if any legacy file is
-missing or cannot be migrated.
+The command is safe to rerun. It skips managed Cloudinary images, keeps source
+files for rollback, and fails when a referenced legacy file cannot be migrated.
 
 ## AI assistant
 
@@ -46,21 +157,7 @@ AI_CHAT_TIMEOUT=15
 AI_CHAT_KEEP_ALIVE=30m
 ```
 
-Install and start the configured model before starting Laravel:
-
-```bash
-ollama pull qwen3:4b
-ollama serve
-```
-
-Preload the model after a machine restart to avoid a slow first chat request:
-
-```bash
-curl http://127.0.0.1:11434/api/generate \
-  -d '{"model":"qwen3:4b","keep_alive":"30m"}'
-```
-
-Groq configuration for hosted environments:
+Hosted Groq configuration:
 
 ```dotenv
 AI_CHAT_DRIVER=groq
@@ -69,61 +166,59 @@ AI_CHAT_BASE_URL=https://api.groq.com/openai/v1
 GROQ_API_KEY=
 ```
 
-Groq responses use a strict JSON schema and are treated only as product ID suggestions. Laravel reloads every suggested product from the database before returning its name, price, or inventory. If Groq is unavailable or out of quota, the endpoint returns a safe catalog fallback instead of exposing a provider error. The API never exposes the provider key to the frontend.
+Groq responses use a strict JSON schema and are accepted only as product-ID
+suggestions. Laravel reloads every product before returning its name, price, or
+inventory. If the provider is unavailable, the API returns a catalog fallback.
+The evidence boundary and evaluation rules are documented in
+[docs/chat-rag.md](docs/chat-rag.md).
 
-The recommendation path uses bounded sparse retrieval before generation. Its evidence boundary, evaluation checks, and limitations are documented in [docs/chat-rag.md](docs/chat-rag.md).
-
-Anthropic remains supported by setting `AI_CHAT_DRIVER=anthropic`, its model and base URL, and `ANTHROPIC_API_KEY`.
+Anthropic remains supported through `AI_CHAT_DRIVER=anthropic` and the matching
+model, base URL, and API key.
 
 ## Local/QA seed accounts
 
-No production credential is stored in source. To create reusable local/QA
-accounts through the seeder, enable the flag below. The seeder refuses to run
-these accounts in production.
+No production credential is stored in source. Reusable accounts can be created
+only in the `local` and `testing` environments:
 
 ```dotenv
 SEED_ADMIN_ENABLED=true
 ```
 
-Created test accounts:
-
 | Role | Email | Password |
 | --- | --- | --- |
-| admin | qa.admin@example.test | FartaQa12345 |
-| staff | qa.staff@example.test | FartaQa12345 |
-| customer | qa.customer@example.test | FartaQa12345 |
+| admin | `qa.admin@example.test` | `FartaQa12345` |
+| staff | `qa.staff@example.test` | `FartaQa12345` |
+| customer | `qa.customer@example.test` | `FartaQa12345` |
 
-You can also add a custom local admin by setting `SEED_ADMIN_NAME`,
-`SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD` with a password of at least
-12 characters.
-
-Admin/QA seeding is ignored outside `local` and `testing`.
-
-## Order API
-
-`POST /api/order` requires a unique `X-Idempotency-Key` header. Replaying the
-same key returns the original order and does not decrement inventory again.
-Guest order creation is limited to five requests per minute per IP.
-
-## Production checklist
-
-- Set a real `APP_URL`, database credentials, and `APP_KEY`.
-- Set the AI driver, model, base URL, and provider secret.
-- Set the Cloudinary cloud name, API key, and API secret.
-- Keep `SEED_ADMIN_ENABLED=false`; create admins using controlled deployment tooling.
-- Configure a shared cache store so rate limits and idempotency locks work across servers.
+Custom local admin credentials use `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, and a
+`SEED_ADMIN_PASSWORD` of at least 12 characters. The seeder refuses to create
+these QA accounts in the production application environment.
 
 ## Verification
 
 ```bash
 php artisan test
+vendor/bin/pint --test
+composer validate --strict
 composer audit
 ```
 
-Testing is configured to avoid real network calls for mail, queues, and password
-breach checks. If `php artisan test` appears to hang on macOS/Homebrew PHP, first
-check whether CLI OPcache is stuck compiling files; running with
+Tests avoid real mail, queue, breach-check, payment, and media-provider calls.
+If the suite appears to hang on macOS/Homebrew PHP, check CLI OPcache first;
 `php -d opcache.enable_cli=0 artisan test` should behave consistently.
-# BE_Farta-Market-
-# BE_Farta-Market-
-# BE_Farta-Market-
+
+## Production gates
+
+Before declaring production readiness:
+
+1. Configure SePay Test Mode with a real HMAC secret and complete an inbound
+   simulated payment through the normal browser flow.
+2. Verify Admin MFA and Cloudinary create/replace/delete operations on the
+   deployed domains.
+3. Repeat registration, email verification, password reset, COD order, order
+   view, and cancellation with disposable accounts.
+4. Review historical duplicate orders manually; do not bulk-delete records that
+   may have affected inventory or payment state.
+5. Rotate any historically exposed provider/database credentials and retest.
+6. Point staging services at the intended `main` revisions, rerun CI and smoke
+   tests, and perform a separately controlled production release.

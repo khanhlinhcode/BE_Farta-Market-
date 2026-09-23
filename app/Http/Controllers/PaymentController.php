@@ -54,6 +54,7 @@ class PaymentController extends Controller
         $data['payment_method'] = Order::PAYMENT_METHOD_VNPAY;
         $payloadHash = IdempotencyHasher::hash($data);
         $userId = $request->user()->id;
+        $idempotencyScope = "user:{$userId}";
         $analyticsBinding = $request->hasSession() ? (string) $request->session()->token() : '';
         $analyticsSession = $analyticsBinding !== ''
             ? $analyticsSessions->verify($request->header('X-Analytics-Token'), $analyticsBinding)
@@ -64,19 +65,19 @@ class PaymentController extends Controller
 
         try {
             [$order, $isReplay, $paymentUrl] = Cache::lock(
-                'payment:create:'.hash('sha256', "user:{$userId}|{$data['idempotency_key']}"),
+                'payment:create:'.hash('sha256', $idempotencyScope.'|'.$data['idempotency_key']),
                 15
-            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $vnPayService, $analyticsSessionHash) {
-                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $vnPayService, $analyticsSessionHash) {
+            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $vnPayService, $analyticsSessionHash, $idempotencyScope) {
+                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $vnPayService, $analyticsSessionHash, $idempotencyScope) {
                     IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
-                        ->where('user_id', $userId)
+                        ->where('scope', $idempotencyScope)
                         ->where('expires_at', '<=', now())
                         ->delete();
 
                     $existingKey = IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
-                        ->where('user_id', $userId)
+                        ->where('scope', $idempotencyScope)
                         ->where('expires_at', '>', now())
                         ->lockForUpdate()
                         ->first();
@@ -195,6 +196,7 @@ class PaymentController extends Controller
 
                     IdempotencyKey::create([
                         'idempotency_key' => $data['idempotency_key'],
+                        'scope' => $idempotencyScope,
                         'payload_hash' => $payloadHash,
                         'user_id' => $userId,
                         'order_id' => $order->id,

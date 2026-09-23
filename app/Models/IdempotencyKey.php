@@ -9,6 +9,7 @@ class IdempotencyKey extends Model
 {
     protected $fillable = [
         'idempotency_key',
+        'scope',
         'payload_hash',
         'user_id',
         'order_id',

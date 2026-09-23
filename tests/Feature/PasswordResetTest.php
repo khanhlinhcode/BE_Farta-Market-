@@ -56,9 +56,13 @@ test('password reset notifications point to the storefront without exposing the 
     ])->assertAccepted()->assertJsonMissingPath('token');
 
     Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): bool {
-        $url = (string) $notification->toMail($user)->actionUrl;
+        $mail = $notification->toMail($user);
+        $url = (string) $mail->actionUrl;
 
-        return str_starts_with($url, 'https://fartamarket.company/reset-password?')
+        return $mail->subject === 'Đặt lại mật khẩu Farta Market'
+            && ($mail->view['html'] ?? null) === 'emails.auth-notification'
+            && ($mail->view['text'] ?? null) === 'emails.auth-notification-text'
+            && str_starts_with($url, 'https://fartamarket.company/reset-password?')
             && str_contains($url, 'token=')
             && str_contains($url, 'email=reset-url%40example.test');
     });

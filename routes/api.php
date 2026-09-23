@@ -90,7 +90,6 @@ Route::prefix('')->group(function () {
         Route::post('/products/{product}/reviews', [ReviewController::class, 'store'])->middleware('verified');
     });
     Route::post('/chat', [ChatController::class, 'send'])
-        ->block(35, 1)
         ->middleware('throttle:chat');
     Route::get('/chat/health', [ChatController::class, 'health'])
         ->middleware('throttle:30,1');

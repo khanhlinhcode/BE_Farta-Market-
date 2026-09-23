@@ -55,8 +55,6 @@ class AppServiceProvider extends ServiceProvider
             return $this->brandedAuthMail(
                 subject: 'Xác minh email Farta Market',
                 preheader: 'Hoàn tất xác minh để bảo vệ tài khoản Farta Market của bạn.',
-                visual: '@',
-                eyebrow: 'Bảo mật tài khoản',
                 title: 'Xác minh địa chỉ email',
                 intro: 'Chỉ còn một bước để hoàn tất tài khoản. Hãy xác minh email để sử dụng đầy đủ tính năng thanh toán, ưu đãi và đánh giá sản phẩm.',
                 actionText: 'Xác minh email',
@@ -70,8 +68,6 @@ class AppServiceProvider extends ServiceProvider
             return $this->brandedAuthMail(
                 subject: 'Đặt lại mật khẩu Farta Market',
                 preheader: 'Sử dụng liên kết bảo mật để đặt lại mật khẩu Farta Market.',
-                visual: '•••',
-                eyebrow: 'Yêu cầu bảo mật',
                 title: 'Đặt lại mật khẩu',
                 intro: 'Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Hãy dùng nút bên dưới để tạo mật khẩu mới.',
                 actionText: 'Đặt lại mật khẩu',
@@ -183,8 +179,6 @@ class AppServiceProvider extends ServiceProvider
     private function brandedAuthMail(
         string $subject,
         string $preheader,
-        string $visual,
-        string $eyebrow,
         string $title,
         string $intro,
         string $actionText,
@@ -194,8 +188,6 @@ class AppServiceProvider extends ServiceProvider
     ): MailMessage {
         $data = compact(
             'preheader',
-            'visual',
-            'eyebrow',
             'title',
             'intro',
             'actionText',

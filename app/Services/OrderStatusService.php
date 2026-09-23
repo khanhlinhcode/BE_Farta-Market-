@@ -46,9 +46,10 @@ class OrderStatusService
                 throw new InvalidArgumentException("Không thể chuyển từ {$order->status} sang {$status}");
             }
 
-            if ($status === Order::STATUS_CONFIRMED && $order->payment_method === Order::PAYMENT_METHOD_VNPAY
+            if ($status === Order::STATUS_CONFIRMED
+                && in_array($order->payment_method, [Order::PAYMENT_METHOD_SEPAY, Order::PAYMENT_METHOD_VNPAY], true)
                 && $order->payment_status !== Order::PAYMENT_STATUS_PAID) {
-                throw new InvalidArgumentException('Đơn VNPay chưa được thanh toán.');
+                throw new InvalidArgumentException('Đơn thanh toán trực tuyến chưa được thanh toán.');
             }
 
             if ($status === Order::STATUS_CANCELLED) {
@@ -78,7 +79,7 @@ class OrderStatusService
             ]);
             $updates = ['status' => $status];
             if ($status === Order::STATUS_CANCELLED
-                && $order->payment_method === Order::PAYMENT_METHOD_VNPAY
+                && in_array($order->payment_method, [Order::PAYMENT_METHOD_SEPAY, Order::PAYMENT_METHOD_VNPAY], true)
                 && $order->payment_status === Order::PAYMENT_STATUS_PENDING) {
                 $updates['payment_status'] = Order::PAYMENT_STATUS_FAILED;
             }

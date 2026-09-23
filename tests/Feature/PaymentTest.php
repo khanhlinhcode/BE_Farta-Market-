@@ -1,6 +1,8 @@
 <?php
 
+use App\Jobs\SendOrderConfirmationEmail;
 use App\Models\Category;
+use App\Models\IdempotencyKey;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -45,127 +47,88 @@ function paymentPayload(Product $product, int $quantity = 2): array
     ];
 }
 
-function configureVnpayTest(): void
+function configureSepayTest(): void
 {
-    config()->set('services.vnpay.tmn_code', 'TESTCODE');
-    config()->set('services.vnpay.hash_secret', 'test-secret');
-    config()->set('services.vnpay.url', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
-    config()->set('services.vnpay.return_url', 'http://127.0.0.1:8000/api/payment/vnpay-return');
-    config()->set('services.vnpay.frontend_url', 'http://127.0.0.1:5173');
+    config()->set('services.sepay.bank_code', 'Vietcombank');
+    config()->set('services.sepay.account_number', '0010000000355');
+    config()->set('services.sepay.account_holder', 'FARTA MARKET');
+    config()->set('services.sepay.webhook_secret', 'local-test-secret');
+    config()->set('services.sepay.payment_prefix', 'FM');
+    config()->set('services.sepay.payment_ttl_minutes', 30);
+    config()->set('services.sepay.webhook_tolerance_seconds', 300);
+    config()->set('services.sepay.qr_base_url', 'https://vietqr.app/img');
 }
 
-function signedVnpayReturnParams(array $params): array
+function sepayWebhookPayload(Order $order, array $overrides = []): array
 {
-    ksort($params);
-    $hashData = http_build_query($params, '', '&', PHP_QUERY_RFC1738);
-    $params['vnp_SecureHash'] = hash_hmac('sha512', $hashData, 'test-secret');
-
-    return $params;
+    return array_merge([
+        'id' => 123456,
+        'accountNumber' => '0010000000355',
+        'transferType' => 'in',
+        'transferAmount' => (int) $order->grand_total,
+        'code' => $order->payment_reference,
+        'content' => $order->payment_reference.' thanh toan don hang',
+    ], $overrides);
 }
 
-test('authenticated user can create a vnpay payment url', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
+function sepayWebhookServer(string $rawBody, ?int $timestamp = null): array
+{
+    $timestamp ??= now()->timestamp;
+    $signature = 'sha256='.hash_hmac(
+        'sha256',
+        $timestamp.'.'.$rawBody,
+        'local-test-secret'
+    );
+
+    return [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_ACCEPT' => 'application/json',
+        'HTTP_X_SEPAY_TIMESTAMP' => (string) $timestamp,
+        'HTTP_X_SEPAY_SIGNATURE' => $signature,
+    ];
+}
+
+test('authenticated customer can create a SePay QR payment', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
     $product = createPaymentProduct();
-
     Sanctum::actingAs($user);
 
-    $response = $this->withHeader('X-Idempotency-Key', 'vnpay-create-test-0001')
+    $response = $this->withHeader('X-Idempotency-Key', 'sepay-create-test-0001')
         ->postJson('/api/payment/create', paymentPayload($product))
         ->assertCreated()
-        ->assertJsonPath('data.status', Order::STATUS_PENDING_PAYMENT)
-        ->assertJsonPath('data.payment_method', Order::PAYMENT_METHOD_VNPAY)
+        ->assertJsonPath('data.status', Order::STATUS_PENDING)
+        ->assertJsonPath('data.payment_method', Order::PAYMENT_METHOD_SEPAY)
         ->assertJsonPath('data.payment_status', Order::PAYMENT_STATUS_PENDING)
         ->assertJsonPath('data.subtotal', '90000.00')
         ->assertJsonPath('data.shipping_fee', '20000.00')
-        ->assertJsonPath('data.grand_total', '110000.00');
+        ->assertJsonPath('data.grand_total', '110000.00')
+        ->assertJsonPath('payment.amount', 110000)
+        ->assertJsonPath('payment.bank_code', 'Vietcombank')
+        ->assertJsonPath('payment.account_number', '0010000000355');
 
-    $paymentUrl = $response->json('payment_url');
-    expect($paymentUrl)->toContain('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
-    expect($paymentUrl)->toContain('vnp_SecureHash=');
-
-    parse_str(parse_url($paymentUrl, PHP_URL_QUERY), $query);
-    expect($query['vnp_TmnCode'])->toBe('TESTCODE');
-    expect((int) $query['vnp_Amount'])->toBe(11000000);
+    expect($response->json('payment.reference'))->toStartWith('FM');
+    expect($response->json('payment.qr_url'))
+        ->toContain('https://vietqr.app/img?')
+        ->toContain('amount=110000')
+        ->toContain('des='.urlencode($response->json('payment.reference')));
     expect($product->fresh()->inventory)->toBe(8);
 });
 
-test('vnpay return marks order as paid when signature and response are valid', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
-    $product = createPaymentProduct();
+test('SePay payment requires an idempotency key header', function () {
+    configureSepayTest();
+    Sanctum::actingAs(User::factory()->customer()->create());
 
-    Sanctum::actingAs($user);
-
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-return-paid-0001')
-        ->postJson('/api/payment/create', paymentPayload($product))
-        ->assertCreated()
-        ->json('data.id');
-
-    $params = signedVnpayReturnParams([
-        'vnp_Amount' => '11000000',
-        'vnp_ResponseCode' => '00',
-        'vnp_TransactionStatus' => '00',
-        'vnp_TmnCode' => 'TESTCODE',
-        'vnp_TxnRef' => (string) $orderId,
-    ]);
-
-    $this->get('/api/payment/vnpay-return?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986))
-        ->assertRedirect("http://127.0.0.1:5173/dat-hang-thanh-cong?orderId={$orderId}&payment=vnpay");
-
-    $order = Order::findOrFail($orderId);
-    expect($order->status)->toBe(Order::STATUS_CONFIRMED);
-    expect($order->payment_status)->toBe(Order::PAYMENT_STATUS_PAID);
-    expect($product->fresh()->inventory)->toBe(8);
-});
-
-test('vnpay return marks order as failed and restores inventory on failed payment', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
-    $product = createPaymentProduct();
-
-    Sanctum::actingAs($user);
-
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-return-failed-0001')
-        ->postJson('/api/payment/create', paymentPayload($product))
-        ->assertCreated()
-        ->json('data.id');
-
-    $params = signedVnpayReturnParams([
-        'vnp_Amount' => '11000000',
-        'vnp_ResponseCode' => '24',
-        'vnp_TransactionStatus' => '02',
-        'vnp_TmnCode' => 'TESTCODE',
-        'vnp_TxnRef' => (string) $orderId,
-    ]);
-
-    $this->get('/api/payment/vnpay-return?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986))
-        ->assertRedirect("http://127.0.0.1:5173/thanh-toan?error=payment_failed&orderId={$orderId}");
-
-    $order = Order::findOrFail($orderId);
-    expect($order->status)->toBe(Order::STATUS_CANCELLED);
-    expect($order->payment_status)->toBe(Order::PAYMENT_STATUS_FAILED);
-    expect($product->fresh()->inventory)->toBe(10);
-});
-
-test('vnpay payment requires idempotency key header', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
-    $product = createPaymentProduct();
-
-    Sanctum::actingAs($user);
-
-    $this->postJson('/api/payment/create', paymentPayload($product))
+    $this->postJson('/api/payment/create', paymentPayload(createPaymentProduct()))
         ->assertUnprocessable()
         ->assertJsonPath('message', 'Header X-Idempotency-Key là bắt buộc.');
 });
 
-test('replaying a vnpay idempotency key returns the same pending payment order', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
+test('replaying a SePay idempotency key returns the same order and reference', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
     $product = createPaymentProduct();
-    $headers = ['X-Idempotency-Key' => 'vnpay-replay-test-0001'];
-
+    $headers = ['X-Idempotency-Key' => 'sepay-replay-test-0001'];
     Sanctum::actingAs($user);
 
     $first = $this->withHeaders($headers)
@@ -179,16 +142,16 @@ test('replaying a vnpay idempotency key returns the same pending payment order',
         ->assertJsonPath('idempotent_replay', true);
 
     expect($second->json('data.id'))->toBe($first->json('data.id'));
+    expect($second->json('payment.reference'))->toBe($first->json('payment.reference'));
     expect(Order::count())->toBe(1);
     expect($product->fresh()->inventory)->toBe(8);
 });
 
-test('reusing a vnpay idempotency key with a different payload returns conflict', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
+test('reusing a SePay idempotency key with a different payload is rejected', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
     $product = createPaymentProduct();
-    $headers = ['X-Idempotency-Key' => 'vnpay-conflict-test-0001'];
-
+    $headers = ['X-Idempotency-Key' => 'sepay-conflict-test-0001'];
     Sanctum::actingAs($user);
 
     $this->withHeaders($headers)
@@ -204,181 +167,233 @@ test('reusing a vnpay idempotency key with a different payload returns conflict'
     expect($product->fresh()->inventory)->toBe(9);
 });
 
-test('reusing a vnpay idempotency key with a changed email returns conflict', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
+test('valid SePay webhook confirms payment and queues one email', function () {
+    configureSepayTest();
+    Queue::fake();
+    $user = User::factory()->customer()->create();
     $product = createPaymentProduct();
-    $headers = ['X-Idempotency-Key' => 'vnpay-conflict-email-0001'];
-    $payload = paymentPayload($product, 1);
-
     Sanctum::actingAs($user);
-
-    $this->withHeaders($headers)
-        ->postJson('/api/payment/create', $payload)
-        ->assertCreated();
-
-    $payload['email'] = 'another-customer@example.test';
-
-    $this->withHeaders($headers)
-        ->postJson('/api/payment/create', $payload)
-        ->assertConflict()
-        ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
-
-    expect(Order::count())->toBe(1);
-    expect($product->fresh()->inventory)->toBe(9);
-});
-
-test('reusing a vnpay idempotency key with changed customer name or note returns conflict', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
-    $product = createPaymentProduct();
-    $headers = ['X-Idempotency-Key' => 'vnpay-conflict-profile-fields-0001'];
-    $payload = paymentPayload($product, 1);
-    $payload['note'] = 'Leave at reception';
-
-    Sanctum::actingAs($user);
-
-    $this->withHeaders($headers)
-        ->postJson('/api/payment/create', $payload)
-        ->assertCreated();
-
-    $payload['customer_name'] = 'Tran Thi B';
-
-    $this->withHeaders($headers)
-        ->postJson('/api/payment/create', $payload)
-        ->assertConflict()
-        ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
-
-    $payload['customer_name'] = 'Nguyen Van A';
-    $payload['note'] = 'Call before delivery';
-
-    $this->withHeaders($headers)
-        ->postJson('/api/payment/create', $payload)
-        ->assertConflict()
-        ->assertJsonPath('message', 'Idempotency key đã được dùng với request khác.');
-
-    expect(Order::count())->toBe(1);
-    expect($product->fresh()->inventory)->toBe(9);
-});
-
-test('expired pending vnpay payments restore inventory once', function () {
-    configureVnpayTest();
-    $user = User::factory()->create();
-    $product = createPaymentProduct();
-
-    Sanctum::actingAs($user);
-
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-expire-test-0001')
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-paid-test-0001')
         ->postJson('/api/payment/create', paymentPayload($product))
         ->assertCreated()
         ->json('data.id');
+    $order = Order::findOrFail($orderId);
+    $payload = sepayWebhookPayload($order);
+    $rawBody = json_encode($payload);
 
-    Order::query()
-        ->whereKey($orderId)
-        ->update(['created_at' => now()->subMinutes(31)]);
+    $this->call(
+        'POST',
+        '/api/payment/sepay/webhook',
+        [],
+        [],
+        [],
+        sepayWebhookServer($rawBody),
+        $rawBody
+    )->assertOk()->assertExactJson(['success' => true]);
 
+    $order->refresh();
+    expect($order->status)->toBe(Order::STATUS_CONFIRMED);
+    expect($order->payment_status)->toBe(Order::PAYMENT_STATUS_PAID);
+    expect($order->payment_transaction_id)->toBe('123456');
     expect($product->fresh()->inventory)->toBe(8);
+    Queue::assertPushed(SendOrderConfirmationEmail::class, 1);
+});
 
-    $this->artisan('payments:expire-pending')
-        ->assertSuccessful();
+test('SePay webhook replay is idempotent', function () {
+    configureSepayTest();
+    Queue::fake();
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+    Sanctum::actingAs($user);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-webhook-replay-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertCreated()
+        ->json('data.id');
+    $payload = sepayWebhookPayload(Order::findOrFail($orderId));
+    $rawBody = json_encode($payload);
+    $server = sepayWebhookServer($rawBody);
+
+    $this->call('POST', '/api/payment/sepay/webhook', [], [], [], $server, $rawBody)
+        ->assertOk()
+        ->assertExactJson(['success' => true]);
+    $this->call('POST', '/api/payment/sepay/webhook', [], [], [], $server, $rawBody)
+        ->assertOk()
+        ->assertExactJson(['success' => true]);
+
+    Queue::assertPushed(SendOrderConfirmationEmail::class, 1);
+    expect($product->fresh()->inventory)->toBe(8);
+});
+
+test('SePay webhook can match the order reference from content when code is null', function () {
+    configureSepayTest();
+    Queue::fake();
+    $user = User::factory()->customer()->create();
+    Sanctum::actingAs($user);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-content-code-test-0001')
+        ->postJson('/api/payment/create', paymentPayload(createPaymentProduct()))
+        ->assertCreated()
+        ->json('data.id');
+    $order = Order::findOrFail($orderId);
+    $payload = sepayWebhookPayload($order, [
+        'code' => null,
+        'content' => 'Chuyen tien '.$order->payment_reference.' thanh toan',
+    ]);
+    $rawBody = json_encode($payload);
+
+    $this->call(
+        'POST',
+        '/api/payment/sepay/webhook',
+        [],
+        [],
+        [],
+        sepayWebhookServer($rawBody),
+        $rawBody
+    )->assertOk()->assertExactJson(['success' => true]);
+
+    expect($order->fresh()->payment_status)->toBe(Order::PAYMENT_STATUS_PAID);
+    Queue::assertPushed(SendOrderConfirmationEmail::class, 1);
+});
+
+test('invalid or stale SePay webhook signatures cannot change payment state', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
+    Sanctum::actingAs($user);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-signature-test-0001')
+        ->postJson('/api/payment/create', paymentPayload(createPaymentProduct()))
+        ->assertCreated()
+        ->json('data.id');
+    $rawBody = json_encode(sepayWebhookPayload(Order::findOrFail($orderId)));
+    $server = sepayWebhookServer($rawBody);
+    $server['HTTP_X_SEPAY_SIGNATURE'] = 'sha256='.str_repeat('0', 64);
+
+    $this->call('POST', '/api/payment/sepay/webhook', [], [], [], $server, $rawBody)
+        ->assertUnauthorized();
+    $this->call(
+        'POST',
+        '/api/payment/sepay/webhook',
+        [],
+        [],
+        [],
+        sepayWebhookServer($rawBody, now()->subMinutes(6)->timestamp),
+        $rawBody
+    )->assertUnauthorized();
+
+    expect(Order::findOrFail($orderId)->payment_status)->toBe(Order::PAYMENT_STATUS_PENDING);
+});
+
+test('SePay webhook rejects a wrong account or amount', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
+    Sanctum::actingAs($user);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-mismatch-test-0001')
+        ->postJson('/api/payment/create', paymentPayload(createPaymentProduct()))
+        ->assertCreated()
+        ->json('data.id');
+    $order = Order::findOrFail($orderId);
+
+    foreach ([
+        ['accountNumber' => '9999999999'],
+        ['transferAmount' => 1, 'id' => 123457],
+    ] as $overrides) {
+        $rawBody = json_encode(sepayWebhookPayload($order, $overrides));
+        $this->call(
+            'POST',
+            '/api/payment/sepay/webhook',
+            [],
+            [],
+            [],
+            sepayWebhookServer($rawBody),
+            $rawBody
+        )->assertUnprocessable();
+    }
+
+    expect($order->fresh()->payment_status)->toBe(Order::PAYMENT_STATUS_PENDING);
+});
+
+test('a paid webhook cannot revive a customer-cancelled SePay order', function () {
+    configureSepayTest();
+    Queue::fake();
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+    Sanctum::actingAs($user);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-cancelled-test-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertCreated()
+        ->json('data.id');
+    $order = Order::findOrFail($orderId);
+
+    $this->patchJson("/api/my-orders/{$orderId}/cancel")
+        ->assertOk()
+        ->assertJsonPath('status', Order::STATUS_CANCELLED);
+    $rawBody = json_encode(sepayWebhookPayload($order));
+    $this->call(
+        'POST',
+        '/api/payment/sepay/webhook',
+        [],
+        [],
+        [],
+        sepayWebhookServer($rawBody),
+        $rawBody
+    )->assertConflict();
+
+    expect($order->fresh()->payment_status)->toBe(Order::PAYMENT_STATUS_FAILED);
+    expect($product->fresh()->inventory)->toBe(10);
+    Queue::assertNothingPushed();
+});
+
+test('expired pending SePay payments restore inventory once', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+    Sanctum::actingAs($user);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-expire-test-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertCreated()
+        ->json('data.id');
+    Order::query()->whereKey($orderId)->update([
+        'created_at' => now()->subMinutes(31),
+        'payment_expires_at' => now()->subMinute(),
+    ]);
+
+    $this->artisan('payments:expire-pending')->assertSuccessful();
+    $this->artisan('payments:expire-pending')->assertSuccessful();
 
     $order = Order::findOrFail($orderId);
     expect($order->status)->toBe(Order::STATUS_CANCELLED);
     expect($order->payment_status)->toBe(Order::PAYMENT_STATUS_FAILED);
     expect($product->fresh()->inventory)->toBe(10);
+});
 
-    $this->artisan('payments:expire-pending')
-        ->assertSuccessful();
+test('missing SePay configuration rolls back order reservation and idempotency record', function () {
+    configureSepayTest();
+    config()->set('services.sepay.account_number', '');
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+    Sanctum::actingAs($user);
 
+    $this->withHeader('X-Idempotency-Key', 'sepay-config-test-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertServiceUnavailable();
+
+    expect(Order::count())->toBe(0);
+    expect(IdempotencyKey::count())->toBe(0);
     expect($product->fresh()->inventory)->toBe(10);
 });
 
-test('failed vnpay callback after customer cancellation does not restore inventory twice', function () {
-    configureVnpayTest();
-    $user = User::factory()->customer()->create();
-    $product = createPaymentProduct();
-
-    Sanctum::actingAs($user);
-
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-cancel-then-fail-0001')
-        ->postJson('/api/payment/create', paymentPayload($product))
+test('customers can only read their own SePay payment status', function () {
+    configureSepayTest();
+    $owner = User::factory()->customer()->create();
+    Sanctum::actingAs($owner);
+    $orderId = $this->withHeader('X-Idempotency-Key', 'sepay-status-test-0001')
+        ->postJson('/api/payment/create', paymentPayload(createPaymentProduct()))
         ->assertCreated()
         ->json('data.id');
 
-    expect($product->fresh()->inventory)->toBe(8);
-
-    $this->patchJson("/api/my-orders/{$orderId}/cancel")
+    $this->getJson("/api/payment/{$orderId}/status")
         ->assertOk()
-        ->assertJsonPath('status', Order::STATUS_CANCELLED);
+        ->assertJsonPath('data.id', $orderId)
+        ->assertJsonPath('payment.account_number', '0010000000355');
 
-    expect($product->fresh()->inventory)->toBe(10);
-
-    $params = signedVnpayReturnParams([
-        'vnp_Amount' => '11000000',
-        'vnp_ResponseCode' => '24',
-        'vnp_TransactionStatus' => '02',
-        'vnp_TmnCode' => 'TESTCODE',
-        'vnp_TxnRef' => (string) $orderId,
-    ]);
-
-    $this->get('/api/payment/vnpay-return?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986))
-        ->assertRedirect("http://127.0.0.1:5173/thanh-toan?error=payment_failed&orderId={$orderId}");
-
-    expect($product->fresh()->inventory)->toBe(10);
-});
-
-test('missing VNPay configuration rolls back order reservation and idempotency record', function () {
-    configureVnpayTest();
-    config()->set('services.vnpay.hash_secret', '');
-    $user = User::factory()->customer()->create();
-    $product = createPaymentProduct();
-    Sanctum::actingAs($user);
-    $this->withHeader('X-Idempotency-Key', 'vnpay-config-rollback-0001')->postJson('/api/payment/create', paymentPayload($product))->assertServiceUnavailable();
-    expect(Order::count())->toBe(0)->and(\App\Models\IdempotencyKey::count())->toBe(0)->and($product->fresh()->inventory)->toBe(10);
-});
-
-test('invalid VNPay signature and amount cannot change payment state', function () {
-    configureVnpayTest();
-    $user = User::factory()->customer()->create();
-    $product = createPaymentProduct();
-    Sanctum::actingAs($user);
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-invalid-return-0001')->postJson('/api/payment/create', paymentPayload($product))->assertCreated()->json('data.id');
-    $base = ['vnp_Amount' => '11000000', 'vnp_ResponseCode' => '00', 'vnp_TransactionStatus' => '00', 'vnp_TmnCode' => 'TESTCODE', 'vnp_TxnRef' => (string) $orderId];
-    $badSignature = signedVnpayReturnParams($base);
-    $badSignature['vnp_SecureHash'] = str_repeat('0', 128);
-    $this->get('/api/payment/vnpay-return?'.http_build_query($badSignature))->assertRedirect();
-    expect(Order::findOrFail($orderId)->payment_status)->toBe(Order::PAYMENT_STATUS_PENDING);
-    $badAmount = signedVnpayReturnParams([...$base, 'vnp_Amount' => '1']);
-    $this->get('/api/payment/vnpay-return?'.http_build_query($badAmount))->assertRedirectContains('error=invalid_payment_signature');
-    expect(Order::findOrFail($orderId)->payment_status)->toBe(Order::PAYMENT_STATUS_PENDING)->and($product->fresh()->inventory)->toBe(8);
-});
-
-test('successful VNPay callback replay queues confirmation only once', function () {
-    configureVnpayTest();
-    Queue::fake();
-    $user = User::factory()->customer()->create();
-    $product = createPaymentProduct();
-    Sanctum::actingAs($user);
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-success-replay-0001')->postJson('/api/payment/create', paymentPayload($product))->assertCreated()->json('data.id');
-    $params = signedVnpayReturnParams(['vnp_Amount' => '11000000', 'vnp_ResponseCode' => '00', 'vnp_TransactionStatus' => '00', 'vnp_TmnCode' => 'TESTCODE', 'vnp_TxnRef' => (string) $orderId]);
-    $url = '/api/payment/vnpay-return?'.http_build_query($params);
-    $this->get($url)->assertRedirect();
-    $this->get($url)->assertRedirect();
-    Queue::assertPushed(\App\Jobs\SendOrderConfirmationEmail::class, 1);
-    expect(Order::findOrFail($orderId)->status)->toBe(Order::STATUS_CONFIRMED)->and($product->fresh()->inventory)->toBe(8);
-});
-
-test('VNPay success cannot revive an already cancelled payment', function () {
-    configureVnpayTest();
-    Queue::fake();
-    $user = User::factory()->customer()->create();
-    $product = createPaymentProduct();
-    Sanctum::actingAs($user);
-    $orderId = $this->withHeader('X-Idempotency-Key', 'vnpay-cancel-success-0001')->postJson('/api/payment/create', paymentPayload($product))->assertCreated()->json('data.id');
-    $this->patchJson("/api/my-orders/{$orderId}/cancel")->assertOk();
-    $params = signedVnpayReturnParams(['vnp_Amount' => '11000000', 'vnp_ResponseCode' => '00', 'vnp_TransactionStatus' => '00', 'vnp_TmnCode' => 'TESTCODE', 'vnp_TxnRef' => (string) $orderId]);
-    $this->get('/api/payment/vnpay-return?'.http_build_query($params))->assertRedirectContains('error=payment_failed');
-    $order = Order::findOrFail($orderId);
-    expect($order->status)->toBe(Order::STATUS_CANCELLED)->and($order->payment_status)->toBe(Order::PAYMENT_STATUS_FAILED)->and($product->fresh()->inventory)->toBe(10);
-    Queue::assertNothingPushed();
+    Sanctum::actingAs(User::factory()->customer()->create());
+    $this->getJson("/api/payment/{$orderId}/status")->assertNotFound();
 });

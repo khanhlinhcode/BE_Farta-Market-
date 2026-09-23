@@ -31,7 +31,11 @@ class OrderController extends Controller
     {
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(Order::STATUSES)],
-            'payment_method' => ['nullable', Rule::in([Order::PAYMENT_METHOD_COD, Order::PAYMENT_METHOD_VNPAY])],
+            'payment_method' => ['nullable', Rule::in([
+                Order::PAYMENT_METHOD_COD,
+                Order::PAYMENT_METHOD_SEPAY,
+                Order::PAYMENT_METHOD_VNPAY,
+            ])],
             'payment_status' => ['nullable', Rule::in([
                 Order::PAYMENT_STATUS_PENDING,
                 Order::PAYMENT_STATUS_PAID,
@@ -76,7 +80,11 @@ class OrderController extends Controller
     {
         $filters = $request->validate([
             'status' => ['nullable', Rule::in(Order::STATUSES)],
-            'payment_method' => ['nullable', Rule::in([Order::PAYMENT_METHOD_COD, Order::PAYMENT_METHOD_VNPAY])],
+            'payment_method' => ['nullable', Rule::in([
+                Order::PAYMENT_METHOD_COD,
+                Order::PAYMENT_METHOD_SEPAY,
+                Order::PAYMENT_METHOD_VNPAY,
+            ])],
             'payment_status' => ['nullable', Rule::in([
                 Order::PAYMENT_STATUS_PENDING,
                 Order::PAYMENT_STATUS_PAID,

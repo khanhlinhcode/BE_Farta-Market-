@@ -2,7 +2,7 @@
 
 Laravel 12 API for the Farta Market storefront and administration portal. It
 owns authentication, catalog data, orders, payments, Cloudinary media,
-analytics, coupons, reviews, and grounded AI product recommendations.
+analytics, coupons, reviews, and a Grounded Conversational AI Assistant.
 
 ## Current release status
 
@@ -34,8 +34,9 @@ checkout intentionally fails closed with HTTP `503`.
 - COD and SePay VietQR checkout with scoped idempotency keys and inventory
   locking. VNPay values remain readable only for historical orders.
 - Pending online-payment expiration with inventory restoration.
-- Grounded AI product recommendations: model output is treated as product-ID
-  suggestions and every returned product is reloaded from the database.
+- Grounded Conversational AI Assistant with explicit intent routing,
+  database-verified product cards, read-only cart/order context, and
+  user-confirmed cart proposals.
 - Rate limits, CORS allowlists, security headers, CSV-injection protection, and
   bounded analytics/session retention.
 
@@ -156,6 +157,23 @@ files for rollback, and fails when a referenced legacy file cannot be migrated.
 
 ## AI assistant
 
+The assistant keeps `/api/chat` backward-compatible through the `reply` field
+and adds `message`, `intent`, verified `products`, `suggested_actions`, and an
+opaque conversation ID. The legacy `action` field is always inert. The
+Storefront changes its session cart only after the customer clicks a visible
+add-to-cart button.
+
+Common configuration:
+
+```dotenv
+AI_CHAT_ENABLED=true
+AI_CHAT_ORCHESTRATION=router
+AI_PRODUCT_SEARCH_MODE=database
+AI_VECTOR_SEARCH_ENABLED=false
+AI_CHAT_PROMPT_VERSION=catalog-v2
+AI_CHAT_DEBUG_LOG=false
+```
+
 Local Ollama configuration:
 
 ```dotenv
@@ -177,9 +195,14 @@ GROQ_API_KEY=
 
 Groq responses use a strict JSON schema and are accepted only as product-ID
 suggestions. Laravel reloads every product before returning its name, price, or
-inventory. If the provider is unavailable, the API returns a catalog fallback.
-The evidence boundary and evaluation rules are documented in
-[docs/chat-rag.md](docs/chat-rag.md).
+inventory. Cart input accepts only product IDs and quantities. Customer order
+queries require authentication, customer role, and server-side ownership. If
+any provider is unavailable, the API returns a deterministic catalog fallback.
+
+This version does not implement a provider-controlled tool loop, vector search,
+Qdrant, LangChain, or LangGraph. Architecture and trust boundaries are in
+[docs/chat-architecture.md](docs/chat-architecture.md); retrieval evaluation is
+in [docs/chat-rag.md](docs/chat-rag.md).
 
 Anthropic remains supported through `AI_CHAT_DRIVER=anthropic` and the matching
 model, base URL, and API key.

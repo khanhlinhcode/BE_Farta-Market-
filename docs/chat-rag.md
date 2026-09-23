@@ -1,19 +1,70 @@
-# Catalog-grounded chat: sparse RAG pilot
+# Chat retrieval and evaluation
 
-The recommendation path now follows retrieval, augmentation, generation, and verification. This is **sparse lexical RAG**, not vector or hybrid retrieval. The current catalog is small, so the API ranks the active product records already loaded for deterministic catalog answers. It sends at most five retrieved records to the model. The shopping/cart path remains deterministic and does not grant the model authority to create actions.
+> The filename is retained for existing links. The implemented feature is
+> documented as a **Grounded Conversational AI Assistant**, not as vector,
+> hybrid, or agentic search.
 
-## Evidence and answer boundary
+## Current retrieval baseline
 
-Each product is one source document, built from its current database ID, name, category, short description (capped at 300 characters), price, and inventory. The retriever normalizes accents and case, removes common query words, and scores token overlap with weights of 5 for name, 3 for category, and 1 for description. Multi-term queries require at least two weighted points, so an incidental match to one description word does not trigger generation. A query without enough evidence returns no sources and makes no model request. The corpus is read on each request, so product edits and deactivation do not depend on an embedding refresh or background index.
+The assistant uses database-only retrieval. Active products are filtered by
+structured constraints such as price and stock. The bounded candidate set is
+then ranked through normalized lexical overlap:
 
-The prompt contains only the retrieved source documents. Groq returns strict JSON with `kind` and up to three product IDs. The server rejects extra fields, invalid IDs, IDs outside the retrieved set, and IDs that are no longer active. It then re-queries the database and formats all user-visible product facts itself. Model prose, prices, quantities, discounts, and cart actions are never rendered or authorized. The existing `/api/chat` response contract is unchanged.
+- product name weight: 5;
+- category weight: 3;
+- short description weight: 1;
+- maximum provider evidence: 5 products;
+- maximum accepted provider recommendation: 3 distinct IDs.
 
-The browser may submit chat history for its own display, but recommendation inference forwards only the current question to the provider. The retriever also uses only that question, so sending earlier messages would add private data without improving retrieval. The public chat endpoint is limited to 20 requests per minute per IP and 60 requests per minute across the API deployment; the shared cache must remain available for the global limit to work across instances.
+Only current-question text is used for retrieval. Browser history is not
+evidence and is not forwarded to a provider. If retrieval finds no support, the
+endpoint abstains without a model request.
 
-This design is grounded by a structural allowlist and deterministic database facts. It does **not** claim independent semantic verification of arbitrary model-generated prose or visible citations. If the product data itself contains an unsupported marketing claim, this mechanism cannot validate that claim; catalog editors remain responsible for source quality.
+The provider can only return `kind` and `product_ids`. Laravel rejects unknown
+fields, duplicates, strings in place of integer IDs, IDs outside evidence, and
+stale/inactive IDs. Approved IDs are reloaded from MySQL before any name, price,
+stock, image, or category is returned. Provider prose is never used for product
+facts or cart authorization.
 
-## Evaluation and limits
+## Local evaluation fixture
 
-`tests/Feature/ChatTest.php` checks retrieval scope, inactive products, bounded top-five context, updates to descriptions, no-evidence refusal, out-of-source IDs, malformed model output, fresh price and inventory, and purchase authorization. These are regression checks, not a representative relevance benchmark. Before a production claim about recommendation quality, label a Vietnamese/English query set and measure Precision@5, Recall@5, MRR, abstention accuracy, and p95 retrieval/inference latency. Sparse token matching will miss synonyms and some follow-up questions. Add an independently evaluated dense retriever and fusion only if those measurements show a material gap.
+Run:
 
-The retrieval-augmented generation pattern is described by [Lewis et al., 2020](https://arxiv.org/abs/2005.11401). This implementation uses its retrieve-then-generate structure with a small catalog and provider-side generation, without claiming to reproduce that paper's dense retriever or training method.
+```bash
+php artisan test tests/Feature/ChatEvaluationTest.php
+```
+
+The test prints one `CHAT_EVALUATION` JSON line and asserts conservative floors.
+On 24 September 2026, the local SQLite run against fixture version 1 produced:
+
+```json
+{
+  "fixture_version": 1,
+  "intent_cases": 14,
+  "intent_accuracy": 1.0,
+  "retrieval_cases": 6,
+  "hit_rate_at_5": 1.0,
+  "mrr_at_5": 0.9167,
+  "ndcg_at_5": 0.9385
+}
+```
+
+Timing is intentionally not copied into this document because it varies by
+machine and test process. Read it from the current test output instead.
+
+This dataset is small and curated for regression. It does not establish p95
+production latency, broad Vietnamese/English relevance, synonym coverage, or
+real customer satisfaction. Expand it with reviewed production-like queries
+before making stronger quality claims.
+
+## Why Qdrant is not included
+
+The measured database/lexical baseline clears the current fixture thresholds,
+so adding a vector service would increase deployment, indexing, stale-data, and
+fallback complexity without demonstrated benefit. A future experiment should
+compare the same labeled set plus harder synonym and similarity queries. Adopt
+hybrid retrieval only if it materially improves recall/ranking while preserving
+MySQL as the final source of truth.
+
+See [chat-architecture.md](chat-architecture.md) for request flow, tools,
+provider capabilities, security boundaries, response schema, and fallback.

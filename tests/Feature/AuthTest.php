@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\AdminMfaService;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -169,6 +170,42 @@ test('customer can register and login through user auth only', function () {
         'email' => 'customer@example.test',
         'password' => 'FartaPass123',
     ])->assertUnauthorized();
+});
+
+test('unverified customer login sends a fresh verification email', function () {
+    Notification::fake();
+    $user = User::factory()->customer()->unverified()->create([
+        'password' => 'FartaPass123',
+    ]);
+
+    $this->withHeaders(spaHeaders())->postJson('/api/login', [
+        'email' => $user->email,
+        'password' => 'FartaPass123',
+    ])
+        ->assertOk()
+        ->assertJsonPath('verification_email_sent', true);
+
+    Notification::assertSentTo($user, VerifyEmail::class);
+});
+
+test('unverified customer login succeeds when verification email delivery fails', function () {
+    $user = User::factory()->customer()->unverified()->create([
+        'password' => 'FartaPass123',
+    ]);
+
+    $this->mock(Dispatcher::class, function ($mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->andThrow(new RuntimeException('Mail transport unavailable'));
+    });
+
+    $this->withHeaders(spaHeaders())->postJson('/api/login', [
+        'email' => $user->email,
+        'password' => 'FartaPass123',
+    ])
+        ->assertOk()
+        ->assertJsonPath('user.id', $user->id)
+        ->assertJsonPath('verification_email_sent', false);
 });
 
 test('registration succeeds when the verification email transport is unavailable', function () {

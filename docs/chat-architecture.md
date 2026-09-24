@@ -1,178 +1,112 @@
-# Grounded Conversational AI Assistant
+# Grounded Commerce Assistant
 
-## Purpose and scope
+## Trust model and request flow
 
-The customer chat endpoint is a bounded commerce assistant. It interprets a
-message, routes it to a small read-only capability, reloads commerce facts from
-MySQL, and returns a structured response. It does not have generic SQL, HTTP,
-payment, order-update, or admin capabilities.
+`POST /api/chat` is public so guests can discover products and ask store FAQs.
+The endpoint accepts a 500-character message, bounded display history, and at
+most 20 cart references shaped only as `{product_id, quantity}`. Browser history
+is never treated as evidence or forwarded to a provider.
 
 ```mermaid
 flowchart TD
-    U[Customer] --> UI[Storefront Chat UI]
-    UI -->|message + cart IDs/quantities| API[POST /api/chat]
-    API --> V[Validation, rate limit, request ID]
-    V --> R[Deterministic intent router]
-    R --> P[Product tool]
-    R --> C[Cart context tool]
-    R --> O[Customer order tool]
-    P --> DB[(MySQL)]
-    C --> DB
+    U[Guest or customer] --> API[Validation + deterministic router]
+    API --> P[Product/catalog tool]
+    API --> C[Cart tool]
+    API --> O[Owner-scoped order tool]
+    API --> K[Knowledge retriever]
+    API --> G[Deterministic greeting/help]
+    P --> DB[(MySQL products)]
+    C -->|verified customer only| DB
     O -->|customer + owner scope| DB
-    P --> L[Optional provider recommendation]
-    L --> X[Validate IDs and reload MySQL]
-    DB --> OUT[Verified response contract]
-    X --> OUT
-    OUT --> UI
-    UI -->|explicit click only| CART[sessionStorage cart logic]
+    K --> S[SiteSetting dynamic facts]
+    K --> D[(Published knowledge chunks)]
+    K -. optional .-> V[Qdrant Cloud Inference]
+    V -->|error or missing config| D
+    K --> A[Verified answer pipeline]
+    A --> OUT[Backward-compatible response]
 ```
 
-The implementation follows one invariant:
+The router returns `product_search`, `product_detail`, `cart_query`,
+`cart_action_request`, `order_query`, `knowledge_query`, `general_chat`, or
+`unsupported`. Commerce tools stay ahead of knowledge retrieval.
 
-> The model interprets; Laravel retrieves; MySQL verifies; tools stay within
-> permissions; the customer confirms cart writes.
+## Authority boundaries
 
-## Request flow
+- Product name, price, inventory, active state and image come from fresh MySQL
+  reads. Provider output can select only IDs already present in evidence.
+- Shipping fee, free-shipping threshold, contact and address come directly from
+  `SiteSetting`.
+- Policy answers use only indexed `published` documents. Drafts, samples,
+  placeholders and instruction-like content are not indexed.
+- Order queries require a customer account and always include owner scoping.
+- Chat has no order/payment mutation, admin, arbitrary SQL/URL, or generic
+  execution capability. The legacy `action` field is always `{ "type": "none" }`.
 
-`POST /api/chat` accepts a message of at most 500 characters, bounded display
-history, and at most 20 cart references. Each cart reference has exactly
-`product_id` and `quantity`; extra names, prices, stock, or totals are rejected.
-History remains a browser display concern and is not forwarded to a provider.
+## Cart authorization
 
-The router returns one enum value:
+Only a user with role `customer` and verified email may receive
+`ADD_TO_CART`. A guest cart query or mutation returns HTTP 200 with
+`code=AUTH_REQUIRED_FOR_CART`, `auth.required=true`, no suggested action, and an
+optional verified product card. `respond()` rechecks authorization while
+filtering actions, so a malformed/internal payload cannot bypass the boundary.
 
-- `product_search`
-- `product_detail`
-- `cart_query`
-- `cart_action_request`
-- `order_query`
-- `general_chat`
-- `unsupported`
+The Storefront independently enforces the same rule in `useShoppingCart`. It
+waits for auth bootstrap, binds session cart storage to the customer ID, clears
+stale storage after logout/session loss/owner change, sends no guest cart
+context, and requires a new explicit click after login.
 
-Deterministic product filters, cart queries, greetings, and order lookups do not
-need a provider request. A semantic recommendation first retrieves a bounded
-set of active product records and gives the provider at most five evidence
-records. This keeps the normal path to router → retrieval → at most one model
-call.
+## Knowledge retrieval and answer verification
 
-## Read-only tools
+Query normalization uses ASCII matching and whitespace normalization while the
+original question remains unchanged for display/generation. Deterministic
+synonym expansion produces at most three variants. Optional model expansion
+uses strict JSON only when sparse confidence is low and the feature flag is on.
 
-### Product tool
+Sparse ranking weights title, heading, topic and content. Optional dense ranks
+come directly from Qdrant Cloud Inference using
+`intfloat/multilingual-e5-small`. The dedicated collection accepts only Farta
+chat knowledge names; point IDs and payload `chunk_id` values match MySQL chunk
+IDs. Reciprocal Rank Fusion uses `k=60`; failures fall back to sparse and never
+fail the chat request. At most five chunks become evidence.
 
-`ChatProductTool` supports bounded database filters for active status, category,
-price, stock, query text, and result limit. The existing lexical scorer ranks
-name, category, and short-description tokens. Every chosen provider ID is then
-reloaded from MySQL and serialized into a product card containing only approved
-fields.
-
-### Cart context tool
-
-`ChatCartTool` reloads every submitted ID, checks active state and current
-inventory, and compares the current quantity. It never trusts browser product
-objects. Cart queries are read-only. An add request becomes a
-`suggested_actions` item; the Storefront must render and receive a separate
-customer click before using its existing cart hook.
-
-### Customer order tool
-
-`ChatOrderTool` accepts only an authenticated user whose role is `customer`.
-Both exact and recent-order queries include `where user_id = current_user_id`.
-The output contains only order ID, order status, payment status/method, total,
-and creation time. It excludes contact details, notes, payment references,
-transaction IDs, and admin history. No chat tool can modify an order or payment.
-
-## Response contract
-
-The endpoint keeps `reply` for older consumers and also returns `message`:
+With generated knowledge answers enabled, the provider must return strict JSON
+containing claims, source indices and exact evidence quotes. Laravel validates
+indices and substring-exact quotes, then a second strict verifier checks
+entailment. One repair is allowed. Failure returns
+`answer_status=refused_unverified`. When generation is disabled, the answer is a
+direct extract from the highest-ranked approved chunk and remains traceable.
 
 ```json
 {
-  "message": "Tôi đã tìm thấy Cam Tươi.",
-  "reply": "Tôi đã tìm thấy Cam Tươi.",
-  "intent": "cart_action_request",
-  "products": [
+  "message": "Phí giao hàng tiêu chuẩn là 20.000đ.",
+  "reply": "Phí giao hàng tiêu chuẩn là 20.000đ.",
+  "intent": "knowledge_query",
+  "source": "knowledge",
+  "answer_status": "verified",
+  "citations": [
     {
-      "id": 123,
-      "slug": "cam-tuoi",
-      "name": "Cam Tươi",
-      "price": 45000,
-      "inventory": 30,
-      "inventory_status": "in_stock",
-      "image_url": "https://...",
-      "category": { "id": 1, "name": "Trái Cây" }
+      "source_id": "site-settings",
+      "title": "Thông tin giao hàng",
+      "section": "Phí giao hàng"
     }
   ],
-  "suggested_actions": [
-    { "type": "ADD_TO_CART", "product_id": 123, "quantity": 2 }
-  ],
-  "conversation": { "id": "session-scoped opaque ID" },
-  "action": { "type": "none" },
-  "source": "catalog"
+  "products": [],
+  "suggested_actions": [],
+  "action": { "type": "none" }
 }
 ```
 
-The legacy `action` field is deliberately inert. Suggested actions are kept
-only when their product ID exists in the verified `products` list and quantity
-is an integer from 1 to 100.
+## Context and observability
 
-## Provider capabilities and fallback
+There is no long-term memory. A five-minute server context stores only product
+ID, quantity, clarification stage, owner ID and expiry. It is cleared on expiry,
+owner/topic change or negation. No raw cart, payment reference or sensitive
+profile data is stored.
 
-The provider service supports Groq, Ollama, and Anthropic transports. Its
-capability report describes only behaviors enabled by this implementation:
-strict/structured output for the configured Groq and Ollama paths, no streaming,
-and no provider-controlled tool loop. Anthropic uses the same server-side JSON
-validation boundary but is not advertised as strict structured output.
+Logs contain request ID, HMAC user identifier, intent, source IDs, counts,
+retrieval mode, vector fallback, answer status, provider/model and timing. They
+do not contain raw prompts/history/cart contents, cookies, API keys, addresses
+or payment details.
 
-Groq Structured Outputs are used in a separate product-ID selection call. The
-implementation does not combine Structured Outputs with tool use because the
-current Groq documentation says that combination is unavailable. Ollama uses a
-JSON schema through its structured-output interface. Provider errors from all
-drivers return a deterministic catalog fallback; authorization and validation
-errors are not retried.
-
-References:
-
-- [Groq Structured Outputs](https://console.groq.com/docs/structured-outputs)
-- [Groq Tool Use](https://console.groq.com/docs/tool-use/overview)
-- [Ollama Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs)
-- [Ollama Tool Calling](https://docs.ollama.com/capabilities/tool-calling)
-- [Anthropic Tool Use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview)
-
-## Trust boundaries and security
-
-- Browser messages, history, cart references, and provider output are untrusted.
-- Product price, inventory, active state, and category come from a fresh MySQL
-  read before serialization.
-- Order reads require authentication, the customer role, and owner scoping.
-- Chat has no payment mutation, SePay confirmation, arbitrary SQL, arbitrary
-  URL, admin, or generic execution tool.
-- The endpoint keeps its existing IP/global rate limits and request IDs.
-- Structured logs contain intent, source, provider, counts, timing, status, and
-  an HMAC user identifier. Raw prompts, cart contents, cookies, credentials,
-  and payment data are not logged.
-- Assistant content is rendered as React text. It is not inserted as HTML.
-
-These boundaries follow the practical guidance in the
-[OWASP LLM Prompt Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
-and [OWASP Excessive Agency guidance](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/).
-
-## Conversation memory
-
-There is no long-term AI memory. The browser retains a bounded visible history,
-while the backend stores only a five-minute, session-and-owner-scoped purchase
-clarification context. It cannot be authorized from browser-supplied assistant
-messages and is cleared on expiry, owner change, negation, or topic change.
-
-## Evaluation and future search path
-
-`tests/Fixtures/chat_evaluation.php` is a versioned local fixture for intent and
-retrieval behavior. `ChatEvaluationTest` reports intent accuracy, HitRate@5,
-MRR@5, nDCG@5, and local router/retrieval duration. It is intentionally small;
-the numbers are regression evidence, not production traffic quality claims.
-
-Database-only retrieval remains the configured mode. Qdrant and hybrid fusion
-are deferred until a larger labeled VI/EN query set proves a material lexical
-recall gap. If that happens, the next step is a feature-flagged, idempotent index
-sync with MySQL reload as the final authority and database fallback whenever the
-vector service is unavailable. Qdrant's Query API and RRF are candidates, not
-current implementation: [Qdrant hybrid queries](https://qdrant.tech/documentation/search/hybrid-queries/).
+See [chat-rag.md](chat-rag.md) for retrieval/evaluation and
+[chat-knowledge-authoring.md](chat-knowledge-authoring.md) for publishing.

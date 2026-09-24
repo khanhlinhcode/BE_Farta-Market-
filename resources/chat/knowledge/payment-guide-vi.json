@@ -1,0 +1,32 @@
+{
+  "source_id": "payment-guide-vi",
+  "title": "Hướng dẫn thanh toán",
+  "locale": "vi",
+  "topic": "payment",
+  "version": 1,
+  "status": "published",
+  "updated_at": "2026-09-24",
+  "owner": "Farta Market",
+  "sections": [
+    {
+      "heading": "Thanh toán khi nhận hàng",
+      "content": "Khách hàng có thể chọn thanh toán khi nhận hàng. Hệ thống tạo đơn theo tổng tiền được tính trên máy chủ và đơn bắt đầu ở trạng thái chờ xử lý."
+    },
+    {
+      "heading": "Thanh toán bằng SePay",
+      "content": "Thanh toán SePay yêu cầu khách hàng đã đăng nhập và xác minh email. Sau khi tạo yêu cầu thanh toán, hệ thống hiển thị mã QR, số tiền, tài khoản nhận, nội dung chuyển khoản và thời điểm hết hạn."
+    },
+    {
+      "heading": "Nội dung và số tiền chuyển khoản",
+      "content": "Khi thanh toán bằng SePay, khách hàng cần chuyển đúng số tiền và giữ nguyên nội dung chuyển khoản được hiển thị. Hệ thống chỉ xác nhận thanh toán khi giao dịch khớp tài khoản nhận, số tiền và mã tham chiếu của đơn hàng."
+    },
+    {
+      "heading": "Xác nhận thanh toán",
+      "content": "Trạng thái thanh toán được máy chủ cập nhật sau khi nhận thông báo giao dịch hợp lệ từ SePay. Trình duyệt hoặc chatbot không thể tự đánh dấu một đơn hàng là đã thanh toán."
+    },
+    {
+      "heading": "Yêu cầu thanh toán hết hạn",
+      "content": "Khách hàng cần hoàn tất chuyển khoản trước thời điểm hết hạn hiển thị cùng mã QR. Một yêu cầu thanh toán đang chờ có thể bị hủy khi hết hạn và hệ thống sẽ xử lý hoàn lại lượng tồn kho đã giữ theo quy trình của đơn hàng."
+    }
+  ]
+}

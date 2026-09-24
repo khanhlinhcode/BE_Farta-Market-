@@ -1,0 +1,28 @@
+{
+  "source_id": "account-guide-vi",
+  "title": "Hướng dẫn tài khoản khách hàng",
+  "locale": "vi",
+  "topic": "account",
+  "version": 1,
+  "status": "published",
+  "updated_at": "2026-09-24",
+  "owner": "Farta Market",
+  "sections": [
+    {
+      "heading": "Đăng ký và xác minh email",
+      "content": "Khách hàng đăng ký bằng tên, địa chỉ email và mật khẩu. Sau khi đăng ký, hệ thống gửi email xác minh. Khách hàng cần mở liên kết trong email để hoàn tất xác minh tài khoản."
+    },
+    {
+      "heading": "Gửi lại email xác minh",
+      "content": "Nếu chưa nhận được email xác minh, khách hàng có thể đăng nhập và yêu cầu hệ thống gửi lại email. Liên kết xác minh có thời hạn và chỉ áp dụng cho đúng tài khoản được gửi."
+    },
+    {
+      "heading": "Quên mật khẩu",
+      "content": "Khách hàng có thể sử dụng chức năng quên mật khẩu để nhận liên kết đặt lại mật khẩu qua email. Vì lý do bảo mật, hệ thống không xác nhận một địa chỉ email có tồn tại trong hệ thống hay không."
+    },
+    {
+      "heading": "Các chức năng yêu cầu xác minh",
+      "content": "Một số chức năng như thanh toán SePay, sử dụng coupon, gửi đánh giá và nhận đề xuất thêm sản phẩm vào giỏ từ chatbot yêu cầu khách hàng đã đăng nhập và xác minh email."
+    }
+  ]
+}

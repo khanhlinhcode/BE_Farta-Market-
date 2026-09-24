@@ -170,7 +170,9 @@ AI_CHAT_ENABLED=true
 AI_CHAT_ORCHESTRATION=router
 AI_PRODUCT_SEARCH_MODE=database
 AI_VECTOR_SEARCH_ENABLED=false
-AI_CHAT_PROMPT_VERSION=catalog-v2
+AI_KNOWLEDGE_GENERATION_ENABLED=false
+AI_QUERY_EXPANSION_ENABLED=false
+AI_CHAT_PROMPT_VERSION=grounded-commerce-v3
 AI_CHAT_DEBUG_LOG=false
 ```
 
@@ -193,14 +195,46 @@ AI_CHAT_BASE_URL=https://api.groq.com/openai/v1
 GROQ_API_KEY=
 ```
 
-Groq responses use a strict JSON schema and are accepted only as product-ID
-suggestions. Laravel reloads every product before returning its name, price, or
-inventory. Cart input accepts only product IDs and quantities. Customer order
-queries require authentication, customer role, and server-side ownership. If
-any provider is unavailable, the API returns a deterministic catalog fallback.
+Groq responses use strict JSON schemas. Laravel reloads every product before
+returning its name, price, or inventory. Only authenticated, email-verified
+customers can receive cart proposals or submit cart context; guests still browse
+and chat but receive `AUTH_REQUIRED_FOR_CART`. Order queries remain customer-only
+and owner-scoped.
 
-This version does not implement a provider-controlled tool loop, vector search,
-Qdrant, LangChain, or LangGraph. Architecture and trust boundaries are in
+Knowledge RAG reads dynamic shipping/contact facts from `SiteSetting` and
+published curated policy documents. Sparse retrieval is the local default.
+Optional dense retrieval uses Qdrant Cloud Inference with
+`intfloat/multilingual-e5-small` and automatically falls back to sparse. The
+dedicated collection must be named `farta_chat_knowledge` (an environment suffix
+is allowed), and every point ID/payload `chunk_id` is the MySQL chunk ID. This
+guard prevents the chatbot from writing to an unrelated Qdrant collection. RRF
+uses `k=60`; at most five chunks are evidence. Generated knowledge answers
+require strict claims, exact evidence quotes, semantic verification and at most
+one repair. With generation disabled, the API returns a verified direct extract
+instead of inventing prose.
+
+```dotenv
+QDRANT_URL=https://your-cluster.cloud.qdrant.io
+QDRANT_API_KEY=
+QDRANT_COLLECTION=farta_chat_knowledge
+QDRANT_INFERENCE_ENABLED=true
+QDRANT_INFERENCE_MODEL=intfloat/multilingual-e5-small
+AI_VECTOR_SEARCH_ENABLED=true
+```
+
+When one cluster serves multiple environments, use separate collections such as
+`farta_chat_knowledge_local` and `farta_chat_knowledge_staging` so identical
+database chunk IDs cannot collide.
+
+Validate and index authored documents with:
+
+```bash
+php artisan chat:knowledge:sync --dry-run
+php artisan chat:knowledge:sync
+```
+
+Authoring rules are in
+[docs/chat-knowledge-authoring.md](docs/chat-knowledge-authoring.md). Architecture and trust boundaries are in
 [docs/chat-architecture.md](docs/chat-architecture.md); retrieval evaluation is
 in [docs/chat-rag.md](docs/chat-rag.md).
 

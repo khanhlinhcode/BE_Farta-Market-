@@ -2,16 +2,19 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\ChatProductRetriever;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->withHeader('Accept-Language', 'vi');
     $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+    Sanctum::actingAs(User::factory()->customer()->create());
 });
 
 function chatSpaHeaders(): array

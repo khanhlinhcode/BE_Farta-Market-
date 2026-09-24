@@ -36,12 +36,12 @@ final class ChatProvider
     }
 
     /** @param array<int, array{role: string, content: string}> $messages @param array<string, mixed> $schema */
-    public function structured(array $messages, string $systemPrompt, array $schema): string
+    public function structured(array $messages, string $systemPrompt, array $schema, string $schemaName = 'catalog_recommendation'): string
     {
         return match ($this->driver()) {
             'ollama' => $this->ollama($messages, $systemPrompt, $schema),
             'anthropic' => $this->anthropic($messages, $systemPrompt),
-            'groq' => $this->groq($messages, $systemPrompt, $schema),
+            'groq' => $this->groq($messages, $systemPrompt, $schema, $schemaName),
             default => throw new RuntimeException('AI_MODEL_UNAVAILABLE:Invalid driver.'),
         };
     }
@@ -102,7 +102,7 @@ final class ChatProvider
             ->map(fn ($block) => $block->text)->join("\n");
     }
 
-    private function groq(array $messages, string $systemPrompt, array $schema): string
+    private function groq(array $messages, string $systemPrompt, array $schema, string $schemaName): string
     {
         $key = config('services.ai_chat.key');
         if (! is_string($key) || $key === '') {
@@ -118,7 +118,7 @@ final class ChatProvider
                 'response_format' => [
                     'type' => 'json_schema',
                     'json_schema' => [
-                        'name' => 'catalog_recommendation',
+                        'name' => preg_replace('/[^a-z0-9_]/', '_', strtolower($schemaName)) ?: 'structured_response',
                         'strict' => true,
                         'schema' => $schema,
                     ],

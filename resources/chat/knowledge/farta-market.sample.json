@@ -1,0 +1,16 @@
+{
+  "source_id": "example-policy-vi",
+  "title": "Tài liệu mẫu — không được xuất bản",
+  "locale": "vi",
+  "topic": "example",
+  "version": 1,
+  "status": "draft",
+  "updated_at": "2026-09-24",
+  "owner": "Farta Market",
+  "sections": [
+    {
+      "heading": "Cách soạn nội dung",
+      "content": "Bản mẫu này chỉ minh họa cấu trúc. Chủ cửa hàng phải thay bằng chính sách đã xác nhận và đổi trạng thái thành published trước khi đồng bộ."
+    }
+  ]
+}

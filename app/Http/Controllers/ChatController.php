@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Services\Chat\ChatCartTool;
 use App\Services\Chat\ChatIntentRouter;
+use App\Services\Chat\ChatKnowledgeAnswerService;
+use App\Services\Chat\ChatKnowledgeRetriever;
 use App\Services\Chat\ChatOrderTool;
 use App\Services\Chat\ChatProductTool;
 use App\Services\Chat\ChatProvider;
@@ -35,6 +37,8 @@ class ChatController extends Controller
         private readonly ChatCartTool $cartTool,
         private readonly ChatOrderTool $orderTool,
         private readonly ChatProvider $provider,
+        private readonly ChatKnowledgeRetriever $knowledgeRetriever,
+        private readonly ChatKnowledgeAnswerService $knowledgeAnswer,
     ) {}
 
     public function send(Request $request): JsonResponse
@@ -69,6 +73,9 @@ class ChatController extends Controller
             }
             if ($route['intent'] === ChatIntent::CartQuery) {
                 return $this->cartResponse($request, $validated['cart'] ?? [], $route, $english, $startedAt);
+            }
+            if ($route['intent'] === ChatIntent::KnowledgeQuery) {
+                return $this->knowledgeResponse($request, $validated['message'], $route, $english, $startedAt);
             }
             if ($route['intent'] === ChatIntent::ProductSearch
                 && collect($route['filters'])->contains(fn ($value) => $value !== null)) {
@@ -213,6 +220,17 @@ class ChatController extends Controller
         bool $english,
         float $startedAt,
     ): JsonResponse {
+        if (! $this->verifiedCustomer($request)) {
+            return $this->respond($request, [
+                'reply' => $english
+                    ? 'Please sign in with a verified customer account to view or change your cart.'
+                    : 'Vui lòng đăng nhập tài khoản khách hàng đã xác minh để xem hoặc thay đổi giỏ hàng.',
+                'source' => 'cart',
+                'code' => 'AUTH_REQUIRED_FOR_CART',
+                'auth' => ['required' => true, 'reason' => 'cart_query'],
+            ], $route, $startedAt);
+        }
+
         $context = $this->cartTool->resolve($cart);
         $cards = collect($context['items'])->pluck('product')->filter()->unique('id')->values()->all();
 
@@ -290,6 +308,30 @@ class ChatController extends Controller
         ], $route, $startedAt);
     }
 
+    /** @param array<string, mixed> $route */
+    private function knowledgeResponse(
+        Request $request,
+        string $message,
+        array $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        $retrievalStartedAt = microtime(true);
+        $retrieval = $this->knowledgeRetriever->retrieve($message, $english ? 'en' : 'vi');
+        $retrievalMs = (int) round((microtime(true) - $retrievalStartedAt) * 1000);
+        $answer = $this->knowledgeAnswer->answer($message, $retrieval, $english);
+        $answer['_telemetry'] = [
+            ...($answer['_telemetry'] ?? []),
+            'chunk_count' => count($retrieval['chunks']),
+        ];
+        $answer['retrieval'] = [
+            'mode' => $retrieval['mode'],
+            'vector_fallback' => $retrieval['vector_fallback'],
+        ];
+
+        return $this->respond($request, $answer, $route, $startedAt, $retrievalMs);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $route
@@ -305,8 +347,9 @@ class ChatController extends Controller
         $reply = (string) ($payload['reply'] ?? $payload['message'] ?? '');
         $products = array_slice(array_values($payload['products'] ?? []), 0, ChatProductTool::MAX_OUTPUT);
         $productIds = array_map(fn (array $product) => $product['id'] ?? null, $products);
-        $actions = collect($payload['suggested_actions'] ?? [])->filter(function ($action) use ($productIds) {
+        $actions = collect($payload['suggested_actions'] ?? [])->filter(function ($action) use ($productIds, $request) {
             return is_array($action)
+                && $this->verifiedCustomer($request)
                 && count($action) === 3
                 && ($action['type'] ?? null) === 'ADD_TO_CART'
                 && is_int($action['product_id'] ?? null)
@@ -332,7 +375,7 @@ class ChatController extends Controller
             'action' => ['type' => 'none'],
             'source' => $payload['source'] ?? 'catalog',
         ];
-        foreach (['code', 'order'] as $key) {
+        foreach (['code', 'order', 'auth', 'answer_status', 'citations', 'retrieval'] as $key) {
             if (array_key_exists($key, $payload)) {
                 $response[$key] = $payload[$key];
             }
@@ -348,7 +391,14 @@ class ChatController extends Controller
             'prompt_version' => config('services.ai_chat.prompt_version'),
             'product_count' => count($products),
             'suggested_action_count' => count($actions),
+            'answer_status' => $response['answer_status'] ?? null,
+            'citation_source_ids' => collect($response['citations'] ?? [])->pluck('source_id')->all(),
+            'retrieval_mode' => $response['retrieval']['mode'] ?? null,
+            'chunk_count' => $payload['_telemetry']['chunk_count'] ?? 0,
+            'vector_fallback' => $response['retrieval']['vector_fallback'] ?? null,
             'retrieval_ms' => $retrievalMs,
+            'generation_ms' => $payload['_telemetry']['generation_ms'] ?? 0,
+            'verification_ms' => $payload['_telemetry']['verification_ms'] ?? 0,
             'total_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'status' => $status,
         ]);
@@ -384,7 +434,7 @@ class ChatController extends Controller
             if (($context['stage'] ?? '') === 'confirmation') {
                 $this->clearContext($request);
 
-                return $this->buildAddToCartResponse($context['product_id'], $context['quantity'], $english);
+                return $this->buildAddToCartResponse($request, $context['product_id'], $context['quantity'], $english);
             }
 
             return ['reply' => $english
@@ -398,6 +448,20 @@ class ChatController extends Controller
             return ['reply' => $english
                 ? 'Hi! I can help you check products, stock, prices, or add items to your cart.'
                 : 'Xin chào! Tôi có thể giúp bạn kiểm tra sản phẩm, tồn kho, giá hoặc thêm sản phẩm vào giỏ hàng.'];
+        }
+
+        if ($this->containsPhrase($message, 'cam on') || preg_match('/\b(?:thank|thanks)\b/', $message)) {
+            $this->clearContext($request);
+
+            return ['reply' => $english ? 'You are welcome. I am here whenever you need help with Farta Market.' : 'Rất vui được hỗ trợ bạn. Khi cần thông tin về Farta Market, bạn cứ nhắn nhé.'];
+        }
+
+        if (preg_match('/\b(ban (?:lam|giup) duoc gi|what can you do|how can you help)\b/', $message)) {
+            $this->clearContext($request);
+
+            return ['reply' => $english
+                ? 'I can find products, check current price and stock, explain verified store policies, review your signed-in cart, and look up your own orders.'
+                : 'Tôi có thể tìm sản phẩm, kiểm tra giá và tồn kho hiện tại, giải thích chính sách đã kiểm chứng, xem giỏ hàng khi bạn đăng nhập và tra cứu đơn của chính bạn.'];
         }
 
         // These facts have no source in the catalog. A model cannot supply them.
@@ -440,7 +504,7 @@ class ChatController extends Controller
             }
             $this->clearContext($request);
 
-            return $this->buildAddToCartResponse($product->id, $quantity['value'], $english);
+            return $this->buildAddToCartResponse($request, $product->id, $quantity['value'], $english);
         }
 
         if ($product && ($context['stage'] ?? '') === 'quantity' && $matches->isEmpty()) {
@@ -556,7 +620,7 @@ class ChatController extends Controller
 
     private function offer(Request $request, Product $product, int $quantity, bool $english): array
     {
-        $checked = $this->buildAddToCartResponse($product->id, $quantity, $english);
+        $checked = $this->buildAddToCartResponse($request, $product->id, $quantity, $english);
         if (($checked['suggested_actions'][0]['type'] ?? '') !== 'ADD_TO_CART') {
             $this->clearContext($request);
 
@@ -628,7 +692,7 @@ class ChatController extends Controller
         return array_values(array_unique(array_filter($aliases)));
     }
 
-    private function buildAddToCartResponse(int $productId, int $quantity, bool $english): array
+    private function buildAddToCartResponse(Request $request, int $productId, int $quantity, bool $english): array
     {
         if ($quantity < 1 || $quantity > 100) {
             return $this->fallback($english);
@@ -648,6 +712,19 @@ class ChatController extends Controller
                 : "{$product->name} chỉ còn {$inventory} sản phẩm. Bạn vui lòng chọn số lượng ít hơn."];
         }
 
+        if (! $this->verifiedCustomer($request)) {
+            return [
+                'reply' => $english
+                    ? "I found {$product->name}. Sign in with a verified customer account to add it to your cart."
+                    : "Tôi đã tìm thấy {$product->name}. Hãy đăng nhập tài khoản khách hàng đã xác minh để thêm sản phẩm vào giỏ.",
+                'products' => [$this->productTool->card($product)],
+                'suggested_actions' => [],
+                'code' => 'AUTH_REQUIRED_FOR_CART',
+                'auth' => ['required' => true, 'reason' => 'cart_mutation'],
+                'action' => ['type' => 'none'],
+            ];
+        }
+
         return [
             'reply' => $english
                 ? "I found {$product->name}. Confirm below to add {$quantity} to your cart."
@@ -660,6 +737,15 @@ class ChatController extends Controller
             ]],
             'action' => ['type' => 'none'],
         ];
+    }
+
+    private function verifiedCustomer(Request $request): bool
+    {
+        $user = $request->user('sanctum');
+
+        return $user !== null
+            && $user->role === 'customer'
+            && $user->hasVerifiedEmail();
     }
 
     private function numberWords(): array

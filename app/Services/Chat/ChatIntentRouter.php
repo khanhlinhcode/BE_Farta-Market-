@@ -35,7 +35,8 @@ final class ChatIntentRouter
 
         if ($this->matches($message, [
             'xoa don', 'doi trang thai don', 'danh dau da thanh toan', 'hoan tien',
-            'delete order', 'change order status', 'mark as paid', 'refund order',
+            'delete order', 'change order status', 'mark as paid', 'mark order as paid', 'refund order',
+            'tu van y te', 'tu van phap ly', 'tu van tai chinh', 'medical advice', 'legal advice', 'financial advice',
         ]) || preg_match('/\bdanh dau\b.*\bda thanh toan\b/', $message) === 1) {
             return ChatIntent::Unsupported;
         }
@@ -48,13 +49,23 @@ final class ChatIntentRouter
         }
 
         if ($this->matches($message, [
-            'trong gio', 'gio cua toi', 'gio hang co', 'gio hang cua', 'my cart', 'in my cart', 'cart contain',
+            'trong gio', 'gio cua toi', 'gio hang co', 'gio hang cua', 'my cart', 'in my cart', 'cart contain', 'cart contains',
         ])) {
             return ChatIntent::CartQuery;
         }
 
         if (preg_match('/\b(mua|dat|lay|buy|order)\b|\bthem\b.*\bgio\b|\badd\b.*\bcart\b/', $message) === 1) {
             return ChatIntent::CartActionRequest;
+        }
+
+        if ($this->matches($message, [
+            'phi ship', 'phi giao hang', 'mien phi van chuyen', 'mien phi giao hang', 'free ship',
+            'shipping fee', 'delivery fee', 'free shipping', 'lien he', 'dia chi', 'hotline',
+            'contact', 'address', 'doi tra', 'hoan tra', 'return policy', 'refund policy',
+            'bao quan', 'storage', 'phuong thuc thanh toan', 'payment method', 'huong dan mua hang',
+            'how to order', 'chinh sach giao hang', 'shipping policy', 'payment methods',
+        ])) {
+            return ChatIntent::KnowledgeQuery;
         }
 
         if ($this->matches($message, [
@@ -71,7 +82,10 @@ final class ChatIntentRouter
             return ChatIntent::ProductDetail;
         }
 
-        if ($this->matches($message, ['xin chao', 'chao', 'alo', 'hello', 'hi', 'hey', 'cam on', 'thank'])) {
+        if ($this->matches($message, [
+            'xin chao', 'chao', 'alo', 'hello', 'hi', 'hey', 'cam on', 'thank', 'thanks',
+            'ban lam duoc gi', 'ban giup duoc gi', 'what can you do', 'how can you help',
+        ])) {
             return ChatIntent::GeneralChat;
         }
 

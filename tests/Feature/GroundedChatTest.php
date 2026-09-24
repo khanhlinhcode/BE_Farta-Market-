@@ -70,6 +70,7 @@ it('uses MySQL filters and returns only authoritative product cards', function (
 
 it('accepts only cart references and reloads current product facts', function () {
     $product = groundedProduct();
+    Sanctum::actingAs(User::factory()->customer()->create());
 
     $this->postJson('/api/chat', [
         'message' => 'Trong giỏ của tôi có gì?',
@@ -93,6 +94,7 @@ it('accepts only cart references and reloads current product facts', function ()
 
 it('reports deleted and out-of-stock cart references without trusting the client', function () {
     $empty = groundedProduct(['inventory' => 0]);
+    Sanctum::actingAs(User::factory()->customer()->create());
 
     $response = $this->postJson('/api/chat', [
         'message' => 'Trong giỏ món nào hết hàng?',
@@ -166,4 +168,54 @@ it('validates cart bounds and duplicate product references', function () {
         'message' => 'Trong giỏ có gì?',
         'cart' => [['product_id' => $product->id, 'quantity' => 101]],
     ])->assertUnprocessable()->assertJsonValidationErrors(['cart.0.quantity']);
+});
+
+it('keeps product discovery public but never gives a guest a cart action', function () {
+    $product = groundedProduct();
+
+    $this->postJson('/api/chat', ['message' => 'Trà Nhẹ còn hàng không?'])
+        ->assertOk()
+        ->assertJsonPath('products.0.id', $product->id);
+
+    $this->postJson('/api/chat', ['message' => 'Thêm 2 Trà Nhẹ vào giỏ'])
+        ->assertOk()
+        ->assertJsonPath('code', 'AUTH_REQUIRED_FOR_CART')
+        ->assertJsonPath('auth.required', true)
+        ->assertJsonPath('auth.reason', 'cart_mutation')
+        ->assertJsonPath('products.0.id', $product->id)
+        ->assertJsonCount(0, 'suggested_actions')
+        ->assertJsonPath('action.type', 'none');
+});
+
+it('requires a verified customer for cart context and proposals', function () {
+    $product = groundedProduct();
+
+    $this->postJson('/api/chat', [
+        'message' => 'Trong giỏ của tôi có gì?',
+        'cart' => [['product_id' => $product->id, 'quantity' => 1]],
+    ])->assertOk()
+        ->assertJsonPath('code', 'AUTH_REQUIRED_FOR_CART')
+        ->assertJsonPath('auth.reason', 'cart_query')
+        ->assertJsonCount(0, 'products');
+
+    Sanctum::actingAs(User::factory()->unverified()->customer()->create());
+    $this->postJson('/api/chat', ['message' => 'Thêm 1 Trà Nhẹ vào giỏ'])
+        ->assertOk()->assertJsonCount(0, 'suggested_actions');
+
+    Sanctum::actingAs(User::factory()->customer()->create());
+    $this->postJson('/api/chat', ['message' => 'Thêm 1 Trà Nhẹ vào giỏ'])
+        ->assertOk()
+        ->assertJsonPath('suggested_actions.0.type', 'ADD_TO_CART')
+        ->assertJsonPath('suggested_actions.0.product_id', $product->id);
+});
+
+it('finds a relevant product beyond the first twenty alphabetical names', function () {
+    for ($index = 1; $index <= 25; $index++) {
+        groundedProduct(['name' => sprintf('A Product %02d', $index), 'slug' => "a-product-{$index}"]);
+    }
+    $target = groundedProduct(['name' => 'Zeta Matcha Special', 'slug' => 'zeta-matcha-special']);
+
+    $this->postJson('/api/chat', ['message' => 'Tìm matcha special dưới 100k'])
+        ->assertOk()
+        ->assertJsonPath('products.0.id', $target->id);
 });

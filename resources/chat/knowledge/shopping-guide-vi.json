@@ -1,0 +1,28 @@
+{
+  "source_id": "shopping-guide-vi",
+  "title": "Hướng dẫn mua hàng tại Farta Market",
+  "locale": "vi",
+  "topic": "ordering",
+  "version": 1,
+  "status": "published",
+  "updated_at": "2026-09-24",
+  "owner": "Farta Market",
+  "sections": [
+    {
+      "heading": "Tìm kiếm sản phẩm",
+      "content": "Khách hàng có thể tìm sản phẩm theo tên, xem theo danh mục hoặc yêu cầu chatbot gợi ý. Tên sản phẩm, giá bán và tình trạng tồn kho được hệ thống kiểm tra lại từ dữ liệu hiện tại trước khi hiển thị."
+    },
+    {
+      "heading": "Thêm sản phẩm từ chatbot",
+      "content": "Chatbot chỉ tạo đề xuất thêm vào giỏ hàng khi khách hàng đã đăng nhập, đã xác minh email và yêu cầu rõ sản phẩm cùng số lượng. Sản phẩm chỉ được thêm sau khi khách hàng bấm nút xác nhận trên giao diện."
+    },
+    {
+      "heading": "Kiểm tra giỏ hàng",
+      "content": "Trước khi đặt hàng, khách hàng cần kiểm tra lại sản phẩm, số lượng, địa chỉ nhận hàng, phương thức thanh toán và tổng tiền trên trang thanh toán. Giá và tồn kho được máy chủ tính lại khi tiếp nhận đơn hàng."
+    },
+    {
+      "heading": "Mã giảm giá",
+      "content": "Mã giảm giá được hệ thống kiểm tra theo thời hạn, giá trị đơn hàng tối thiểu và giới hạn sử dụng. Mức giảm và tổng tiền cuối cùng do máy chủ tính toán tại thời điểm đặt hàng."
+    }
+  ]
+}

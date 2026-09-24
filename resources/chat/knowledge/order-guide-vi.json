@@ -1,0 +1,28 @@
+{
+  "source_id": "order-guide-vi",
+  "title": "Hướng dẫn theo dõi và hủy đơn hàng",
+  "locale": "vi",
+  "topic": "orders",
+  "version": 1,
+  "status": "published",
+  "updated_at": "2026-09-24",
+  "owner": "Farta Market",
+  "sections": [
+    {
+      "heading": "Xem đơn hàng",
+      "content": "Khách hàng đã đăng nhập có thể xem danh sách và chi tiết các đơn hàng thuộc tài khoản của mình. Hệ thống không cho phép một khách hàng xem đơn hàng của tài khoản khác."
+    },
+    {
+      "heading": "Các trạng thái đơn hàng",
+      "content": "Đơn hàng có thể lần lượt ở các trạng thái chờ xử lý, đã xác nhận, đang xử lý, đang giao, đã giao hoặc đã hủy. Trạng thái được cập nhật theo quy trình xử lý đơn hàng của hệ thống."
+    },
+    {
+      "heading": "Điều kiện hủy đơn",
+      "content": "Khách hàng chỉ có thể tự hủy đơn hàng thuộc tài khoản của mình khi đơn vẫn đang ở trạng thái chờ xử lý. Đơn đã chuyển sang trạng thái khác không thể hủy bằng chức năng tự hủy của khách hàng."
+    },
+    {
+      "heading": "Hỏi chatbot về đơn hàng",
+      "content": "Chatbot chỉ tra cứu đơn hàng cho khách hàng đã đăng nhập và chỉ trả thông tin của chính tài khoản đó. Chatbot không có quyền thay đổi trạng thái, hủy đơn hoặc xác nhận thanh toán."
+    }
+  ]
+}

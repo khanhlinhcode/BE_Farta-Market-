@@ -1,70 +1,90 @@
 # Chat retrieval and evaluation
 
-> The filename is retained for existing links. The implemented feature is
-> documented as a **Grounded Conversational AI Assistant**, not as vector,
-> hybrid, or agentic search.
+## Product retrieval
 
-## Current retrieval baseline
+Structured product filters run in SQL before lexical ranking. Search no longer
+truncates to the first 20 alphabetical product names; the filtered active set is
+ranked by normalized name, category and short-description overlap, then bounded
+to five output products. MySQL remains authoritative after provider selection.
 
-The assistant uses database-only retrieval. Active products are filtered by
-structured constraints such as price and stock. The bounded candidate set is
-then ranked through normalized lexical overlap:
+## Knowledge retrieval
 
-- product name weight: 5;
-- category weight: 3;
-- short description weight: 1;
-- maximum provider evidence: 5 products;
-- maximum accepted provider recommendation: 3 distinct IDs.
+The local baseline is sparse retrieval over dynamic `SiteSetting` facts and
+published knowledge chunks:
 
-Only current-question text is used for retrieval. Browser history is not
-evidence and is not forwarded to a provider. If retrieval finds no support, the
-endpoint abstains without a model request.
+- title weight 5;
+- section/heading weight 4;
+- topic weight 3;
+- content weight 1;
+- maximum query variants 3;
+- maximum evidence chunks 5.
 
-The provider can only return `kind` and `product_ids`. Laravel rejects unknown
-fields, duplicates, strings in place of integer IDs, IDs outside evidence, and
-stale/inactive IDs. Approved IDs are reloaded from MySQL before any name, price,
-stock, image, or category is returned. Provider prose is never used for product
-facts or cart authorization.
+`AI_VECTOR_SEARCH_ENABLED=false` is the safe default. Dense retrieval uses
+Qdrant Cloud Inference and `intfloat/multilingual-e5-small` (384 dimensions), so
+the backend never sends knowledge text to a separate embedding provider. Dense
+and sparse ranks are fused with Reciprocal Rank Fusion (`k=60`). Missing
+configuration, timeouts and provider errors set `vector_fallback=true` and
+continue with sparse results.
 
-## Local evaluation fixture
+```dotenv
+QDRANT_URL=https://your-cluster.cloud.qdrant.io
+QDRANT_API_KEY=
+QDRANT_COLLECTION=farta_chat_knowledge
+QDRANT_INFERENCE_ENABLED=false
+QDRANT_INFERENCE_MODEL=intfloat/multilingual-e5-small
+AI_VECTOR_SEARCH_ENABLED=false
+```
 
-Run:
+Enable `QDRANT_INFERENCE_ENABLED` only after the dedicated 384-dimensional
+collection exists and an inference upsert/query/delete probe passes. Enable
+`AI_VECTOR_SEARCH_ENABLED` last. Collection names outside
+`farta_chat_knowledge` plus an optional environment suffix are rejected before
+any HTTP request, protecting unrelated collections in a shared cluster. Use one
+collection per environment because point IDs are database-local chunk IDs.
+
+Model query expansion and generated answers are separate flags:
+
+```dotenv
+AI_QUERY_EXPANSION_ENABLED=false
+AI_KNOWLEDGE_GENERATION_ENABLED=false
+AI_VECTOR_SEARCH_ENABLED=false
+```
+
+Without generation, the assistant returns a direct approved-source extract.
+With generation, strict claim/citation/evidence JSON, exact quote validation,
+semantic verification and one repair are mandatory. No evidence means no
+generator call and a fail-closed response.
+
+## Knowledge index
+
+```bash
+php artisan chat:knowledge:sync --dry-run
+php artisan chat:knowledge:sync
+```
+
+Stable `source_id`, document checksum and chunk checksum make synchronization
+idempotent. With inference enabled, the command replaces only points matching
+that exact `source_id`, then upserts points whose Qdrant ID and payload
+`chunk_id` equal the MySQL chunk ID. Moving a previously indexed file to draft
+removes that source's vector points and local chunks. Invalid placeholders and
+instruction-like content are rejected. The command never deletes records outside
+the explicit source and dedicated collection. See
+[chat-knowledge-authoring.md](chat-knowledge-authoring.md).
+
+## Evaluation
 
 ```bash
 php artisan test tests/Feature/ChatEvaluationTest.php
 ```
 
-The test prints one `CHAT_EVALUATION` JSON line and asserts conservative floors.
-On 24 September 2026, the local SQLite run against fixture version 1 produced:
+The suite reports intent accuracy, HitRate@5, MRR@5, nDCG@5 and local latency.
+The target fixture should contain at least 50 reviewed VI/EN queries including
+diacritics/no-diacritics, common typos, paraphrases, missing evidence, prompt
+injection and auth/cart/order boundaries. Quality gates are intent accuracy
+≥95%, HitRate@5 ≥90%, MRR@5 ≥80%, exact evidence validity 100%, unsupported
+factual claims 0 and guest cart mutations 0.
 
-```json
-{
-  "fixture_version": 1,
-  "intent_cases": 14,
-  "intent_accuracy": 1.0,
-  "retrieval_cases": 6,
-  "hit_rate_at_5": 1.0,
-  "mrr_at_5": 0.9167,
-  "ndcg_at_5": 0.9385
-}
-```
-
-Timing is intentionally not copied into this document because it varies by
-machine and test process. Read it from the current test output instead.
-
-This dataset is small and curated for regression. It does not establish p95
-production latency, broad Vietnamese/English relevance, synonym coverage, or
-real customer satisfaction. Expand it with reviewed production-like queries
-before making stronger quality claims.
-
-## Why Qdrant is not included
-
-The measured database/lexical baseline clears the current fixture thresholds,
-so adding a vector service would increase deployment, indexing, stale-data, and
-fallback complexity without demonstrated benefit. A future experiment should
-compare the same labeled set plus harder synonym and similarity queries. Adopt
-hybrid retrieval only if it materially improves recall/ranking while preserving
-MySQL as the final source of truth.
-
-See [chat-architecture.md](chat-architecture.md) for request flow, tools,
-provider capabilities, security boundaries, response schema, and fallback.
+Fixture metrics are regression evidence, not production latency or customer
+satisfaction claims. Dense retrieval cannot be claimed as tested until valid
+Qdrant credentials are supplied and the Cloud Inference upsert/query/delete path
+is exercised.

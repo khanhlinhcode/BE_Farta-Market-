@@ -9,6 +9,7 @@ enum ChatIntent: string
     case CartQuery = 'cart_query';
     case CartActionRequest = 'cart_action_request';
     case OrderQuery = 'order_query';
+    case KnowledgeQuery = 'knowledge_query';
     case GeneralChat = 'general_chat';
     case Unsupported = 'unsupported';
 }

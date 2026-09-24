@@ -10,15 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 final class ChatProductTool
 {
-    public const MAX_CANDIDATES = 20;
-
     public const MAX_OUTPUT = 5;
 
     public function __construct(private readonly ChatProductRetriever $retriever) {}
 
     /**
      * Read-only product search. The query builder applies deterministic business filters;
-     * the existing lexical retriever ranks only the bounded candidate set.
+     * the existing lexical retriever ranks the filtered candidate set.
      *
      * @param  array<string, mixed>  $input
      * @return Collection<int, Product>
@@ -60,7 +58,10 @@ final class ChatProductTool
             $query->where('inventory', '>', 0);
         }
 
-        $candidates = $query->orderBy('name')->limit(self::MAX_CANDIDATES)->get();
+        // Do not alphabetically truncate before relevance ranking: a matching product
+        // can legitimately appear after the first 20 names. Structured filters stay in
+        // SQL, then the bounded output is selected by the lexical retriever.
+        $candidates = $query->orderBy('id')->get();
         $text = trim((string) ($validated['query'] ?? ''));
         $ranked = $text === '' ? $candidates : $this->retriever->retrieve($candidates, $text);
         $hasStructuredFilter = collect(['category', 'min_price', 'max_price', 'in_stock'])

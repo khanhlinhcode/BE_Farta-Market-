@@ -54,18 +54,20 @@ final class ChatIntentRouter
             return ChatIntent::CartQuery;
         }
 
-        if (preg_match('/\b(mua|dat|lay|buy|order)\b|\bthem\b.*\bgio\b|\badd\b.*\bcart\b/', $message) === 1) {
-            return ChatIntent::CartActionRequest;
-        }
-
         if ($this->matches($message, [
             'phi ship', 'phi giao hang', 'mien phi van chuyen', 'mien phi giao hang', 'free ship',
             'shipping fee', 'delivery fee', 'free shipping', 'lien he', 'dia chi', 'hotline',
             'contact', 'address', 'doi tra', 'hoan tra', 'return policy', 'refund policy',
             'bao quan', 'storage', 'phuong thuc thanh toan', 'payment method', 'huong dan mua hang',
             'how to order', 'chinh sach giao hang', 'shipping policy', 'payment methods',
+            'quen mat khau', 'lay lai mat khau', 'lay lai tai khoan', 'forgot password',
+            'reset password', 'recover account',
         ])) {
             return ChatIntent::KnowledgeQuery;
+        }
+
+        if (preg_match('/\b(mua|dat|lay|buy|order)\b|\bthem\b.*\bgio\b|\badd\b.*\bcart\b/', $message) === 1) {
+            return ChatIntent::CartActionRequest;
         }
 
         if ($this->matches($message, [

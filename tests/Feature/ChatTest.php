@@ -228,6 +228,127 @@ test('chat greeting does not trigger product-not-found', function () {
     Http::assertNothingSent();
 });
 
+it('answers capability questions deterministically', function (string $message) {
+    createChatProduct();
+    Http::preventStrayRequests();
+
+    $this->postJson('/api/chat', ['message' => $message])
+        ->assertOk()
+        ->assertJsonPath('intent', 'general_chat')
+        ->assertJsonPath('source', 'catalog')
+        ->assertJsonFragment(['message' => 'Tôi có thể tìm sản phẩm, kiểm tra giá và tồn kho hiện tại, giải thích chính sách đã kiểm chứng, xem giỏ hàng khi bạn đăng nhập và tra cứu đơn của chính bạn.']);
+
+    Http::assertNothingSent();
+})->with([
+    'Bạn làm được gì?',
+    'Bạn có thể làm được gì?',
+    'Bạn giúp được gì?',
+    'Bạn có thể giúp gì?',
+    'What can you do?',
+    'How can you help?',
+]);
+
+it('lists active catalog products instead of returning product not found', function () {
+    $available = createChatProduct();
+    $empty = createChatProduct(['name' => 'Táo Hộp', 'inventory' => 0]);
+    createChatProduct(['name' => 'Sản Phẩm Ẩn', 'is_active' => false]);
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', [
+        'message' => 'Hiện tại shop bạn có những sản phẩm nào?',
+    ])->assertOk()->assertJsonPath('source', 'catalog');
+
+    expect($response->json('reply'))
+        ->toContain('Farta Market hiện có')
+        ->toContain($available->name)
+        ->toContain($empty->name)
+        ->not->toContain('chưa có sản phẩm');
+    expect(collect($response->json('products'))->pluck('id')->all())
+        ->toContain($available->id, $empty->id)
+        ->not->toContain(Product::query()->where('name', 'Sản Phẩm Ẩn')->value('id'));
+    expect($response->json('products.0.id'))->toBe($available->id);
+
+    Http::assertNothingSent();
+});
+
+it('returns a deterministic empty catalog response without calling the model', function () {
+    Http::preventStrayRequests();
+
+    $this->postJson('/api/chat', [
+        'message' => 'Hiện tại shop bạn có những sản phẩm nào?',
+    ])->assertOk()
+        ->assertJsonPath('source', 'catalog')
+        ->assertJsonPath('reply', 'Farta Market hiện chưa có sản phẩm đang bán.')
+        ->assertJsonCount(0, 'products');
+
+    Http::assertNothingSent();
+});
+
+it('prioritizes an explicit category browse over a shorter product alias', function () {
+    $category = Category::create(['name' => 'Rau Củ']);
+    $vegetable = createChatProduct([
+        'name' => 'Rau Củ Tươi',
+        'category_id' => $category->id,
+    ]);
+    $carrot = createChatProduct([
+        'name' => 'Cà Rốt',
+        'category_id' => $category->id,
+    ]);
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', ['message' => 'Rau củ gồm những gì?'])
+        ->assertOk()
+        ->assertJsonPath('source', 'catalog');
+
+    expect($response->json('reply'))
+        ->toContain('Danh mục Rau Củ hiện có')
+        ->toContain($vegetable->name)
+        ->toContain($carrot->name);
+    expect(collect($response->json('products'))->pluck('id')->all())
+        ->toContain($vegetable->id, $carrot->id);
+
+    Http::assertNothingSent();
+});
+
+it('handles the exact reported conversation for an authenticated customer', function () {
+    $category = Category::create(['name' => 'Rau Củ']);
+    $product = createChatProduct([
+        'name' => 'Rau Củ Tươi',
+        'inventory' => 23,
+        'category_id' => $category->id,
+    ]);
+    Http::preventStrayRequests();
+
+    $this->withHeaders(chatSpaHeaders())->postJson('/api/chat', ['message' => 'bạn có thể làm được gì ?'])
+        ->assertOk()->assertJsonPath('intent', 'general_chat');
+    $this->withCookie(config('session.cookie'), session()->getId());
+
+    $this->postJson('/api/chat', ['message' => 'hiện tại shop bạn có những sản phẩm nào ?'])
+        ->assertOk()->assertJsonPath('products.0.id', $product->id);
+
+    $this->postJson('/api/chat', ['message' => 'Rau củ gồm những gì ?'])
+        ->assertOk()->assertJsonPath('products.0.id', $product->id);
+
+    $this->postJson('/api/chat', ['message' => 'hiện tại có thể thêm vào giỏ hàng không?'])
+        ->assertOk()
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonCount(0, 'suggested_actions')
+        ->assertJsonPath('reply', 'Bạn muốn thêm bao nhiêu Rau Củ Tươi vào giỏ hàng? Vui lòng dùng một số lượng nguyên từ 1 đến 100.');
+
+    $this->postJson('/api/chat', ['message' => 'Rau Củ Tưoi 3'])
+        ->assertOk()
+        ->assertJsonCount(0, 'suggested_actions')
+        ->assertJsonPath('reply', 'Rau Củ Tươi có giá 45.000đ, tồn kho chính xác 23 sản phẩm, trạng thái còn hàng, thuộc danh mục Rau Củ. Bạn muốn mua 3 Rau Củ Tươi không? Trả lời có để tiếp tục.');
+
+    $this->postJson('/api/chat', ['message' => 'Có'])
+        ->assertOk()
+        ->assertJsonPath('suggested_actions.0.type', 'ADD_TO_CART')
+        ->assertJsonPath('suggested_actions.0.product_id', $product->id)
+        ->assertJsonPath('suggested_actions.0.quantity', 3);
+
+    Http::assertNothingSent();
+});
+
 it('uses the configured Ollama model and parses its structured reply', function () {
     $product = createChatProduct([
         'name' => 'Ổi',

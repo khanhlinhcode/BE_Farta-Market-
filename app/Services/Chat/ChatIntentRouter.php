@@ -86,7 +86,8 @@ final class ChatIntentRouter
 
         if ($this->matches($message, [
             'xin chao', 'chao', 'alo', 'hello', 'hi', 'hey', 'cam on', 'thank', 'thanks',
-            'ban lam duoc gi', 'ban giup duoc gi', 'what can you do', 'how can you help',
+            'ban lam duoc gi', 'ban co the lam duoc gi', 'ban giup duoc gi', 'ban co the giup gi',
+            'what can you do', 'how can you help',
         ])) {
             return ChatIntent::GeneralChat;
         }

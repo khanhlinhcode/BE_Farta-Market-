@@ -187,6 +187,42 @@ it('keeps product discovery public but never gives a guest a cart action', funct
         ->assertJsonPath('action.type', 'none');
 });
 
+it('handles the exact reported conversation for a guest and requires authentication', function () {
+    $category = Category::create(['name' => 'Rau Củ']);
+    $product = groundedProduct([
+        'name' => 'Rau Củ Tươi',
+        'slug' => 'rau-cu-tuoi',
+        'inventory' => 23,
+        'category_id' => $category->id,
+    ]);
+    Http::preventStrayRequests();
+
+    $this->withHeaders(['Origin' => 'http://127.0.0.1:5173', 'Referer' => 'http://127.0.0.1:5173/'])
+        ->postJson('/api/chat', ['message' => 'bạn có thể làm được gì ?'])
+        ->assertOk()->assertJsonPath('intent', 'general_chat');
+    $this->withCookie(config('session.cookie'), session()->getId());
+
+    $this->postJson('/api/chat', ['message' => 'hiện tại shop bạn có những sản phẩm nào ?'])
+        ->assertOk()->assertJsonPath('products.0.id', $product->id);
+
+    $this->postJson('/api/chat', ['message' => 'Rau củ gồm những gì ?'])
+        ->assertOk()->assertJsonPath('products.0.id', $product->id);
+
+    $this->postJson('/api/chat', ['message' => 'hiện tại có thể thêm vào giỏ hàng không?'])
+        ->assertOk()
+        ->assertJsonPath('reply', 'Bạn muốn thêm bao nhiêu Rau Củ Tươi vào giỏ hàng? Vui lòng dùng một số lượng nguyên từ 1 đến 100.');
+
+    $this->postJson('/api/chat', ['message' => 'Rau Củ Tưoi 3'])
+        ->assertOk()
+        ->assertJsonPath('code', 'AUTH_REQUIRED_FOR_CART')
+        ->assertJsonPath('auth.required', true)
+        ->assertJsonPath('auth.reason', 'cart_mutation')
+        ->assertJsonPath('products.0.id', $product->id)
+        ->assertJsonCount(0, 'suggested_actions');
+
+    Http::assertNothingSent();
+});
+
 it('requires a verified customer for cart context and proposals', function () {
     $product = groundedProduct();
 

@@ -53,7 +53,10 @@ class E2ESeeder extends Seeder
 
     private function recoveryCode(string $name): string
     {
-        return 'E2E-'.strtoupper($name).'-RECOVERY';
+        $normalized = strtoupper((string) preg_replace('/[^A-Z0-9]/i', '', $name));
+        $value = str_pad(substr($normalized, 0, 10), 10, 'X');
+
+        return substr($value, 0, 5).'-'.substr($value, 5, 5);
     }
 
     private function recoveryHash(string $code): string

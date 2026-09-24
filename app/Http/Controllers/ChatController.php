@@ -456,7 +456,7 @@ class ChatController extends Controller
             return ['reply' => $english ? 'You are welcome. I am here whenever you need help with Farta Market.' : 'Rất vui được hỗ trợ bạn. Khi cần thông tin về Farta Market, bạn cứ nhắn nhé.'];
         }
 
-        if (preg_match('/\b(ban (?:lam|giup) duoc gi|what can you do|how can you help)\b/', $message)) {
+        if (preg_match('/\b(ban (?:co the )?(?:lam duoc|giup(?: duoc)?) gi|what can you do|how can you help)\b/', $message)) {
             $this->clearContext($request);
 
             return ['reply' => $english
@@ -471,6 +471,35 @@ class ChatController extends Controller
             return $this->fallback($english);
         }
 
+        if ($this->isCatalogListingQuestion($message)) {
+            $this->clearContext($request);
+            $listedProducts = $products->sort(function (Product $left, Product $right): int {
+                $stock = ((int) $right->inventory > 0) <=> ((int) $left->inventory > 0);
+
+                return $stock !== 0 ? $stock : strcasecmp($left->name, $right->name);
+            })->take(ChatProductTool::MAX_OUTPUT)->values();
+            if ($listedProducts->isEmpty()) {
+                return ['reply' => $english
+                    ? 'Farta Market currently has no active products.'
+                    : 'Farta Market hiện chưa có sản phẩm đang bán.'];
+            }
+            $names = $listedProducts->pluck('name')->join(', ');
+            $count = $products->count();
+
+            return [
+                'reply' => $english
+                    ? "Farta Market currently has {$count} active product(s). Available products include: {$names}."
+                    : "Farta Market hiện có {$count} sản phẩm đang bán. Một số sản phẩm gồm: {$names}.",
+                'products' => $listedProducts->map(fn (Product $item) => $this->productTool->card($item))->all(),
+            ];
+        }
+
+        $category = $categories->sortByDesc(fn ($item) => mb_strlen($item->name))
+            ->first(fn ($item) => $this->containsPhrase($message, $this->normalize($item->name)));
+        if ($category && $this->isCategoryBrowseQuestion($message)) {
+            return $this->categoryResponse($request, $category, $products, $english);
+        }
+
         $matches = $this->matchProducts($message, $products);
         if ($matches->count() > 1) {
             $this->clearContext($request);
@@ -483,9 +512,13 @@ class ChatController extends Controller
         $product = $matches->first();
         $purchase = $this->isPurchaseRequest($message, $raw);
         $purchaseTopic = $this->hasPurchaseTopic($message);
+        $usesContextProduct = false;
 
-        if (! $product && ($purchase || ($context['stage'] ?? '') === 'quantity')) {
+        if (! $product && ($purchase
+            || ($context['stage'] ?? '') === 'quantity'
+            || ($purchaseTopic && ($context['stage'] ?? '') === 'context'))) {
             $product = $products->firstWhere('id', $context['product_id'] ?? 0);
+            $usesContextProduct = $product !== null;
         }
         $quantity = $this->extractQuantity($raw, $product);
 
@@ -493,6 +526,12 @@ class ChatController extends Controller
             if ($quantity['status'] !== 'valid') {
                 // Invalid and missing quantities never authorize a default quantity on a later "yes".
                 if ($quantity['status'] === 'missing' && ! $purchase) {
+                    if ($usesContextProduct) {
+                        $this->remember($request, $product, 'quantity');
+
+                        return $this->askQuantity($product, $english);
+                    }
+
                     return $this->offer($request, $product, 1, $english);
                 }
                 $this->remember($request, $product, 'quantity');
@@ -507,11 +546,15 @@ class ChatController extends Controller
             return $this->buildAddToCartResponse($request, $product->id, $quantity['value'], $english);
         }
 
-        if ($product && ($context['stage'] ?? '') === 'quantity' && $matches->isEmpty()) {
-            if ($quantity['status'] === 'valid' && $this->isQuantityOnly($message)) {
+        if ($product && ($context['stage'] ?? '') === 'quantity'
+            && (int) $product->id === (int) ($context['product_id'] ?? 0)) {
+            $isExpectedReply = $matches->isEmpty()
+                ? $this->isQuantityOnly($message)
+                : $this->isProductQuantityReply($message, $product);
+            if ($quantity['status'] === 'valid' && $isExpectedReply) {
                 return $this->offer($request, $product, $quantity['value'], $english);
             }
-            if ($this->isQuantityOnly($message) || $quantity['status'] !== 'missing') {
+            if ($isExpectedReply || $quantity['status'] !== 'missing') {
                 return $this->askQuantity($product, $english);
             }
         }
@@ -532,17 +575,8 @@ class ChatController extends Controller
                 : 'Bạn hãy chọn một sản phẩm đang bán bằng tên đầy đủ và số lượng nguyên từ 1 đến 100.'];
         }
 
-        $category = $categories->sortByDesc(fn ($category) => mb_strlen($category->name))
-            ->first(fn ($category) => $this->containsPhrase($message, $this->normalize($category->name)));
         if ($category) {
-            $categoryProducts = $products->where('category_id', $category->id)->take(3)->values();
-            $names = $categoryProducts->pluck('name')->join(', ');
-
-            return ['reply' => $english
-                ? ($names === '' ? "The {$category->name} category currently has no products." : "The {$category->name} category currently includes: {$names}.")
-                : ($names === '' ? "Danh mục {$category->name} hiện chưa có sản phẩm." : "Danh mục {$category->name} hiện có: {$names}."),
-                'products' => $categoryProducts->map(fn (Product $item) => $this->productTool->card($item))->all(),
-            ];
+            return $this->categoryResponse($request, $category, $products, $english);
         }
 
         if ($this->isCatalogQuestion($message)) {
@@ -554,6 +588,25 @@ class ChatController extends Controller
         }
 
         return null;
+    }
+
+    private function categoryResponse(Request $request, Category $category, Collection $products, bool $english): array
+    {
+        $categoryProducts = $products->where('category_id', $category->id)
+            ->take(ChatProductTool::MAX_OUTPUT)->values();
+        $names = $categoryProducts->pluck('name')->join(', ');
+
+        if ($categoryProducts->count() === 1) {
+            $this->remember($request, $categoryProducts->first(), 'context');
+        } else {
+            $this->clearContext($request);
+        }
+
+        return ['reply' => $english
+            ? ($names === '' ? "The {$category->name} category currently has no products." : "The {$category->name} category currently includes: {$names}.")
+            : ($names === '' ? "Danh mục {$category->name} hiện chưa có sản phẩm." : "Danh mục {$category->name} hiện có: {$names}."),
+            'products' => $categoryProducts->map(fn (Product $item) => $this->productTool->card($item))->all(),
+        ];
     }
 
     private function context(Request $request): ?array
@@ -818,6 +871,15 @@ class ChatController extends Controller
         return preg_match('/^(?:\d+|'.$words.')(?: (?:qua|cai|hop|kg|san pham|items?|units?))?(?: nhe|please)?$/', $message) === 1;
     }
 
+    private function isProductQuantityReply(string $message, Product $product): bool
+    {
+        foreach ($this->productAliases($product) as $alias) {
+            $message = preg_replace('/\b'.preg_quote($alias, '/').'\b/', ' ', $message);
+        }
+
+        return $this->isQuantityOnly($this->normalize($message));
+    }
+
     private function isPurchaseRequest(string $message, string $raw): bool
     {
         if ($this->isNegativeMessage($message)) {
@@ -857,6 +919,20 @@ class ChatController extends Controller
         }
 
         return false;
+    }
+
+    private function isCatalogListingQuestion(string $message): bool
+    {
+        return $this->containsPhrase($message, 'danh sach san pham')
+            || $this->containsPhrase($message, 'what products do you have')
+            || preg_match('/\b(?:shop|cua hang|farta market)\b.*\b(?:co|ban)\b.*\b(?:san pham|mat hang)\b.*\b(?:nao|gi)\b/', $message) === 1
+            || preg_match('/^(?:hien tai )?hien co (?:nhung )?(?:san pham|mat hang) (?:nao|gi)$/', $message) === 1
+            || preg_match('/^(?:shop|cua hang)(?: ban)? ban gi$/', $message) === 1;
+    }
+
+    private function isCategoryBrowseQuestion(string $message): bool
+    {
+        return preg_match('/\b(gom nhung gi|co nhung gi|co gi|trong danh muc|what is in|products in)\b/', $message) === 1;
     }
 
     private function buildSystemPrompt(Collection $products): string

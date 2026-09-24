@@ -348,6 +348,38 @@ test('mfa rejects wrong and replayed recovery codes', function () {
         ->assertUnprocessable();
 });
 
+test('mfa normalizes recovery code case and surrounding whitespace', function () {
+    [$user] = mfaAdmin(['email' => 'normalized-recovery@example.test']);
+    $recoveryCode = 'ABCDE-12345';
+    $user->forceFill([
+        'mfa_recovery_codes' => app(AdminMfaService::class)->recoveryCodeHashes([$recoveryCode]),
+    ])->save();
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', [
+        'recovery_code' => '  abcde-12345  ',
+    ])->assertOk()->assertJsonPath('user.id', $user->id);
+});
+
+test('expired mfa challenge returns a json unauthorized response', function () {
+    [$user] = mfaAdmin(['email' => 'expired-mfa@example.test']);
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/login', [
+        'email' => $user->email,
+        'password' => 'secret123',
+    ])->assertOk();
+    session()->put('admin_mfa_pending_at', now()->subMinutes(11)->timestamp);
+
+    $this->withHeaders(spaHeaders())->postJson('/api/admin/mfa/challenge', ['code' => '000000'])
+        ->assertUnauthorized()
+        ->assertHeader('content-type', 'application/json')
+        ->assertJsonPath('message', 'Phiên xác thực MFA không hợp lệ hoặc đã hết hạn.');
+});
+
 test('totp code cannot be replayed in the same time window', function () {
     [$user, $secret] = mfaAdmin(['email' => 'totp-replay@example.test']);
     $code = app(Google2FA::class)->getCurrentOtp($secret);

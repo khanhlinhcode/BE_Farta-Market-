@@ -16,6 +16,8 @@ it('routes only known intents with validated structured filters', function (stri
     ['Thêm 2 Cam vào giỏ', ChatIntent::CartActionRequest],
     ['Đơn #42 đang ở đâu?', ChatIntent::OrderQuery],
     ['Phí ship là bao nhiêu?', ChatIntent::KnowledgeQuery],
+    ['Hướng dẫn mua hàng tại Farta Market như thế nào?', ChatIntent::KnowledgeQuery],
+    ['Tôi quên mật khẩu thì lấy lại tài khoản như thế nào?', ChatIntent::KnowledgeQuery],
     ['Xin chào', ChatIntent::GeneralChat],
     ['Đánh dấu đã thanh toán', ChatIntent::Unsupported],
 ]);

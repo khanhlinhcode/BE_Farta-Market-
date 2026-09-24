@@ -135,3 +135,67 @@ test('cors preflight only permits the configured methods and headers', function 
         ->and(strtolower((string) $unknownHeader->headers->get('Access-Control-Allow-Headers')))
         ->not->toContain('x-unapproved-header');
 });
+
+test('session payload is encrypted when session encrypt is enabled', function () {
+    config([
+        'session.driver' => 'database',
+        'session.encrypt' => true,
+        'sanctum.stateful' => ['127.0.0.1:5173', 'localhost', '127.0.0.1'],
+    ]);
+
+    $user = \App\Models\User::factory()->customer()->create([
+        'password' => 'FartaPass123',
+    ]);
+
+    $response = $this->withHeaders([
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+    ])->postJson('/api/login', [
+        'email' => $user->email,
+        'password' => 'FartaPass123',
+    ])->assertOk();
+
+    $sessionRow = \Illuminate\Support\Facades\DB::table(config('session.table'))->first();
+
+    expect($sessionRow)->not->toBeNull();
+    // Payload when encrypted should not contain plain text email address
+    expect($sessionRow->payload)->not->toContain($user->email);
+});
+
+test('purging database session table invalidates authenticated requests', function () {
+    config([
+        'session.driver' => 'database',
+        'session.encrypt' => true,
+        'sanctum.stateful' => ['127.0.0.1:5173', 'localhost', '127.0.0.1'],
+    ]);
+
+    $user = \App\Models\User::factory()->customer()->create([
+        'password' => 'FartaPass123',
+    ]);
+
+    $this->withHeaders([
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+    ])->postJson('/api/login', [
+        'email' => $user->email,
+        'password' => 'FartaPass123',
+    ])->assertOk();
+
+    // Verify session works before purge
+    $this->withHeaders([
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+    ])->getJson('/api/me')->assertOk()->assertJsonPath('email', $user->email);
+
+    // Simulate session purge (Phase 3 of runbook)
+    \Illuminate\Support\Facades\DB::table(config('session.table'))->delete();
+    $this->flushSession();
+    \Illuminate\Support\Facades\Auth::forgetGuards();
+    $this->app->forgetInstance('auth');
+
+    // Verify request with old session cookie is now 401 Unauthenticated
+    $this->withHeaders([
+        'Origin' => 'http://127.0.0.1:5173',
+        'Referer' => 'http://127.0.0.1:5173/',
+    ])->getJson('/api/me')->assertUnauthorized();
+});

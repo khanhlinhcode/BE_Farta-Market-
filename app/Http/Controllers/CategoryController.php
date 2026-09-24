@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\CloudinaryException;
 use App\Models\Category as CategoryModel;
+use App\Services\AdminMediaLibraryService;
 use App\Services\CloudinaryImageService;
+use App\Support\AdminImageUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -12,7 +14,10 @@ use Throwable;
 
 class CategoryController extends Controller
 {
-    public function __construct(private readonly CloudinaryImageService $cloudinary) {}
+    public function __construct(
+        private readonly CloudinaryImageService $cloudinary,
+        private readonly AdminMediaLibraryService $media,
+    ) {}
 
     public function index(Request $request)
     {
@@ -74,7 +79,7 @@ class CategoryController extends Controller
         $publicId = $category->image_public_id;
         $category->delete();
 
-        if ($publicId) {
+        if ($publicId && ! $this->media->isUsed($publicId)) {
             $this->destroyCloudinaryImage($publicId);
         }
 
@@ -84,8 +89,8 @@ class CategoryController extends Controller
     public function uploadImage(Request $request, CategoryModel $category)
     {
         $data = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=6000,max_height=6000'],
-        ]);
+            'image' => AdminImageUpload::rules(),
+        ], AdminImageUpload::messages('image'));
         $uploaded = $this->cloudinary->uploadToFolder($data['image'], 'farta/categories/'.$category->id);
         $oldPublicId = $category->image_public_id;
 
@@ -99,7 +104,28 @@ class CategoryController extends Controller
             throw $exception;
         }
 
-        if ($oldPublicId) {
+        if ($oldPublicId && $oldPublicId !== $uploaded['public_id'] && ! $this->media->isUsed($oldPublicId)) {
+            $this->destroyCloudinaryImage($oldPublicId);
+        }
+
+        return response()->json($category->fresh()->loadCount('products'));
+    }
+
+    public function reuseImage(Request $request, CategoryModel $category)
+    {
+        $data = $request->validate([
+            'media_source_type' => ['required', Rule::in(AdminMediaLibraryService::SOURCE_TYPES)],
+            'media_source_id' => ['required', 'integer', 'min:1'],
+        ]);
+        $source = $this->media->resolve($data['media_source_type'], (int) $data['media_source_id']);
+        $oldPublicId = $category->image_public_id;
+
+        $category->update([
+            'image_url' => $source['url'],
+            'image_public_id' => $source['public_id'],
+        ]);
+
+        if ($oldPublicId && $oldPublicId !== $source['public_id'] && ! $this->media->isUsed($oldPublicId)) {
             $this->destroyCloudinaryImage($oldPublicId);
         }
 
@@ -111,7 +137,7 @@ class CategoryController extends Controller
         $publicId = $category->image_public_id;
         $category->update(['image_url' => null, 'image_public_id' => null]);
 
-        if ($publicId) {
+        if ($publicId && ! $this->media->isUsed($publicId)) {
             $this->destroyCloudinaryImage($publicId);
         }
 

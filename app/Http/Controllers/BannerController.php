@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\CloudinaryException;
 use App\Models\Banner;
+use App\Services\AdminMediaLibraryService;
 use App\Services\CloudinaryImageService;
+use App\Support\AdminImageUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +15,10 @@ use Throwable;
 
 class BannerController extends Controller
 {
-    public function __construct(private readonly CloudinaryImageService $cloudinary) {}
+    public function __construct(
+        private readonly CloudinaryImageService $cloudinary,
+        private readonly AdminMediaLibraryService $media,
+    ) {}
 
     public function index(Request $request)
     {
@@ -31,15 +36,20 @@ class BannerController extends Controller
     public function store(Request $request)
     {
         $data = $this->validatedData($request, true);
+        $image = $data['image'] ?? null;
+        $mediaSource = $this->extractMediaSource($data);
+        unset($data['image']);
         $banner = Banner::create([...$data, 'image_url' => '', 'image_public_id' => '']);
         $uploaded = null;
 
         try {
-            $uploaded = $this->cloudinary->uploadToFolder($data['image'], 'farta/banners/'.$banner->id);
+            $uploaded = $image
+                ? $this->cloudinary->uploadToFolder($image, 'farta/banners/'.$banner->id)
+                : $this->media->resolve($mediaSource['type'], $mediaSource['id']);
             $banner->update(['image_url' => $uploaded['url'], 'image_public_id' => $uploaded['public_id']]);
         } catch (Throwable $exception) {
             $banner->delete();
-            if ($uploaded) {
+            if ($uploaded && $image) {
                 $this->destroyCloudinaryImage($uploaded['public_id']);
             }
             throw $exception;
@@ -59,8 +69,11 @@ class BannerController extends Controller
     {
         $data = $this->validatedData($request);
         $image = $data['image'] ?? null;
+        $mediaSource = $this->extractMediaSource($data);
         unset($data['image']);
-        $uploaded = $image ? $this->cloudinary->uploadToFolder($image, 'farta/banners/'.$banner->id) : null;
+        $uploaded = $image
+            ? $this->cloudinary->uploadToFolder($image, 'farta/banners/'.$banner->id)
+            : ($mediaSource ? $this->media->resolve($mediaSource['type'], $mediaSource['id']) : null);
         $oldPublicId = $banner->image_public_id;
 
         try {
@@ -70,13 +83,13 @@ class BannerController extends Controller
                 'image_public_id' => $uploaded['public_id'],
             ] : $data);
         } catch (Throwable $exception) {
-            if ($uploaded) {
+            if ($uploaded && $image) {
                 $this->destroyCloudinaryImage($uploaded['public_id']);
             }
             throw $exception;
         }
 
-        if ($uploaded && $oldPublicId) {
+        if ($uploaded && $oldPublicId && $oldPublicId !== $uploaded['public_id'] && ! $this->media->isUsed($oldPublicId)) {
             $this->destroyCloudinaryImage($oldPublicId);
         }
         Cache::forget(SiteContentController::CACHE_KEY);
@@ -88,7 +101,7 @@ class BannerController extends Controller
     {
         $publicId = $banner->image_public_id;
         $banner->delete();
-        if ($publicId) {
+        if ($publicId && ! $this->media->isUsed($publicId)) {
             $this->destroyCloudinaryImage($publicId);
         }
         Cache::forget(SiteContentController::CACHE_KEY);
@@ -121,10 +134,30 @@ class BannerController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
-            'image' => [$imageRequired ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=6000,max_height=6000'],
-        ]);
+            'image' => AdminImageUpload::rules('nullable'),
+            'media_source_type' => [
+                $imageRequired ? 'required_without:image' : 'nullable',
+                'prohibits:image',
+                Rule::in(AdminMediaLibraryService::SOURCE_TYPES),
+            ],
+            'media_source_id' => [
+                $imageRequired ? 'required_without:image' : 'nullable',
+                'required_with:media_source_type',
+                'integer',
+                'min:1',
+            ],
+        ], AdminImageUpload::messages('image'));
 
         return $data;
+    }
+
+    private function extractMediaSource(array &$data): ?array
+    {
+        $type = $data['media_source_type'] ?? null;
+        $id = $data['media_source_id'] ?? null;
+        unset($data['media_source_type'], $data['media_source_id']);
+
+        return $type && $id ? ['type' => $type, 'id' => (int) $id] : null;
     }
 
     private function destroyCloudinaryImage(string $publicId): void

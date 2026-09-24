@@ -28,7 +28,9 @@ checkout intentionally fails closed with HTTP `503`.
 - Admin, staff, and customer authorization with order-ownership checks.
 - Product, category, banner, site-content, review, coupon, user, order, and
   analytics APIs.
-- Cloudinary-backed product, category, banner, and avatar media.
+- Cloudinary-backed product, category, banner, and avatar media. Admins can
+  browse and reuse product/category/banner images without exposing Cloudinary
+  provider identifiers; avatars remain private to their owner records.
 - COD and SePay VietQR checkout with scoped idempotency keys and inventory
   locking. VNPay values remain readable only for historical orders.
 - Pending online-payment expiration with inventory restoration.
@@ -129,6 +131,13 @@ restores reserved inventory. The scheduler runs it every ten minutes.
 Product, category, banner, and avatar uploads are stored on Cloudinary. The
 application does not fall back to local image storage when Cloudinary is
 unavailable.
+
+Admin uploads accept JPG/JPEG, PNG, WEBP, GIF, and AVIF files up to 2 MB and
+6000 × 6000 pixels. Product galleries contain at most eight images. The Admin
+media-library endpoint lists only images already referenced by a product,
+category, or banner. Reuse requests identify a managed source record; clients
+cannot submit an arbitrary Cloudinary URL or `public_id`. Deleting one reference
+does not delete the provider asset while another database record still uses it.
 
 Before removing legacy source files, inspect and migrate their database
 references:

@@ -147,6 +147,6 @@ test('product image upload returns clear validation errors', function () {
         ->assertUnprocessable()
         ->assertJsonPath(
             'errors.image.0',
-            'Chỉ hỗ trợ định dạng JPG, PNG, WEBP'
+            'Chỉ hỗ trợ ảnh JPG, PNG, WEBP, GIF hoặc AVIF hợp lệ.'
         );
 });

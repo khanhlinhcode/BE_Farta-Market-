@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminMediaController;
 use App\Http\Controllers\AdminMfaController;
 use App\Http\Controllers\AdminSiteSettingController;
 use App\Http\Controllers\AdminSystemController;
@@ -118,6 +119,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary']);
         Route::get('/dashboard/revenue-chart', [AdminDashboardController::class, 'revenueChart']);
         Route::get('/dashboard/top-products', [AdminDashboardController::class, 'topProducts']);
+        Route::get('/media', [AdminMediaController::class, 'index']);
         Route::get('/system/queue-health', [AdminSystemController::class, 'queueHealth'])
             ->middleware('admin');
         Route::get('/me', [AuthController::class, 'me']);
@@ -129,6 +131,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
             ->middleware('admin');
         Route::post('/categories/{category}/image', [CategoryController::class, 'uploadImage']);
+        Route::post('/categories/{category}/image/reuse', [CategoryController::class, 'reuseImage']);
         Route::delete('/categories/{category}/image', [CategoryController::class, 'destroyImage'])
             ->middleware('admin');
         Route::apiResource('products', ProductController::class)->except(['destroy']);
@@ -136,6 +139,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->middleware('admin');
         Route::post('/products/{product}/image', [ProductController::class, 'uploadImage'])->middleware('throttle:uploads');
         Route::post('/products/{product}/images', [ProductController::class, 'uploadImages'])->middleware('throttle:uploads');
+        Route::post('/products/{product}/images/reuse', [ProductController::class, 'reuseImage']);
         Route::delete('/product-images/{image}', [ProductController::class, 'destroyImage']);
         Route::patch('/product-images/{image}/primary', [ProductController::class, 'setPrimaryImage']);
         Route::patch('/products/{product}/images/order', [ProductController::class, 'reorderImages']);

@@ -8,7 +8,9 @@ use App\Models\OrderDetail;
 use App\Models\Product as ProductModel;
 use App\Models\ProductImage;
 use App\Models\Wishlist;
+use App\Services\AdminMediaLibraryService;
 use App\Services\CloudinaryImageService;
+use App\Support\AdminImageUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +22,10 @@ use Throwable;
 
 class ProductController extends Controller
 {
-    public function __construct(private readonly CloudinaryImageService $cloudinary) {}
+    public function __construct(
+        private readonly CloudinaryImageService $cloudinary,
+        private readonly AdminMediaLibraryService $media,
+    ) {}
 
     public function index(Request $request)
     {
@@ -268,9 +273,20 @@ class ProductController extends Controller
         }
 
         $images = $product->images()->get();
+        $destroyedPublicIds = [];
 
         foreach ($images as $image) {
-            $this->destroyStoredImage($image);
+            if ($image->provider !== 'cloudinary' || ! $image->public_id) {
+                $this->destroyStoredImage($image);
+            }
+
+            if (
+                ! in_array($image->public_id, $destroyedPublicIds, true)
+                && ! $this->media->isUsedOutsideProduct($image->public_id, $product->id)
+            ) {
+                $this->destroyStoredImage($image);
+                $destroyedPublicIds[] = $image->public_id;
+            }
         }
 
         $product->delete();
@@ -280,14 +296,13 @@ class ProductController extends Controller
 
     public function uploadImage(Request $request, ProductModel $product)
     {
+        if ($product->images()->count() >= 8) {
+            throw ValidationException::withMessages(['image' => 'Mỗi sản phẩm chỉ được có tối đa 8 ảnh.']);
+        }
+
         $data = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=6000,max_height=6000'],
-        ], [
-            'image.uploaded' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
-            'image.max' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
-            'image.image' => 'Chỉ hỗ trợ định dạng JPG, PNG, WEBP',
-            'image.mimes' => 'Chỉ hỗ trợ định dạng JPG, PNG, WEBP',
-        ]);
+            'image' => AdminImageUpload::rules(),
+        ], AdminImageUpload::messages('image'));
 
         $uploaded = $this->cloudinary->upload($data['image'], $product->id);
 
@@ -313,13 +328,8 @@ class ProductController extends Controller
     {
         $data = $request->validate([
             'images' => ['required', 'array', 'min:1', 'max:8'],
-            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=6000,max_height=6000'],
-        ], [
-            'images.*.uploaded' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
-            'images.*.max' => 'Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB',
-            'images.*.image' => 'Chỉ hỗ trợ định dạng JPG, PNG, WEBP',
-            'images.*.mimes' => 'Chỉ hỗ trợ định dạng JPG, PNG, WEBP',
-        ]);
+            'images.*' => AdminImageUpload::rules(),
+        ], AdminImageUpload::messages('images.*'));
 
         if ($product->images()->count() + count($data['images']) > 8) {
             throw ValidationException::withMessages(['images' => 'Mỗi sản phẩm chỉ được có tối đa 8 ảnh.']);
@@ -359,11 +369,60 @@ class ProductController extends Controller
         ], 201);
     }
 
+    public function reuseImage(Request $request, ProductModel $product)
+    {
+        $data = $request->validate([
+            'media_source_type' => ['required', Rule::in(AdminMediaLibraryService::SOURCE_TYPES)],
+            'media_source_id' => ['required', 'integer', 'min:1'],
+            'as_primary' => ['nullable', 'boolean'],
+        ]);
+
+        $source = $this->media->resolve($data['media_source_type'], (int) $data['media_source_id']);
+        $requestedPrimary = filter_var($data['as_primary'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        $created = DB::transaction(function () use ($product, $source, $requestedPrimary) {
+            ProductModel::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+
+            if ($product->images()->count() >= 8) {
+                throw ValidationException::withMessages(['media_source_id' => 'Mỗi sản phẩm chỉ được có tối đa 8 ảnh.']);
+            }
+
+            if ($product->images()->where('public_id', $source['public_id'])->exists()) {
+                throw ValidationException::withMessages(['media_source_id' => 'Ảnh này đã có trong thư viện của sản phẩm.']);
+            }
+
+            $asPrimary = $requestedPrimary || ! $product->images()->exists();
+
+            if ($asPrimary) {
+                $product->images()->update(['is_primary' => false]);
+            }
+
+            $image = $this->createProductImage($product, $source, $asPrimary);
+
+            if ($asPrimary) {
+                $product->update(['img' => $source['url']]);
+            }
+
+            return $image;
+        });
+
+        return response()->json([
+            'image' => $created,
+            'product' => $product->fresh(['category', 'images']),
+        ], 201);
+    }
+
     public function destroyImage(ProductImage $image)
     {
         $product = $image->product;
 
-        $this->destroyStoredImage($image);
+        if (
+            $image->provider !== 'cloudinary'
+            || ! $image->public_id
+            || ! $this->media->isUsedOutsideProductImage($image->public_id, $image->id)
+        ) {
+            $this->destroyStoredImage($image);
+        }
 
         DB::transaction(function () use ($image, $product) {
             $wasPrimary = $image->is_primary;

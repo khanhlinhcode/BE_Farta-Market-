@@ -15,9 +15,13 @@ published knowledge chunks:
 - title weight 5;
 - section/heading weight 4;
 - topic weight 3;
-- content weight 1;
+- retrieval text weight 1;
 - maximum query variants 3;
 - maximum evidence chunks 5.
+
+Retrieval text is built from title, topic, optional aliases/sample questions,
+heading and approved content. It improves matching but is removed before answer
+generation, so aliases and example questions cannot become evidence.
 
 `AI_VECTOR_SEARCH_ENABLED=false` is the safe default. Dense retrieval uses
 Qdrant Cloud Inference and `intfloat/multilingual-e5-small` (384 dimensions), so
@@ -49,6 +53,18 @@ AI_QUERY_EXPANSION_ENABLED=false
 AI_KNOWLEDGE_GENERATION_ENABLED=false
 AI_VECTOR_SEARCH_ENABLED=false
 ```
+
+Semantic intent fallback is also deployed behind an independent gate:
+
+```dotenv
+AI_SEMANTIC_ROUTER_ENABLED=false
+AI_SEMANTIC_ROUTER_MIN_CONFIDENCE=0.75
+```
+
+It runs only when deterministic guards cannot classify a request. Strict JSON,
+a closed intent set and the confidence threshold force ambiguous/unavailable
+results to `clarification`; downstream tools still enforce authentication and
+ownership. Enable it after the router/auth regression suite passes.
 
 Without generation, the assistant returns a direct approved-source extract.
 With generation, strict claim/citation/evidence JSON, exact quote validation,

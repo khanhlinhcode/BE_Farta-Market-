@@ -58,7 +58,6 @@ class ChatController extends Controller
         $english = $request->header('Accept-Language')
             ? $request->getPreferredLanguage(['vi', 'en']) === 'en'
             : $this->isEnglish($this->normalize($validated['message']));
-        $route = $this->router->route($validated['message']);
 
         if (! config('services.ai_chat.enabled', true)) {
             return response()->json([
@@ -66,6 +65,7 @@ class ChatController extends Controller
                 'code' => 'AI_CHAT_DISABLED',
             ], 503);
         }
+        $route = $this->router->route($validated['message']);
 
         try {
             if ($route['intent'] === ChatIntent::OrderQuery) {
@@ -104,6 +104,15 @@ class ChatController extends Controller
             $source = 'catalog';
 
             if ($response === null) {
+                if ($route['intent'] === ChatIntent::Clarification) {
+                    return $this->respond($request, [
+                        'reply' => $english
+                            ? 'Would you like help with products, your cart, your orders, payment, shipping, or store policies?'
+                            : 'Bạn muốn hỏi về sản phẩm, giỏ hàng, đơn hàng, thanh toán, giao hàng hay chính sách cửa hàng?',
+                        'source' => 'clarification',
+                        'code' => 'CLARIFICATION_REQUIRED',
+                    ], $route, $startedAt);
+                }
                 $retrievalStartedAt = microtime(true);
                 $retrieved = $this->productTool->search([
                     'query' => $validated['message'],
@@ -386,6 +395,7 @@ class ChatController extends Controller
             'user_hash' => $userId ? hash_hmac('sha256', (string) $userId, (string) config('app.key')) : null,
             'intent' => $route['intent']->value,
             'router_confidence' => $route['confidence'],
+            'routing_mode' => $route['routing_mode'] ?? 'deterministic',
             'source' => $response['source'],
             'provider' => config('services.ai_chat.driver'),
             'prompt_version' => config('services.ai_chat.prompt_version'),

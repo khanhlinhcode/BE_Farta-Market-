@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 it('measures the local router and database retrieval baseline', function () {
+    config()->set('services.ai_chat.semantic_router_enabled', false);
     $category = Category::create(['name' => 'Bữa sáng']);
     $definitions = [
         ['slug' => 'tra-nhe', 'name' => 'Trà Nhẹ', 'summary' => 'Đồ uống thanh nhẹ cho buổi sáng; light tea morning drink'],
@@ -65,7 +66,7 @@ it('measures the local router and database retrieval baseline', function () {
     $retrievalMs = (microtime(true) - $retrievalStarted) * 1000;
 
     $metrics = [
-        'fixture_version' => 2,
+        'fixture_version' => 3,
         'intent_cases' => count($fixture['intent']),
         'intent_accuracy' => round($correct / count($fixture['intent']), 4),
         'retrieval_cases' => count($fixture['retrieval']),

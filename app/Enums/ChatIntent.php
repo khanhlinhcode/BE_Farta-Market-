@@ -11,5 +11,6 @@ enum ChatIntent: string
     case OrderQuery = 'order_query';
     case KnowledgeQuery = 'knowledge_query';
     case GeneralChat = 'general_chat';
+    case Clarification = 'clarification';
     case Unsupported = 'unsupported';
 }

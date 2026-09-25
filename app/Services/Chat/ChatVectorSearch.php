@@ -52,7 +52,7 @@ final class ChatVectorSearch
             $points = $batch->map(fn ($chunk) => [
                 'id' => (int) $chunk->id,
                 'vector' => [
-                    'text' => $chunk->content,
+                    'text' => $chunk->retrieval_text ?: $chunk->content,
                     'model' => $this->model(),
                 ],
                 'payload' => [

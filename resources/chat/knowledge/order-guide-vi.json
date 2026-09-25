@@ -3,10 +3,21 @@
   "title": "Hướng dẫn theo dõi và hủy đơn hàng",
   "locale": "vi",
   "topic": "orders",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "updated_at": "2026-09-24",
   "owner": "Farta Market",
+  "aliases": [
+    "chính sách đơn hàng",
+    "theo dõi đơn",
+    "hủy đơn",
+    "trạng thái đơn"
+  ],
+  "sample_questions": [
+    "Tôi xem đơn hàng ở đâu?",
+    "Khi nào tôi có thể hủy đơn?",
+    "Chatbot có đổi trạng thái đơn được không?"
+  ],
   "sections": [
     {
       "heading": "Xem đơn hàng",

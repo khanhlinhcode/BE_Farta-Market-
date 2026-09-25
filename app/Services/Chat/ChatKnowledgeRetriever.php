@@ -45,6 +45,7 @@ final class ChatKnowledgeRetriever
         return [
             'chunks' => array_slice(array_map(function (array $item): array {
                 unset($item['score']);
+                unset($item['search_text']);
 
                 return $item;
             }, $ranked), 0, self::MAX_EVIDENCE),
@@ -65,8 +66,8 @@ final class ChatKnowledgeRetriever
             ? "Contact email: {$settings->contact_email}. Customer phone: {$settings->contact_phone}. Support phone: {$settings->support_phone}. Address: {$settings->address_en}."
             : "Email liên hệ: {$settings->contact_email}. Điện thoại khách hàng: {$settings->contact_phone}. Điện thoại hỗ trợ: {$settings->support_phone}. Địa chỉ: {$settings->address_vi}.";
         $dynamic = [
-            ['id' => 'setting:shipping', 'db_id' => null, 'source_id' => 'site-settings', 'title' => $locale === 'en' ? 'Shipping information' : 'Thông tin giao hàng', 'section' => $locale === 'en' ? 'Shipping fee' : 'Phí giao hàng', 'topic' => 'shipping', 'content' => $shipping],
-            ['id' => 'setting:contact', 'db_id' => null, 'source_id' => 'site-settings', 'title' => $locale === 'en' ? 'Store contact' : 'Liên hệ cửa hàng', 'section' => $locale === 'en' ? 'Contact and address' : 'Liên hệ và địa chỉ', 'topic' => 'contact', 'content' => $contact],
+            ['id' => 'setting:shipping', 'db_id' => null, 'source_id' => 'site-settings', 'title' => $locale === 'en' ? 'Shipping information' : 'Thông tin giao hàng', 'section' => $locale === 'en' ? 'Shipping fee' : 'Phí giao hàng', 'topic' => 'shipping', 'content' => $shipping, 'search_text' => $shipping],
+            ['id' => 'setting:contact', 'db_id' => null, 'source_id' => 'site-settings', 'title' => $locale === 'en' ? 'Store contact' : 'Liên hệ cửa hàng', 'section' => $locale === 'en' ? 'Contact and address' : 'Liên hệ và địa chỉ', 'topic' => 'contact', 'content' => $contact, 'search_text' => $contact],
         ];
         $stored = ChatKnowledgeChunk::query()->with('document:id,source_id,title,locale,topic,status')
             ->whereHas('document', fn ($query) => $query->where('status', 'published')->whereIn('locale', [$locale, 'vi']))
@@ -78,6 +79,7 @@ final class ChatKnowledgeRetriever
                 'section' => $chunk->section,
                 'topic' => $chunk->document->topic,
                 'content' => $chunk->content,
+                'search_text' => $chunk->retrieval_text ?: $chunk->content,
             ])->all();
 
         return [...$dynamic, ...$stored];
@@ -93,7 +95,7 @@ final class ChatKnowledgeRetriever
                 $title = $this->tokens($chunk['title']);
                 $section = $this->tokens($chunk['section']);
                 $topic = $this->tokens($chunk['topic']);
-                $content = $this->tokens($chunk['content']);
+                $content = $this->tokens($chunk['search_text']);
                 $score = 5 * count(array_intersect($terms, $title))
                     + 4 * count(array_intersect($terms, $section))
                     + 3 * count(array_intersect($terms, $topic))

@@ -1,0 +1,27 @@
+{
+  "source_id": "policy-index-vi",
+  "title": "Tổng quan chính sách Farta Market",
+  "locale": "vi",
+  "topic": "policy",
+  "version": 1,
+  "status": "published",
+  "updated_at": "2026-09-24",
+  "owner": "Farta Market",
+  "aliases": [
+    "chính sách cửa hàng",
+    "quy định của shop",
+    "thông tin đã kiểm chứng",
+    "các chính sách"
+  ],
+  "sample_questions": [
+    "Shop có những chính sách nào?",
+    "Chính sách đã kiểm chứng gồm những gì?",
+    "Bạn có thể giải thích quy định của cửa hàng không?"
+  ],
+  "sections": [
+    {
+      "heading": "Các nhóm thông tin đã kiểm chứng",
+      "content": "Farta Market hiện có thông tin đã kiểm chứng về tài khoản và xác minh email; tìm kiếm, giỏ hàng và mua hàng; thanh toán COD và SePay; theo dõi và hủy đơn; phí giao hàng; thông tin liên hệ cửa hàng. Khách hàng có thể hỏi cụ thể một nhóm để nhận nội dung chi tiết từ tài liệu tương ứng."
+    }
+  ]
+}

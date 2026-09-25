@@ -9,12 +9,16 @@ is never treated as evidence or forwarded to a provider.
 
 ```mermaid
 flowchart TD
-    U[Guest or customer] --> API[Validation + deterministic router]
-    API --> P[Product/catalog tool]
-    API --> C[Cart tool]
-    API --> O[Owner-scoped order tool]
-    API --> K[Knowledge retriever]
-    API --> G[Deterministic greeting/help]
+    U[Guest or customer] --> API[Validation + deterministic guards]
+    API -->|resolved| D[Bounded intent]
+    API -->|unresolved only| R[Strict semantic classifier]
+    R -->|low confidence| Q[Bounded clarification]
+    R -->|high confidence| D
+    D --> P[Product/catalog tool]
+    D --> C[Cart tool]
+    D --> O[Owner-scoped order tool]
+    D --> K[Knowledge retriever]
+    D --> G[Deterministic greeting/help]
     P --> DB[(MySQL products)]
     C -->|verified customer only| DB
     O -->|customer + owner scope| DB
@@ -28,7 +32,10 @@ flowchart TD
 
 The router returns `product_search`, `product_detail`, `cart_query`,
 `cart_action_request`, `order_query`, `knowledge_query`, `general_chat`, or
-`unsupported`. Commerce tools stay ahead of knowledge retrieval.
+`unsupported`; unresolved messages become `clarification`. Deterministic guards
+always handle forbidden actions first. The optional semantic classifier sees
+only the current message, selects from a closed intent/entity schema and cannot
+call tools. Its result never bypasses authentication, role or ownership checks.
 
 ## Authority boundaries
 
@@ -62,7 +69,10 @@ original question remains unchanged for display/generation. Deterministic
 synonym expansion produces at most three variants. Optional model expansion
 uses strict JSON only when sparse confidence is low and the feature flag is on.
 
-Sparse ranking weights title, heading, topic and content. Optional dense ranks
+Sparse ranking weights title, heading, topic and retrieval text. Retrieval text
+contains the approved title/topic plus optional aliases/sample questions and the
+section heading/content. It is discarded before answer generation; only section
+`content` is evidence and may be cited. Optional dense ranks
 come directly from Qdrant Cloud Inference using
 `intfloat/multilingual-e5-small`. The dedicated collection accepts only Farta
 chat knowledge names; point IDs and payload `chunk_id` values match MySQL chunk
@@ -103,7 +113,8 @@ ID, quantity, clarification stage, owner ID and expiry. It is cleared on expiry,
 owner/topic change or negation. No raw cart, payment reference or sensitive
 profile data is stored.
 
-Logs contain request ID, HMAC user identifier, intent, source IDs, counts,
+Logs contain request ID, HMAC user identifier, intent, routing mode, router
+confidence, source IDs, counts,
 retrieval mode, vector fallback, answer status, provider/model and timing. They
 do not contain raw prompts/history/cart contents, cookies, API keys, addresses
 or payment details.

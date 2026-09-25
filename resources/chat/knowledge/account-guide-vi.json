@@ -3,10 +3,21 @@
   "title": "Hướng dẫn tài khoản khách hàng",
   "locale": "vi",
   "topic": "account",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "updated_at": "2026-09-24",
   "owner": "Farta Market",
+  "aliases": [
+    "chính sách tài khoản",
+    "xác minh email",
+    "khôi phục tài khoản",
+    "đặt lại mật khẩu"
+  ],
+  "sample_questions": [
+    "Làm sao để xác minh tài khoản?",
+    "Tôi quên mật khẩu thì làm gì?",
+    "Vì sao tôi chưa dùng được chức năng mua hàng?"
+  ],
   "sections": [
     {
       "heading": "Đăng ký và xác minh email",

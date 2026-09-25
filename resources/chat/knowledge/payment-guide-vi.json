@@ -3,10 +3,21 @@
   "title": "Hướng dẫn thanh toán",
   "locale": "vi",
   "topic": "payment",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "updated_at": "2026-09-24",
   "owner": "Farta Market",
+  "aliases": [
+    "chính sách thanh toán",
+    "phương thức thanh toán",
+    "trả tiền khi nhận hàng",
+    "chuyển khoản SePay"
+  ],
+  "sample_questions": [
+    "Shop hỗ trợ thanh toán gì?",
+    "Tôi có thể thanh toán COD không?",
+    "Thanh toán SePay được xác nhận như thế nào?"
+  ],
   "sections": [
     {
       "heading": "Thanh toán khi nhận hàng",

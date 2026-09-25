@@ -75,13 +75,14 @@ final class ChatKnowledgeSyncService
                     ]
                 );
                 $document->chunks()->delete();
-                foreach ($this->chunks($validated['sections']) as $position => $chunk) {
+                foreach ($this->chunks($validated) as $position => $chunk) {
                     $document->chunks()->create([
                         'section' => $chunk['heading'],
                         'content' => $chunk['content'],
                         'normalized_content' => $this->normalize($chunk['content']),
+                        'retrieval_text' => $chunk['retrieval_text'],
                         'position' => $position,
-                        'checksum' => hash('sha256', $chunk['heading']."\n".$chunk['content']),
+                        'checksum' => hash('sha256', $chunk['retrieval_text']),
                     ]);
                 }
 
@@ -122,6 +123,8 @@ final class ChatKnowledgeSyncService
                 throw new RuntimeException("{$filename}: {$key} is invalid.");
             }
         }
+        $aliases = $this->validateRetrievalHints($data['aliases'] ?? [], 'aliases', $filename);
+        $sampleQuestions = $this->validateRetrievalHints($data['sample_questions'] ?? [], 'sample_questions', $filename);
         foreach ($data['sections'] as $section) {
             if (! is_array($section) || ! is_string($section['heading'] ?? null) || ! is_string($section['content'] ?? null)
                 || trim($section['heading']) === '' || trim($section['content']) === '') {
@@ -142,30 +145,71 @@ final class ChatKnowledgeSyncService
             'status' => 'published',
             'updated_at' => $data['updated_at'],
             'owner' => trim($data['owner']),
+            'aliases' => $aliases,
+            'sample_questions' => $sampleQuestions,
             'sections' => $data['sections'],
         ];
     }
 
-    /** @param array<int, array{heading: string, content: string}> $sections @return array<int, array{heading: string, content: string}> */
-    private function chunks(array $sections): array
+    /** @param array<string, mixed> $document @return array<int, array{heading: string, content: string, retrieval_text: string}> */
+    private function chunks(array $document): array
     {
         $chunks = [];
-        foreach ($sections as $section) {
+        $metadata = [
+            $document['title'],
+            $document['topic'],
+            ...$document['aliases'],
+            ...$document['sample_questions'],
+        ];
+        foreach ($document['sections'] as $section) {
             $sentences = preg_split('/(?<=[.!?])\s+(?=\p{Lu}|\d)/u', trim($section['content'])) ?: [];
             $current = '';
             foreach ($sentences as $sentence) {
                 if ($current !== '' && mb_strlen($current.' '.$sentence) > 900) {
-                    $chunks[] = ['heading' => trim($section['heading']), 'content' => $current];
+                    $chunks[] = $this->chunk($metadata, $section['heading'], $current);
                     $current = '';
                 }
                 $current = trim($current.' '.$sentence);
             }
             if ($current !== '') {
-                $chunks[] = ['heading' => trim($section['heading']), 'content' => $current];
+                $chunks[] = $this->chunk($metadata, $section['heading'], $current);
             }
         }
 
         return $chunks;
+    }
+
+    /** @param array<int, string> $metadata @return array{heading: string, content: string, retrieval_text: string} */
+    private function chunk(array $metadata, string $heading, string $content): array
+    {
+        $heading = trim($heading);
+        $content = trim($content);
+
+        return [
+            'heading' => $heading,
+            'content' => $content,
+            'retrieval_text' => implode("\n", [...$metadata, $heading, $content]),
+        ];
+    }
+
+    /** @return array<int, string> */
+    private function validateRetrievalHints(mixed $hints, string $field, string $filename): array
+    {
+        if (! is_array($hints) || count($hints) > 20) {
+            throw new RuntimeException("{$filename}: {$field} must contain at most 20 strings.");
+        }
+
+        return collect($hints)->map(function (mixed $hint) use ($field, $filename): string {
+            if (! is_string($hint) || trim($hint) === '' || mb_strlen($hint) > 240) {
+                throw new RuntimeException("{$filename}: {$field} contains an invalid value.");
+            }
+            $hint = trim($hint);
+            if (preg_match('/\b(?:TODO|CHANGEME)\b|\{\{.*?\}\}|<\/?system>|\[system\]|ignore (?:all )?previous|bo qua (?:moi )?huong dan/i', Str::ascii($hint))) {
+                throw new RuntimeException("{$filename}: instruction-like retrieval hints are not allowed.");
+            }
+
+            return $hint;
+        })->unique()->values()->all();
     }
 
     private function normalize(string $value): string

@@ -7,6 +7,12 @@
   "status": "draft",
   "updated_at": "2026-09-24",
   "owner": "Farta Market",
+  "aliases": [
+    "cách gọi khác của chính sách"
+  ],
+  "sample_questions": [
+    "Người dùng có thể hỏi chính sách này như thế nào?"
+  ],
   "sections": [
     {
       "heading": "Cách soạn nội dung",

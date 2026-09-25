@@ -169,6 +169,8 @@ Common configuration:
 AI_CHAT_ENABLED=true
 AI_CHAT_ORCHESTRATION=router
 AI_PRODUCT_SEARCH_MODE=database
+AI_SEMANTIC_ROUTER_ENABLED=false
+AI_SEMANTIC_ROUTER_MIN_CONFIDENCE=0.75
 AI_VECTOR_SEARCH_ENABLED=false
 AI_KNOWLEDGE_GENERATION_ENABLED=false
 AI_QUERY_EXPANSION_ENABLED=false
@@ -195,6 +197,12 @@ AI_CHAT_BASE_URL=https://api.groq.com/openai/v1
 GROQ_API_KEY=
 ```
 
+High-confidence security and business rules run before an optional semantic
+intent classifier. The classifier returns a strict, fixed intent/entity schema;
+it cannot call tools or grant access. Low-confidence, unavailable, or unrelated
+classification returns a clarification question instead of defaulting to
+product search. Enable it only after local evaluation passes.
+
 Groq responses use strict JSON schemas. Laravel reloads every product before
 returning its name, price, or inventory. Only authenticated, email-verified
 customers can receive cart proposals or submit cart context; guests still browse
@@ -203,6 +211,9 @@ and owner-scoped.
 
 Knowledge RAG reads dynamic shipping/contact facts from `SiteSetting` and
 published curated policy documents. Sparse retrieval is the local default.
+Optional `aliases` and `sample_questions` improve retrieval only: they are
+stored in `retrieval_text`, while answers and citations remain limited to the
+approved section `content`.
 Optional dense retrieval uses Qdrant Cloud Inference with
 `intfloat/multilingual-e5-small` and automatically falls back to sparse. The
 dedicated collection must be named `farta_chat_knowledge` (an environment suffix

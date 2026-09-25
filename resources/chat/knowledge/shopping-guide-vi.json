@@ -3,10 +3,21 @@
   "title": "Hướng dẫn mua hàng tại Farta Market",
   "locale": "vi",
   "topic": "ordering",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "updated_at": "2026-09-24",
   "owner": "Farta Market",
+  "aliases": [
+    "hướng dẫn mua hàng",
+    "chính sách giỏ hàng",
+    "cách đặt hàng",
+    "mã giảm giá"
+  ],
+  "sample_questions": [
+    "Tôi mua hàng như thế nào?",
+    "Chatbot có thể thêm sản phẩm vào giỏ không?",
+    "Giá và tồn kho được kiểm tra khi nào?"
+  ],
   "sections": [
     {
       "heading": "Tìm kiếm sản phẩm",

@@ -64,6 +64,8 @@ return [
         'keep_alive' => env('AI_CHAT_KEEP_ALIVE', '30m'),
         'orchestration' => env('AI_CHAT_ORCHESTRATION', 'router'),
         'product_search_mode' => env('AI_PRODUCT_SEARCH_MODE', 'database'),
+        'semantic_router_enabled' => filter_var(env('AI_SEMANTIC_ROUTER_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'semantic_router_min_confidence' => (float) env('AI_SEMANTIC_ROUTER_MIN_CONFIDENCE', 0.75),
         'vector_search_enabled' => filter_var(env('AI_VECTOR_SEARCH_ENABLED', false), FILTER_VALIDATE_BOOL),
         'knowledge_generation_enabled' => filter_var(env('AI_KNOWLEDGE_GENERATION_ENABLED', false), FILTER_VALIDATE_BOOL),
         'query_expansion_enabled' => filter_var(env('AI_QUERY_EXPANSION_ENABLED', false), FILTER_VALIDATE_BOOL),

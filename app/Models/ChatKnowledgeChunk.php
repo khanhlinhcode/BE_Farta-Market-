@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ChatKnowledgeChunk extends Model
 {
     protected $fillable = [
-        'document_id', 'section', 'content', 'normalized_content', 'position', 'checksum',
+        'document_id', 'section', 'content', 'normalized_content', 'retrieval_text', 'position', 'checksum',
     ];
 
     protected $casts = ['position' => 'integer'];

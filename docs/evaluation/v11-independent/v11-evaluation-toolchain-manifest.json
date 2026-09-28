@@ -1,0 +1,85 @@
+{
+  "manifest_version": "farta-v11-evaluation-toolchain-manifest.1.0",
+  "revision": "V11 Evaluation Toolchain V1",
+  "freeze_status": "FROZEN",
+  "execution_identity": {
+    "candidate_hash": "f04745463eb1958f0ce3c0a9c6719ad74c74355feb6f68e1adff077531a8dacf",
+    "dataset_hash": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "evaluator_hash": "66963e4fa9d21ac832b8d9c4654ad32909b6fb57239dafabed8aaf8ea4767eb2",
+    "scorer_hash": "adb279e855ee8efd09b56af9994204c9f72eb19368b4b807005f3ad95b7ef06a"
+  },
+  "executable_revisions": {
+    "evaluator": "V11 Evaluator V1 / farta-final-v11-evaluator.1.0.0",
+    "offline_scorer": "V11 Offline Scorer V1 / farta-final-v11-offline-scorer.1.0.0"
+  },
+  "frozen_contracts": {
+    "evaluation_contract": {
+      "path": "docs/evaluation/v11-independent/v11-evaluation-contract.json",
+      "sha256": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20"
+    },
+    "fact_verification_contract": {
+      "path": "docs/evaluation/v11-independent/v11-fact-verification-contract.json",
+      "sha256": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604"
+    },
+    "schema_contract": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+      "sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d"
+    }
+  },
+  "freeze_manifests": {
+    "evaluator": {
+      "path": "docs/evaluation/v11-independent/v11-evaluator-freeze-manifest.json",
+      "sha256": "4a6230c474dcd42c6f5b33d6ca5e3081beecc58a8427b8d2cc2b3c17c37da54a"
+    },
+    "offline_scorer": {
+      "path": "docs/evaluation/v11-independent/v11-offline-scorer-freeze-manifest.json",
+      "sha256": "0bcf1ab29d5330ffc758c84ac2d54c83e89bfa78c2efed00b41df093c85b0336"
+    }
+  },
+  "immutable_final_v11": {
+    "dataset": {
+      "path": "docs/evaluation/v11-independent/v11-final-audited-dataset.json",
+      "sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb"
+    },
+    "audit_report": {
+      "path": "docs/evaluation/v11-independent/v11-r3-fresh-audit-report.md",
+      "sha256": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea"
+    },
+    "final_manifest": {
+      "path": "docs/evaluation/v11-independent/v11-final-manifest.json",
+      "sha256": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e"
+    }
+  },
+  "frozen_authorities": {
+    "business_capability_contract_sha256": "ddaf57dcb1fd0db48b7466370c498d52db729cf8a4714f99c0098548fc1e4b7b",
+    "product_authority_sha256": "809923e43f8919446b8123ea3ab0cac2f39cc3b50d89bad89f584d3768799f0a",
+    "sitesetting_authority_sha256": "92e69a3c93bfef417fce7ab76a12e191558cbbe50ec9e645c6422e69bb69f2cb",
+    "knowledge_registry_sha256": "dc8b013d3235a8fb04cedda63575354ab25fd6482316798952ff7161e6d599e7",
+    "authorization_contract_sha256": "de05e7d4ebd0429b20c73fd9bb0927a9012a9e358b80a195c878549e56639dc4"
+  },
+  "validation_gate": {
+    "final_v11_parse": "PASS 160 primary / 20 scenarios / 40 turns / 40 branches / 240 entity objects",
+    "perfect_gold_mirror": "PASS",
+    "business_outcome_mirror": "PASS 160/160",
+    "claim_support_mirror": "PASS 115/115",
+    "scenario_claim_support_mirror": "PASS 15/15",
+    "negative_mutation_suite": "PASS",
+    "claim_support_negative_suite": "PASS A-E rejected / F accepted",
+    "entity_metrics": "PASS 240/240 joint frames",
+    "multi_intent_metrics": "PASS 20/20 parents / 40/40 branches",
+    "follow_up_metrics": "PASS 20/20 scenarios / 40/40 turns",
+    "security_metrics": "PASS",
+    "jsonl_utf8": "PASS",
+    "deterministic_scoring": "PASS",
+    "zero_network_offline_scoring": "PASS",
+    "identity_validation": "PASS",
+    "candidate_hash_unchanged": "PASS",
+    "final_v11_hashes_unchanged": "PASS"
+  },
+  "execution_policy": {
+    "candidate_requests": 0,
+    "candidate_executed": false,
+    "final_v11_execution_authorized": false,
+    "next_phase_requires_separate_authorization": true
+  }
+}

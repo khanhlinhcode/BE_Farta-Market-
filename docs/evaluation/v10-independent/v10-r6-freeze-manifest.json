@@ -1,0 +1,132 @@
+{
+  "manifest_schema_version": "farta-v10-r6-freeze-manifest.1.0",
+  "dataset_schema_version": "farta-v10.3.0",
+  "dataset_version": "V10-blind-independent-2026-09-26-r6",
+  "revision": 6,
+  "parent_revision": 5,
+  "frozen_at_utc": "2026-09-26T17:31:53Z",
+  "freeze_status": "FROZEN",
+  "validation_status": "PASS",
+  "parent_r5_dataset": {
+    "path": "v10-r5-candidate-dataset.json",
+    "sha256": "1c2b671a3ec303fbf2071763665e2471322603b31c3eff7015565a97131603ff"
+  },
+  "verified_r5_inputs": {
+    "authoring_report_sha256": "9dea336885e3381a64234df3574bef90eadf8b3dabd6407b2f3fc2232cac4062",
+    "freeze_manifest_sha256": "b380bcd96517d9167ee7506efb3cab2573547a16a1a11bf4267ddf66c8b388f9"
+  },
+  "artifacts": [
+    {
+      "path": "v10-r6-candidate-dataset.json",
+      "role": "candidate_dataset_revision_6",
+      "bytes": 668405,
+      "sha256": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0"
+    },
+    {
+      "path": "v10-r6-authoring-report.md",
+      "role": "authoring_report_revision_6",
+      "bytes": 5418,
+      "sha256": "d5f08489d214b332420754296622dedca0ef8dd132540526a15388cbc2b8b6cf"
+    }
+  ],
+  "counts": {
+    "primary_single_turn_cases": 292,
+    "explicit_multi_turn_scenarios": 39,
+    "multi_turn_turns": 78,
+    "multi_intent_primary_cases": 27,
+    "multi_intent_annotated_branches": 56,
+    "gold_corrections": 4,
+    "utterance_changes": 0,
+    "schema_changes": 0,
+    "entity_bearing_primary_cases": 173,
+    "entity_bearing_primary_cases_branch_inclusive": 178,
+    "account_target_non_null_primary_records": 11,
+    "account_target_non_null_branch_records": 1,
+    "account_target_non_null_total_records": 12,
+    "requested_mutation_value_non_null_primary_records": 14,
+    "requested_mutation_value_non_null_branch_records": 3,
+    "privileged_mutation_primary_cases": 16,
+    "true_ood_primary_cases": 23
+  },
+  "gold_corrections": {
+    "count": 4,
+    "field": "account_target",
+    "primary_ids": [
+      "V10-ST-0160",
+      "V10-ST-0179",
+      "V10-ST-0260"
+    ],
+    "branch_ids": [
+      "V10-ST-0289/bypass"
+    ]
+  },
+  "distributions": {
+    "language": {
+      "en": 68,
+      "mixed": 48,
+      "vi_conversational": 58,
+      "vi_formal": 67,
+      "vi_no_diacritics": 51
+    },
+    "capability": {
+      "product_search": 24,
+      "product_detail": 18,
+      "price": 18,
+      "stock_availability": 18,
+      "catalog_listing": 12,
+      "shipping_current_value": 12,
+      "shipping_calculation": 16,
+      "cart_informational": 10,
+      "cart_action_request": 18,
+      "order_read": 14,
+      "payment_status_read": 10,
+      "knowledge_query": 20,
+      "missing_evidence_query": 18,
+      "general_chat": 8,
+      "unsupported_ood": 23,
+      "clarification": 10,
+      "privileged_mutation": 16,
+      "multi_intent": 27
+    },
+    "follow_up_subtype": {
+      "singular_reference": 5,
+      "plural_reference": 4,
+      "ordinal_first": 4,
+      "ordinal_second": 4,
+      "ordinal_last": 4,
+      "deictic_that": 5,
+      "ellipsis": 5,
+      "expired_context": 4,
+      "ambiguous_reference": 4
+    }
+  },
+  "validation": {
+    "status": "PASS",
+    "r5_input_hashes": true,
+    "r5_manifest_lineage": true,
+    "json_parse": true,
+    "schema_farta_v10_3_0": true,
+    "primary_count_292": true,
+    "scenario_count_39": true,
+    "turn_count_78": true,
+    "multi_intent_count_27": true,
+    "multi_intent_branch_count_56": true,
+    "unique_ids": true,
+    "uniform_entity_schema_and_types": true,
+    "four_account_target_corrections": true,
+    "account_target_forward_invariant": true,
+    "account_target_reverse_invariant": true,
+    "account_target_raw_surface_consistency": true,
+    "entity_preservation": true,
+    "quantity_and_mutation_value_unchanged": true,
+    "auth_and_security_unchanged": true,
+    "claim_support_and_no_evidence_valid": true,
+    "primary_utterances_byte_identical": true,
+    "scenarios_and_turns_unchanged": true,
+    "multi_intent_structure_order_and_siblings_unchanged": true,
+    "r5_to_r6_semantic_changeset_exact": true,
+    "candidate_executed": false,
+    "candidate_scored": false,
+    "historical_leakage_audit_run_by_author": false
+  }
+}

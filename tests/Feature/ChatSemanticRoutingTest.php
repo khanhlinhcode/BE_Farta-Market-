@@ -58,6 +58,42 @@ it('asks a bounded clarification when semantic confidence is low', function () {
         ->assertJsonPath('code', 'CLARIFICATION_REQUIRED');
 });
 
+it('keeps unsupported as a first-class semantic fallback outcome', function () {
+    Http::fake(['https://groq.test/chat/completions' => Http::response([
+        'choices' => [['message' => ['content' => json_encode([
+            'intent' => 'unsupported',
+            'confidence' => 0.96,
+            'entities' => ['topic' => 'unknown', 'order_id' => '', 'product_name' => '', 'quantity' => 0],
+            'needs_clarification' => false,
+        ])]]],
+    ])]);
+
+    $this->postJson('/api/chat', ['message' => 'Phân tích kiến trúc của một compiler bất kỳ'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'unsupported')
+        ->assertJsonPath('decision_state', 'unsupported')
+        ->assertJsonPath('code', 'UNSUPPORTED_REQUEST')
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonCount(0, 'suggested_actions');
+});
+
+it('rejects a high-confidence semantic intent with incompatible domain evidence', function () {
+    Http::fake(['https://groq.test/chat/completions' => Http::response([
+        'choices' => [['message' => ['content' => json_encode([
+            'intent' => 'product_search',
+            'confidence' => 0.99,
+            'entities' => ['topic' => 'unknown', 'order_id' => '', 'product_name' => '', 'quantity' => 0],
+            'needs_clarification' => false,
+        ])]]],
+    ])]);
+
+    $this->postJson('/api/chat', ['message' => 'Giúp mình chuyện vừa nói nhé'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'clarification')
+        ->assertJsonPath('code', 'CLARIFICATION_REQUIRED')
+        ->assertJsonCount(0, 'suggested_actions');
+});
+
 it('does not call the semantic model for a forbidden action', function () {
     Http::preventStrayRequests();
 

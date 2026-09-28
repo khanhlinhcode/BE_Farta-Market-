@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 final class ChatProductTool
 {
-    public const MAX_OUTPUT = 5;
+    public const MAX_OUTPUT = 12;
 
     public function __construct(private readonly ChatProductRetriever $retriever) {}
 
@@ -66,7 +66,7 @@ final class ChatProductTool
         $ranked = $text === '' ? $candidates : $this->retriever->retrieve($candidates, $text);
         $hasStructuredFilter = collect(['category', 'min_price', 'max_price', 'in_stock'])
             ->contains(fn (string $key) => ($validated[$key] ?? null) !== null);
-        if ($ranked->isEmpty() && $hasStructuredFilter) {
+        if (($validated['category'] ?? null) !== null || ($ranked->isEmpty() && $hasStructuredFilter)) {
             $ranked = $candidates;
         }
 

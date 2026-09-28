@@ -1,0 +1,131 @@
+{
+  "manifest_schema_version": "farta-v10-r5-freeze-manifest.1.0",
+  "dataset_schema_version": "farta-v10.3.0",
+  "dataset_version": "V10-blind-independent-2026-09-26-r5",
+  "revision": 5,
+  "parent_revision": 4,
+  "frozen_at_utc": "2026-09-26T16:34:44Z",
+  "freeze_status": "FROZEN",
+  "parent_r4_dataset": {
+    "path": "v10-r4-candidate-dataset.json",
+    "sha256": "1f9ee94637ce70fc7e64fb03d94ebf211b85a455e79d80c6c939cd58b995b19b"
+  },
+  "artifacts": [
+    {
+      "path": "v10-r5-candidate-dataset.json",
+      "role": "candidate_dataset_revision_5",
+      "bytes": 667757,
+      "sha256": "1c2b671a3ec303fbf2071763665e2471322603b31c3eff7015565a97131603ff"
+    },
+    {
+      "path": "v10-r5-authoring-report.md",
+      "role": "authoring_report_revision_5",
+      "bytes": 6026,
+      "sha256": "9dea336885e3381a64234df3574bef90eadf8b3dabd6407b2f3fc2232cac4062"
+    }
+  ],
+  "counts": {
+    "primary_single_turn_cases": 292,
+    "explicit_multi_turn_scenarios": 39,
+    "multi_turn_turns": 78,
+    "multi_intent_primary_cases": 27,
+    "multi_intent_annotated_branches": 56,
+    "replacement_primary_cases": 1,
+    "gold_corrections": 3,
+    "entity_bearing_primary_cases": 172,
+    "entity_bearing_primary_cases_branch_inclusive": 176,
+    "account_target_non_null_primary_records": 8,
+    "requested_mutation_value_non_null_primary_records": 14,
+    "requested_mutation_value_non_null_branch_records": 3,
+    "privileged_mutation_primary_cases": 16,
+    "true_ood_primary_cases": 23
+  },
+  "replacement_primary_ids": [
+    "V10-ST-0142"
+  ],
+  "gold_corrections": {
+    "count": 3,
+    "account_target_primary_ids": [
+      "V10-ST-0259"
+    ],
+    "unsupported_claim_primary_ids": [
+      "V10-ST-0030"
+    ],
+    "unsupported_claim_branch_ids": [
+      "V10-ST-0272/detail"
+    ],
+    "mechanically_derived_parent_terminal_ids": [
+      "V10-ST-0272"
+    ]
+  },
+  "distributions": {
+    "language": {
+      "en": 68,
+      "mixed": 48,
+      "vi_conversational": 58,
+      "vi_formal": 67,
+      "vi_no_diacritics": 51
+    },
+    "capability": {
+      "product_search": 24,
+      "product_detail": 18,
+      "price": 18,
+      "stock_availability": 18,
+      "catalog_listing": 12,
+      "shipping_current_value": 12,
+      "shipping_calculation": 16,
+      "cart_informational": 10,
+      "cart_action_request": 18,
+      "order_read": 14,
+      "payment_status_read": 10,
+      "knowledge_query": 20,
+      "missing_evidence_query": 18,
+      "general_chat": 8,
+      "unsupported_ood": 23,
+      "clarification": 10,
+      "privileged_mutation": 16,
+      "multi_intent": 27
+    },
+    "follow_up_subtype": {
+      "singular_reference": 5,
+      "plural_reference": 4,
+      "ordinal_first": 4,
+      "ordinal_second": 4,
+      "ordinal_last": 4,
+      "deictic_that": 5,
+      "ellipsis": 5,
+      "expired_context": 4,
+      "ambiguous_reference": 4
+    }
+  },
+  "validation": {
+    "status": "PASS",
+    "r4_parent_hash": true,
+    "json_parse": true,
+    "primary_count_292": true,
+    "scenario_count_39": true,
+    "turn_count_78": true,
+    "multi_intent_count_27": true,
+    "multi_intent_branch_count_56": true,
+    "unique_ids": true,
+    "required_fields": true,
+    "uniform_entity_schema": true,
+    "terminal_vocabulary": true,
+    "canonical_products_active": true,
+    "account_target_semantics": true,
+    "requested_mutation_value_semantics": true,
+    "quantity_and_mutation_value_separated": true,
+    "auth_and_denial_consistency": true,
+    "evidence_source_references_and_versions_valid": true,
+    "claim_support_bidirectional": true,
+    "entity_preservation": true,
+    "shipping_arithmetic": true,
+    "scenario_structure_and_wording_preserved": true,
+    "multi_intent_structure_and_aggregation": true,
+    "internal_utterance_duplicate_and_template_quality": true,
+    "r4_to_r5_changeset_minimal": true,
+    "candidate_executed": false,
+    "candidate_scored": false,
+    "historical_leakage_audit_run_by_author": false
+  }
+}

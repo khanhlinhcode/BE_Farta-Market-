@@ -1,0 +1,168 @@
+{
+  "manifest_version": "farta-v11-toolchain-v2-r3-manifest.1.0",
+  "revision": "V11 Toolchain V2-r3 typed cross-account read canonicalization",
+  "recorded_at_utc": "2026-09-28T07:56:38Z",
+  "freeze_status": "FROZEN",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "root_cause": "A symbolic specific-order reference was recognized by ChatConceptExtractor but not materialized into typed route.entities.order_reference. ChatIntentRouter subsequently reclassified the typed other-user read route from order_read to privileged_mutation. Runtime Adapter V2 then entered mutation business-outcome logic despite resource=other_user_data, operation=read, denial_reason=other_user_data_access, topic=order, and no mutation target.",
+  "failure_evidence": {
+    "r2_run_id": "final-v11-r2-20260928T073537Z",
+    "r2_state_sha256": "37d9dacf168cf9b00ce435790a7f0fd1df2bfa4c0edbf0e8c4457826373cf569",
+    "r2_state": "EXECUTION_INCOMPLETE",
+    "cases_started": 45,
+    "cases_completed": 44,
+    "cases_failed": 1,
+    "last_record": "v11r1-p045",
+    "failure": "Privileged mutation lacks an authoritative typed target or denial reason."
+  },
+  "canonicalization_rule": {
+    "scope_source": "Explicit structural PARENT or BRANCH nesting.",
+    "mapping_source": "Typed semantic_intent, resource, operation, denial_reason, mutation_target, ambiguity, entity topic/account target, mentioned resources, terminal, and authorization result only.",
+    "cross_account_order_read": "other_user_data + read + other_user_data_access + typed order structure -> order_read + owned_order_data",
+    "cross_account_payment_read": "other_user_data + read + other_user_data_access + typed order/payment structure -> payment_status_read + owned_order_payment_status",
+    "parent_authorization": "Structurally denied cross-account read -> DENY_CROSS_ACCOUNT",
+    "branch_authorization": "Structurally denied cross-account read -> DENY",
+    "genuine_mutations": "Preserved as privileged_mutation and still require their authoritative target or denial reason.",
+    "gold_case_utterance_answer_text": "FORBIDDEN",
+    "unknown_or_conflicting_structure": "FAIL_CLOSED"
+  },
+  "privileged_security_audit": {
+    "cross_account_order_read": "CROSS_ACCOUNT_ORDER_READ",
+    "cross_account_payment_read": "CROSS_ACCOUNT_PAYMENT_READ",
+    "order_mutation": "VALID_ORDER_MUTATION",
+    "payment_mutation": "VALID_PAYMENT_MUTATION",
+    "authorization_bypass": "VALID_AUTHORIZATION_BYPASS",
+    "secret_disclosure": "VALID_SECRET_DISCLOSURE",
+    "inventory_mutation": "VALID_INVENTORY_MUTATION",
+    "account_role_mutation": "VALID_ACCOUNT_ROLE_MUTATION",
+    "refund_return_mutation": "VALID_REFUND_RETURN_MUTATION",
+    "other_user_data_mutation_or_unknown_combination": "FAIL_CLOSED_UNKNOWN"
+  },
+  "inherited_identities": {
+    "toolchain_v2_r1": "29714cce29739581347fe36c3fd2ab179a88d8f81cf1dfdb07fba6e0ea639418",
+    "toolchain_v2_r2": "401e530d55c8d3e2dc87885eeeff365fc59fffaaa70ca9bb2d4f60c0115726dc",
+    "execution_bundle_r2": "873e13d70de314a015f2c68ed3b89c90952d37fc5841830c257bf46123745cd8",
+    "evaluator_v2_r1": "0fcce11e5650340c6112372e3f879948555696ed66edb2c64ecfd60e68dee9ef",
+    "evidence_domain_canonicalizer_v2_r2": "2d314bdd29b592a0dbc36ea4498373163c8d02466f6bbda1527d6335cdf3f75f"
+  },
+  "revised_components": {
+    "security_intent_canonicalizer_v2_r3": {
+      "version": "farta-final-v11-security-intent-canonicalizer.2.0.3",
+      "semantic_identity": "bb22b631778faeaa34995fa1254bd654f1b6787210a346d0490a72329cf98616",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11SecurityIntentCanonicalizerV2R3.php"
+      ],
+      "source_file_sha256": "348ca150c672a5e1dfc24889aa27f9458fefda8744261ef41c14c6f66095009b"
+    },
+    "runtime_adapter_v2_r3": {
+      "version": "farta-final-v11-runtime-adapter.2.0.3",
+      "semantic_identity": "93b28a3d8202195d48a404e6d2a7de9ddc91658a466f5965a43ff9b7a17713c4",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11EvidenceDomainCanonicalizerV2R2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R2.php",
+        "tests/Support/FinalV11SecurityIntentCanonicalizerV2R3.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R3.php"
+      ],
+      "source_file_sha256": "addc44714f4acf0c138bb3094a4f20981d7c7efd979e22137c4bcb5f49316fd9"
+    },
+    "scorer_v2_r3": {
+      "version": "farta-final-v11-offline-scorer.2.0.3",
+      "semantic_identity": "82febd17d1487e26384cd9eae90b2c388866299ee89a8dbed7a00d32e6d98d91",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11OfflineScorerV2.php",
+        "tests/Support/FinalV11OfflineScorerV2R2.php",
+        "tests/Support/FinalV11OfflineScorerV2R3.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R3.php"
+      ],
+      "source_file_sha256": "161b13d0c8e040d93ca81586d0e595c94d1cc07dc9510788a949de8c5052d25b"
+    },
+    "harness_r3": {
+      "version": "farta-v11-final-execution-harness.1.0.3",
+      "semantic_identity": "f4ad6efc0f982983ef9d3e5af625b7d1a73116f0c85898ad9feecefae424b873",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV11ExecutionHarnessR1.php",
+        "tests/Support/FinalV11ExecutionHarnessR2.php",
+        "tests/Support/FinalV11ExecutionHarnessR3.php",
+        "tests/Support/FinalV11OfflineScorerV2R3.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R3.php"
+      ],
+      "source_file_sha256": "8fa6456eaf1b3dcbd4cd528fabb847ebfad63561a187b9b76808a73e3d8824fc"
+    },
+    "toolchain_v2_r3": {
+      "semantic_identity": "beb1ca7c0431e3d7b2d67990b554f9713a53c0963fc15af0fc1d16baab053486",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-runtime-adapter-v2-contract.json",
+        "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+        "scripts/v11-toolchain-v2-preflight",
+        "scripts/v11-toolchain-v2-r2-preflight",
+        "scripts/v11-toolchain-v2-r3-preflight",
+        "tests/Feature/FinalV11ToolchainV2PreflightTest.php",
+        "tests/Feature/FinalV11ToolchainV2R1RemediationTest.php",
+        "tests/Feature/FinalV11ToolchainV2R2RemediationTest.php",
+        "tests/Feature/FinalV11ToolchainV2R3RemediationTest.php",
+        "tests/Fixtures/v11_toolchain_v2_r1_synthetic.php",
+        "tests/Fixtures/v11_toolchain_v2_r2_synthetic.php",
+        "tests/Fixtures/v11_toolchain_v2_r3_synthetic.php",
+        "tests/Fixtures/v11_toolchain_v2_synthetic_frames.php",
+        "tests/Support/FinalV11EvaluationV2.php",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11EvidenceDomainCanonicalizerV2R2.php",
+        "tests/Support/FinalV11ExecutionHarnessR1.php",
+        "tests/Support/FinalV11ExecutionHarnessR2.php",
+        "tests/Support/FinalV11ExecutionHarnessR3.php",
+        "tests/Support/FinalV11OfflineScorerV2.php",
+        "tests/Support/FinalV11OfflineScorerV2R1.php",
+        "tests/Support/FinalV11OfflineScorerV2R2.php",
+        "tests/Support/FinalV11OfflineScorerV2R3.php",
+        "tests/Support/FinalV11RuntimeAdapterV2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R3.php",
+        "tests/Support/FinalV11RuntimeEvidenceHarnessV2.php",
+        "tests/Support/FinalV11SecurityIntentCanonicalizerV2R3.php"
+      ]
+    }
+  },
+  "compatibility": {
+    "prediction_field_order": "PASS_UNCHANGED",
+    "prediction_payload_schema": "PASS_UNCHANGED",
+    "scoring_formulas": "PASS_UNCHANGED",
+    "scoring_thresholds": "PASS_UNCHANGED",
+    "parent_branch_security_scope": "PASS_UNCHANGED",
+    "v2_r2_evidence_domain_remediation": "PASS_UNCHANGED"
+  },
+  "validation": {
+    "tests_passed": 148,
+    "tests_total": 148,
+    "assertions_passed": 802,
+    "assertions_total": 802,
+    "focused_r3_tests_passed": 22,
+    "focused_r3_tests_total": 22,
+    "focused_r3_assertions_passed": 88,
+    "focused_r3_assertions_total": 88,
+    "focused_style_files_passed": 10,
+    "focused_style_files_total": 10,
+    "formatting": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS",
+    "gold_isolation": "PASS",
+    "preflight": "PASS"
+  },
+  "build_execution_state": {
+    "v11_requests": 0,
+    "v11_executed": false,
+    "scoring_started": false
+  },
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schema_version": "farta-v11-final-r1-replacement-execution-bundle-test-report.1.0",
+  "recorded_at_utc": "2026-09-28T06:59:48Z",
+  "status": "PASS",
+  "execution_bundle_semantic_identity": "196757e23158dd90cb9a12f8a10ed79451e70d730d32b9fbe46eae28c7a7f60f",
+  "suites": {
+    "replacement_bundle_synthetic": {
+      "tests": 32,
+      "assertions": 66,
+      "status": "PASS"
+    },
+    "toolchain_v2_r1_remediation": {
+      "tests": 27,
+      "assertions": 63,
+      "status": "PASS"
+    },
+    "toolchain_v2_compatibility": {
+      "tests": 16,
+      "assertions": 68,
+      "status": "PASS"
+    },
+    "evaluator_scorer_core_compatibility": {
+      "tests": 9,
+      "assertions": 263,
+      "status": "PASS",
+      "scope_note": "Excludes the obsolete historical frozen-input assertion for pre-Phase-15 candidate f0474546; current candidate identity is covered by Phase 15 and R1 freeze checks."
+    },
+    "phase_15_candidate_freeze_and_security": {
+      "tests": 25,
+      "assertions": 189,
+      "status": "PASS"
+    }
+  },
+  "tests_passed": 109,
+  "tests_total": 109,
+  "assertions_passed": 649,
+  "assertions_total": 649,
+  "focused_style_files_passed": 5,
+  "focused_style_files_total": 5,
+  "shell_files_passed": 2,
+  "shell_files_total": 2,
+  "json_files_passed": 4,
+  "json_files_total": 4,
+  "shell_syntax": "PASS",
+  "json_validation": "PASS",
+  "preflight": "PASS",
+  "preflight_synthetic_tests": 32,
+  "preflight_synthetic_assertions": 66,
+  "v11_candidate_requests": 0,
+  "v11_executed": false,
+  "scoring_started": false
+}

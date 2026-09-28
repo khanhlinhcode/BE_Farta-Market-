@@ -1,0 +1,72 @@
+{
+  "report_version": "farta-v11-toolchain-v2-test-report.1.0",
+  "recorded_at_utc": "2026-09-28T05:07:08Z",
+  "scope": "Build and deterministic offline preflight only",
+  "candidate_requests": 0,
+  "candidate_executed": false,
+  "suites": [
+    {
+      "name": "V11 Toolchain V2 focused preflight",
+      "command": "scripts/v11-toolchain-v2-preflight",
+      "tests_passed": 16,
+      "tests_total": 16,
+      "assertions_passed": 68,
+      "assertions_total": 68,
+      "result": "PASS"
+    },
+    {
+      "name": "V11 Toolchain V1 preserved-core regression",
+      "command": "php artisan test tests/Feature/FinalV11EvaluationToolchainTest.php --filter='/^(?!.*verifies frozen inputs).*$/' --compact",
+      "tests_passed": 9,
+      "tests_total": 9,
+      "assertions_passed": 263,
+      "assertions_total": 263,
+      "result": "PASS",
+      "note": "The excluded historical identity test intentionally pins the Phase 14 parent candidate. V2 has a separate Phase 15 identity gate and does not modify the V1 freeze."
+    },
+    {
+      "name": "Phase 15 typed mutation-target regression and candidate freeze",
+      "command": "php artisan test tests/Feature/ChatPhase15MutationTargetRemediationTest.php tests/Feature/ChatPhase15CandidateFreezeTest.php --compact",
+      "tests_passed": 25,
+      "tests_total": 25,
+      "assertions_passed": 189,
+      "assertions_total": 189,
+      "result": "PASS"
+    },
+    {
+      "name": "Focused PHP style",
+      "command": "vendor/bin/pint <six V2 PHP files> --test",
+      "files_passed": 6,
+      "files_total": 6,
+      "result": "PASS"
+    }
+  ],
+  "combined_php_tests": {
+    "tests_passed": 50,
+    "tests_total": 50,
+    "assertions_passed": 520,
+    "assertions_total": 520,
+    "result": "PASS"
+  },
+  "focused_v2_coverage": {
+    "order_mutation": "PASS",
+    "payment_mutation": "PASS",
+    "both_mentioned_target_wins": "PASS",
+    "ambiguous_mutation": "PASS",
+    "multi_intent_branch_local": "PASS",
+    "follow_up_context_target": "PASS",
+    "claim_evidence": "PASS",
+    "authority_provenance": "PASS",
+    "missing_provenance_fail_closed": "PASS",
+    "gold_independence": "PASS",
+    "wrong_heuristic_protection": "PASS",
+    "schema": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS"
+  },
+  "frontend_build": {
+    "result": "NOT_RUN",
+    "reason": "No frontend files changed. The supplied task records the existing unrelated axios dependency/configuration blocker and forbids installing unrelated dependencies."
+  },
+  "v11_status": "FROZEN / NOT EXECUTED"
+}

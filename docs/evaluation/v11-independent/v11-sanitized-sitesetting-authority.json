@@ -1,0 +1,37 @@
+{
+  "artifact_version": "farta-v11-sanitized-sitesetting-authority.1.0",
+  "snapshot_version": 1,
+  "authority_type": "SiteSetting structured authority",
+  "source_id": "site-settings-authority-v11",
+  "brand_name": "FartaMarket",
+  "public_contact": {
+    "email": "FartaMarket@gmail.com",
+    "contact_phone": "0977232232",
+    "support_phone": "0393886668",
+    "address_vi": "213 Trương Định, Nghệ An",
+    "address_en": "213 Truong Dinh, Nghe An"
+  },
+  "shipping": {
+    "currency": "VND",
+    "shipping_fee_vnd": 20000,
+    "free_shipping_threshold_vnd": 200000,
+    "calculation_semantics": "Shipping is free when the merchandise subtotal is at least the free-shipping threshold; otherwise the current shipping fee applies. Final total is subtotal plus the applicable shipping fee."
+  },
+  "authoring_rules": [
+    "Current shipping-value answers use this snapshot.",
+    "Store-contact answers use only the public contact fields in this snapshot.",
+    "A deterministic price-and-shipping calculation also requires current product prices from Product/Category structured authority."
+  ],
+  "excluded_fields": [
+    "credentials",
+    "secrets",
+    "administrator identifiers",
+    "unrelated presentation configuration"
+  ],
+  "privacy": {
+    "contains_credentials": false,
+    "contains_secrets": false,
+    "contains_private_account_data": false
+  },
+  "provenance": "SiteSetting structured authority"
+}

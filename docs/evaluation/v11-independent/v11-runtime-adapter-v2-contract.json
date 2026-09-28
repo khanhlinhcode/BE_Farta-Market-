@@ -1,0 +1,167 @@
+{
+  "contract_version": "farta-v11-runtime-adapter-contract.2.0",
+  "adapter_revision": "V11 Toolchain V2",
+  "status": "BUILT",
+  "scope": "Gold-independent offline translation of Phase 15 typed runtime state and actual evidence provenance into the frozen V11 prediction shape.",
+  "candidate_requests": 0,
+  "candidate_executed": false,
+  "architecture": [
+    "Phase 15 ChatRouteFrame",
+    "runtime handler outcome and structured response/citation provenance",
+    "V2 evidence harness",
+    "V2 normalized evaluation observation",
+    "frozen V11 prediction schema",
+    "V2 schema/provenance guard",
+    "existing V1 metric core"
+  ],
+  "authoritative_mutation_fields": {
+    "target": "mutation_target",
+    "ambiguity": "mutation_target_ambiguous",
+    "mentioned_resources_role": "diagnostic_only",
+    "forbidden_derivations": [
+      "raw-text keyword parsing",
+      "first mentioned resource",
+      "last mentioned resource",
+      "resource frequency",
+      "ORDER default",
+      "PAYMENT default"
+    ]
+  },
+  "business_outcome_mapping": {
+    "privileged_mutation/order/DENIED": "DENY_CHATBOT_ORDER_MUTATION",
+    "privileged_mutation/payment/DENIED": "DENY_PAYMENT_STATE_MUTATION",
+    "clarification/null/CLARIFICATION_REQUIRED": "ASK_TARGETED_CLARIFYING_QUESTION",
+    "multi_intent": "PROCESS_EVERY_BRANCH_WITH_EXPLICIT_TERMINAL_STATE",
+    "contract_authority": "v11-sanitized-schema-contract.json enum_definitions.business_outcome_category and v11-sanitized-business-capability-contract.json business_outcome_semantics"
+  },
+  "claim_key_contract": {
+    "format": "^[a-z0-9][a-z0-9._:-]{2,159}$",
+    "claim_id_formula": "sha256:<SHA-256(adapter_version NUL canonical_claim_key)>",
+    "record_id_dependency": false,
+    "dataset_position_dependency": false,
+    "gold_dependency": false,
+    "required_runtime_provenance_fields": [
+      "authority",
+      "source_id",
+      "source_version",
+      "evidence_ref",
+      "evidence_type"
+    ],
+    "claim_key_derivation": "The adapter derives the canonical key from registered source identity, typed evidence reference, and evidence type; callers cannot supply a claim key.",
+    "evidence_harness_rule": "The harness derives typed evidence references from Phase 15 semantic intent plus structured products, order objects, SiteSetting handler identity, and citation source/section fields. It never parses reply/message text.",
+    "structured_reference_examples": {
+      "product:8:current_unit_price_vnd": "product.8.price.current",
+      "product:8:current_stock": "product.8.stock.current",
+      "site-setting:shipping_fee_vnd": "shipping.fee.current",
+      "order:synthetic-42:status": "order.synthetic-42.status"
+    },
+    "published_section_rule": "knowledge.<source_id>.section.<SHA-256(evidence_ref)>",
+    "prediction_projection": {
+      "claim_evidence_item_fields": [
+        "claim_id",
+        "source_ids"
+      ],
+      "additional_fields": false
+    },
+    "scorer_boundary_reconciliation": "The V2 scorer injectively matches canonical claims to the frozen record-local claim IDs using exact required-source sets. Adapter output never receives record IDs or gold facts. Missing, duplicate, extra, wrong-source, and wrong-version claims continue to fail in the preserved V1 fact verifier."
+  },
+  "authority_registry": {
+    "source": "v11-fact-verification-contract.json authority_sources",
+    "failure_policy": "An absent, unknown, conflicting, or fabricated source version fails closed.",
+    "sources": {
+      "product-category-authority-v11": {
+        "authority": "Product/Category structured authority",
+        "version": 1
+      },
+      "site-settings-authority-v11": {
+        "authority": "SiteSetting structured authority",
+        "version": 1
+      },
+      "account-guide-vi": {
+        "authority": "Published knowledge registry",
+        "version": 2
+      },
+      "order-guide-vi": {
+        "authority": "Published knowledge registry",
+        "version": 2
+      },
+      "payment-guide-vi": {
+        "authority": "Published knowledge registry",
+        "version": 2
+      },
+      "policy-index-vi": {
+        "authority": "Published knowledge registry",
+        "version": 1
+      },
+      "shopping-guide-vi": {
+        "authority": "Published knowledge registry",
+        "version": 2
+      },
+      "owned-order-authority-v11-r1": {
+        "authority": "Owned/private order authority (synthetic V11 R1)",
+        "version": 1
+      }
+    }
+  },
+  "normalized_observation_fields": [
+    "intent",
+    "entities",
+    "entity_scope",
+    "capability",
+    "resource",
+    "operation",
+    "mentioned_resources",
+    "mutation_target",
+    "mutation_target_ambiguous",
+    "business_outcome_category",
+    "handler",
+    "authorization_result",
+    "multi_intent_branches",
+    "follow_up_state",
+    "claims",
+    "claim_evidence",
+    "accepted_source_ids",
+    "accepted_source_versions",
+    "required_evidence_domain",
+    "security_outcome",
+    "terminal",
+    "unsafe_execution",
+    "wrong_entity_unsafe_action"
+  ],
+  "prediction_fields": [
+    "intent",
+    "handler",
+    "business_outcome_category",
+    "terminal",
+    "entities",
+    "required_evidence_domain",
+    "accepted_source_ids",
+    "accepted_source_versions",
+    "claim_evidence",
+    "security_decision",
+    "unsafe_execution",
+    "wrong_entity_unsafe_action"
+  ],
+  "multi_intent_rule": "Each typed branch is normalized with its own runtime observation. Parent state never supplies a branch mutation target.",
+  "follow_up_rule": "A context-resolved mutation target must equal the target on the typed Phase 15 route frame; unresolved context remains null.",
+  "determinism": {
+    "serialization": "recursive associative-key sort; list order preserved; UTF-8 and slash escaping disabled; newline terminated",
+    "randomness": false,
+    "clock": false
+  },
+  "offline_policy": {
+    "network": false,
+    "external_database": false,
+    "external_llm": false,
+    "qdrant": false,
+    "remote_evaluator": false,
+    "remote_scorer": false
+  },
+  "execution_guard": {
+    "preflight_command": "scripts/v11-toolchain-v2-preflight",
+    "v11_requests": 0,
+    "v11_executed": false,
+    "raw_capture_created": false,
+    "scoring_started": false
+  }
+}

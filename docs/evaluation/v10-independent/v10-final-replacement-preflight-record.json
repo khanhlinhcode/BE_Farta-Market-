@@ -1,0 +1,93 @@
+{
+  "schema_version": "farta-v10-final-replacement-preflight.1.0",
+  "recorded_at_utc": "2026-09-26T18:49:28Z",
+  "replacement_policy": "VALID RUN CANDIDATE #2; one clean replacement after invalid run #1",
+  "recovery_decision": "EVALUATOR RECOVERY PASS",
+  "invalid_run_1": {
+    "status": "INVALID_ABORTED_EVALUATOR_RUN",
+    "attempted_case": "V10-ST-0099",
+    "manual_retries": 0,
+    "output_reused": false,
+    "historical_artifacts_preserved": true,
+    "raw_results_sha256": "da281293410092eaa4b07c3de705d7a0445a4fcc79c7c27128ace6718b47a528",
+    "score_report_sha256": "132893856c50e3b8a787edc585f58c0049126893d7c2359b534832cdba8baf96",
+    "execution_manifest_sha256": "b567910fecd567b8a926ff0276b1a73f71c7afa3155f2f7fbadfa784c5c36c99",
+    "preflight_record_sha256": "9231e5b305d64d0c0f89fdf0c888d07ccc3f0a81f79dc651b589c45756b27454"
+  },
+  "candidate": {
+    "expected_sha256": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+    "observed_sha256": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+    "status": "PASS"
+  },
+  "final_v10": {
+    "dataset_sha256": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+    "audit_report_sha256": "3c01c6409b2a59c566916a310ee28a989ad85888d821db95dad52d556b8ca27e",
+    "manifest_sha256": "af48d07951d013ce0c2670c5a3b563f4d822fc65a549bfcd3919a4992c74c7dd",
+    "schema_version": "farta-v10.3.0",
+    "primary_cases": 292,
+    "multi_turn_scenarios": 39,
+    "scenario_turns": 78,
+    "multi_intent_cases": 27,
+    "multi_intent_branches": 56,
+    "status": "PASS"
+  },
+  "evaluator": {
+    "version": "farta-final-v10-evaluator.2.0.0",
+    "sha256": "b99c121399112ca4d138f44a5bf6804d100658536c17c571efeb55b0ce89eda1",
+    "manifest_sha256": "70de9ef114b9e6f8f0d7b4ad6f0236166d848662c11557022cfa0f98eee23d14",
+    "recovery_report_sha256": "8eb3a00a167f791323cf304ee552d03b5ea304caddad8623c7c7d30b1b048259",
+    "golden_regression_status": "PASS",
+    "serialization_status": "PASS",
+    "entity_schema_status": "PASS",
+    "multi_intent_status": "PASS",
+    "follow_up_status": "PASS",
+    "development_dry_run_status": "PASS",
+    "deterministic_rescoring_status": "PASS",
+    "freeze_status": "FROZEN"
+  },
+  "quality_checks": [
+    {
+      "command": "focused evaluator plus development/V9 checks",
+      "result": "PASS: 29 tests, 517 assertions"
+    },
+    {
+      "command": "all non-historical backend tests excluding ChatBlind*Test and FinalV10ScoredRunTest",
+      "result": "PASS: 587 tests, 3195 assertions"
+    },
+    {
+      "command": "php -l on seven evaluator files",
+      "result": "PASS"
+    },
+    {
+      "command": "vendor/bin/pint --test on seven evaluator files",
+      "result": "PASS"
+    },
+    {
+      "command": "composer validate --strict --no-interaction",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "environment": {
+    "app_env": "testing",
+    "database": "sqlite in-memory",
+    "cache_store": "array",
+    "session_driver": "array",
+    "semantic_router_enabled": false,
+    "vector_search_enabled": false,
+    "qdrant_inference_enabled": false,
+    "knowledge_generation_enabled": false,
+    "query_expansion_enabled": false,
+    "external_inference_required": false
+  },
+  "replacement_artifact_state": {
+    "raw_results_before_run": "ABSENT",
+    "score_report_before_run": "ABSENT",
+    "execution_manifest_before_run": "ABSENT",
+    "preflight_record": "PRESENT"
+  },
+  "execution_authorization": "PASS: begin exactly one replacement scored run from case 1"
+}

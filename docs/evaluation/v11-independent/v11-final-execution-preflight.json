@@ -1,0 +1,112 @@
+{
+  "record_version": "farta-v11-final-execution-preflight.1.0",
+  "preflight_attempt_id": "v11-preflight-20260927T145927Z-3d6fdf7a0556",
+  "recorded_at_utc": "2026-09-27T14:59:27Z",
+  "status": "EVALUATION_TOOLCHAIN_PREFLIGHT_FAILED",
+  "required_stop_message": "FINAL V11 NOT STARTED — EVALUATION TOOLCHAIN PREFLIGHT FAILED.",
+  "candidate_execution": {
+    "request_1_started": false,
+    "actual_candidate_requests": 0,
+    "operator_retries": 0,
+    "raw_capture_created": false,
+    "offline_scoring_started": false
+  },
+  "repository": {
+    "git_head": "ee90385668e263bd7b980a8f86a2280e67f6827c",
+    "branch": "main",
+    "worktree": "DIRTY",
+    "porcelain_entry_count": 90,
+    "note": "Existing user worktree changes were preserved and were not modified by this preflight, except for this new preflight artifact."
+  },
+  "frozen_identities": {
+    "candidate": {
+      "expected": "f04745463eb1958f0ce3c0a9c6719ad74c74355feb6f68e1adff077531a8dacf",
+      "observed": "f04745463eb1958f0ce3c0a9c6719ad74c74355feb6f68e1adff077531a8dacf",
+      "status": "PASS"
+    },
+    "dataset": {
+      "expected": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+      "observed": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+      "status": "PASS"
+    },
+    "audit_report": {
+      "expected": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+      "observed": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+      "status": "PASS"
+    },
+    "final_manifest": {
+      "expected": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+      "observed": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+      "status": "PASS"
+    },
+    "evaluator_v1": {
+      "expected": "66963e4fa9d21ac832b8d9c4654ad32909b6fb57239dafabed8aaf8ea4767eb2",
+      "observed": "66963e4fa9d21ac832b8d9c4654ad32909b6fb57239dafabed8aaf8ea4767eb2",
+      "status": "PASS"
+    },
+    "offline_scorer_v1": {
+      "expected": "adb279e855ee8efd09b56af9994204c9f72eb19368b4b807005f3ad95b7ef06a",
+      "observed": "adb279e855ee8efd09b56af9994204c9f72eb19368b4b807005f3ad95b7ef06a",
+      "status": "PASS"
+    },
+    "evaluation_contract": {
+      "expected": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20",
+      "observed": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20",
+      "status": "PASS"
+    },
+    "fact_verification_contract": {
+      "expected": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604",
+      "observed": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604",
+      "status": "PASS"
+    }
+  },
+  "dataset_counts": {
+    "primary": 160,
+    "scenarios": 20,
+    "scenario_turns": 40,
+    "multi_intent_parents": 20,
+    "multi_intent_branches": 40,
+    "entity_objects": 240,
+    "status": "PASS"
+  },
+  "non_candidate_smoke": {
+    "final_v11_parse": "PASS",
+    "perfect_mirror": "PASS",
+    "jsonl_serialization": "PASS",
+    "raw_capture_writer_round_trip": "PASS",
+    "raw_capture_writer_probe_sha256": "9bd9dd1eb652e147af93639a69d1969aa6c1d52a4d42290019100e307f00e4c2",
+    "frozen_toolchain_test_result": "10 tests passed / 268 assertions",
+    "candidate_requests": 0
+  },
+  "blocking_findings": [
+    {
+      "id": "V11-PREFLIGHT-001",
+      "severity": "BLOCKING",
+      "finding": "The frozen evaluator has no candidate-response-to-V11-prediction adapter or execution harness.",
+      "evidence": "The evaluator freeze manifest contains only dataset parsing, V11 comparison primitives, and raw JSONL serialization. Its semantic file list contains no runtime observer or candidate execution adapter. No Final V11 execution harness exists in the repository."
+    },
+    {
+      "id": "V11-PREFLIGHT-002",
+      "severity": "BLOCKING",
+      "finding": "Required scorer prediction fields cannot be obtained under a frozen, predeclared procedure from the candidate response envelope.",
+      "evidence": "V11 Offline Scorer V1 requires business_outcome_category, accepted_source_versions, and claim_evidence. The candidate application emits none of these fields, and the frozen evaluator defines no transformation that derives them from message, products, citations, route telemetry, or state observations."
+    },
+    {
+      "id": "V11-PREFLIGHT-003",
+      "severity": "BLOCKING",
+      "finding": "Creating an adapter now would violate the frozen evaluator identity and could introduce post-holdout scoring semantics outside identity control.",
+      "evidence": "Any new mapping for symbolic business outcomes, claim IDs, source-version attribution, handler inference, or entity extraction would control evaluation semantics but would not be covered by evaluator identity 66963e4fa9d21ac832b8d9c4654ad32909b6fb57239dafabed8aaf8ea4767eb2."
+    }
+  ],
+  "infrastructure_preflight": {
+    "status": "NOT_RUN",
+    "reason": "Rule 7 requires an immediate stop after evaluation toolchain preflight failure."
+  },
+  "artifacts": {
+    "v11-final-raw-capture.jsonl": "NOT_CREATED",
+    "v11-final-scored-results.json": "NOT_CREATED",
+    "v11-final-score-report.md": "NOT_CREATED",
+    "v11-final-execution-manifest.json": "NOT_CREATED"
+  },
+  "decision": "FINAL V11 NOT STARTED — EVALUATION TOOLCHAIN PREFLIGHT FAILED."
+}

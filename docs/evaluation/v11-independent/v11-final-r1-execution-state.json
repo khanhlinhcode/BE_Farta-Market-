@@ -1,0 +1,33 @@
+{
+    "candidate_request_count": 12,
+    "cases_completed": 11,
+    "cases_failed": 1,
+    "cases_started": 12,
+    "completed_at_utc": null,
+    "execution_state": "EXECUTION_INCOMPLETE",
+    "failure": "Tests\\Support\\FinalV11ContractException: V2 prediction required_evidence_domain contains an unknown enum value.",
+    "first_record": "v11r1-p001",
+    "historical_capture_reused": false,
+    "historical_run_id": "final-v11-20260928T060655Z",
+    "identities": {
+        "audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+        "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+        "dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+        "evaluator_v2_r1": "0fcce11e5650340c6112372e3f879948555696ed66edb2c64ecfd60e68dee9ef",
+        "final_manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+        "harness_r1": "b5f628d48b6adae8f52b44997a087616d64f36aeadd2cfcdd7ddc63a25f78fe2",
+        "replacement_execution_bundle_r1": "196757e23158dd90cb9a12f8a10ed79451e70d730d32b9fbe46eae28c7a7f60f",
+        "runtime_adapter_v2_r1": "ff1db1e229c5498a0599a8cbf3c3223dc9c3e1b972c448107c8bd97fbcfd9ed8",
+        "scorer_v2_r1": "adff5766ebed64125561be979c72f691240f563d54bfe3ff8b81a415fb8bf798",
+        "toolchain_v2_r1": "29714cce29739581347fe36c3fd2ab179a88d8f81cf1dfdb07fba6e0ea639418"
+    },
+    "last_record": "v11r1-p012",
+    "manual_retry_count": 0,
+    "raw_capture": null,
+    "replacement_reason": "EVALUATOR_INFRASTRUCTURE_DEFECT",
+    "resume_count": 0,
+    "run_id": "final-v11-r1-20260928T070446Z",
+    "schema_version": "farta-v11-final-r1-replacement-execution-guard.1.0",
+    "scored_results": null,
+    "started_at_utc": "2026-09-28T07:04:46+00:00"
+}

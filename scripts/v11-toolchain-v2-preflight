@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${V11_EXECUTE:-0}" != "0" || "${V11_ALLOW_REQUESTS:-0}" != "0" ]]; then
+  echo "Refusing to run: V11 Toolchain V2 preflight is build-only." >&2
+  exit 64
+fi
+
+export AI_CHAT_KNOWLEDGE_GENERATION_ENABLED=false
+export AI_CHAT_QUERY_EXPANSION_ENABLED=false
+export AI_CHAT_VECTOR_SEARCH_ENABLED=false
+
+php artisan test tests/Feature/FinalV11ToolchainV2PreflightTest.php --compact
+
+echo "V11_REQUESTS = 0"
+echo "V11_EXECUTED = false"
+echo "V11_STATUS = FROZEN / NOT EXECUTED"

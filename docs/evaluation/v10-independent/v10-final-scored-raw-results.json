@@ -1,0 +1,57 @@
+{
+  "schema_version": "farta-v10-final-raw-results.partial-invalid.1.0",
+  "execution_status": "FINAL V10 EVALUATION INVALID / INCOMPLETE",
+  "integrity_note": "The first candidate request executed exactly once. The frozen evaluator then failed before serializing the first scored record. No case was retried and no later V10 case or scenario was executed.",
+  "attempt_timestamp_utc": "2026-09-26T18:28:19Z",
+  "run_id": null,
+  "run_id_status": "NOT_PERSISTED_BEFORE_HARNESS_FAILURE",
+  "candidate_hash": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+  "dataset_hash": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+  "audit_report_hash": "3c01c6409b2a59c566916a310ee28a989ad85888d821db95dad52d556b8ca27e",
+  "final_manifest_hash": "af48d07951d013ce0c2670c5a3b563f4d822fc65a549bfcd3919a4992c74c7dd",
+  "evaluator_version": "farta-final-v10-evaluator.1.0.0",
+  "evaluator_hash": "0a6f745b6be0daefde5f7cd46674cd1b0d4ffe1ebbc9ea15cc99a978b5653220",
+  "one_scored_run_declaration": true,
+  "manual_retries": 0,
+  "counts": {
+    "primary_cases_declared": 292,
+    "primary_requests_attempted": 1,
+    "primary_scored_records_serialized": 0,
+    "primary_cases_not_executed": 291,
+    "multi_turn_scenarios_declared": 39,
+    "multi_turn_scenarios_executed": 0,
+    "scenario_turns_declared": 78,
+    "scenario_turns_executed": 0,
+    "multi_intent_branches_declared": 56,
+    "multi_intent_branches_scored": 0
+  },
+  "first_request_observation": {
+    "case_id": "V10-ST-0099",
+    "language_bucket": "en",
+    "gold_intent": "shipping_current_value",
+    "request_completion_observed_in_application_log": true,
+    "http_status": 200,
+    "runtime_intent": "shipping_info",
+    "routing_mode": "deterministic",
+    "source": "site-settings",
+    "answer_status": "verified",
+    "citation_source_ids": [
+      "site-settings"
+    ],
+    "required_evidence_topic": "shipping",
+    "intent_router_ms": 2,
+    "total_ms": 9,
+    "scored_result": null,
+    "scored_result_status": "NOT_SERIALIZED_BEFORE_HARNESS_FAILURE"
+  },
+  "harness_failure": {
+    "exception": "ArgumentCountError",
+    "message": "is_string() expects exactly 1 argument, 2 given",
+    "location": "tests/Support/FinalV10Evaluation.php:319",
+    "stage": "accepted source ID serialization",
+    "classification": "evaluation-harness error"
+  },
+  "metrics": null,
+  "metrics_status": "NOT_COMPUTED; no denominator or score was estimated",
+  "release_decision": "FINAL V10 EVALUATION INVALID / INCOMPLETE"
+}

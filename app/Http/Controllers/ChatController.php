@@ -3,15 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ChatIntent;
+use App\Enums\ChatMutationTarget;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\SiteSetting;
+use App\Services\Chat\ChatCapabilityGuard;
 use App\Services\Chat\ChatCartTool;
+use App\Services\Chat\ChatContextResolver;
+use App\Services\Chat\ChatEntityCanonicalizer;
+use App\Services\Chat\ChatEntityExtractor;
 use App\Services\Chat\ChatIntentRouter;
 use App\Services\Chat\ChatKnowledgeAnswerService;
 use App\Services\Chat\ChatKnowledgeRetriever;
 use App\Services\Chat\ChatOrderTool;
 use App\Services\Chat\ChatProductTool;
 use App\Services\Chat\ChatProvider;
+use App\Services\Chat\ChatRouteFrame;
 use App\Services\ChatProductRetriever;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -33,6 +40,10 @@ class ChatController extends Controller
     public function __construct(
         private readonly ChatProductRetriever $retriever,
         private readonly ChatIntentRouter $router,
+        private readonly ChatContextResolver $contextResolver,
+        private readonly ChatCapabilityGuard $capabilityGuard,
+        private readonly ChatEntityCanonicalizer $entityCanonicalizer,
+        private readonly ChatEntityExtractor $entityExtractor,
         private readonly ChatProductTool $productTool,
         private readonly ChatCartTool $cartTool,
         private readonly ChatOrderTool $orderTool,
@@ -65,21 +76,91 @@ class ChatController extends Controller
                 'code' => 'AI_CHAT_DISABLED',
             ], 503);
         }
+        $routerStartedAt = microtime(true);
         $route = $this->router->route($validated['message']);
+        $route = $this->contextResolver->resolve($this->normalize($validated['message']), $route, $this->context($request));
+        $route = $this->capabilityGuard->enforceResolvedMutationTarget($route);
+        $route = $this->entityCanonicalizer->resolve($route);
+        $route = $route->withTelemetry('intent_router_ms', (int) round((microtime(true) - $routerStartedAt) * 1000));
 
         try {
+            if ($route['intent'] === ChatIntent::Unsupported) {
+                $denied = ($route['decision_state'] ?? '') === 'denied_action';
+
+                return $this->respond($request, [
+                    'reply' => $english
+                        ? ($denied
+                            ? 'This assistant cannot perform that account, order, payment, or administrative action.'
+                            : 'This request is outside the Farta Market assistant’s supported scope.')
+                        : ($denied
+                            ? 'Trợ lý không được phép thực hiện thao tác tài khoản, đơn hàng, thanh toán hoặc quản trị đó.'
+                            : 'Yêu cầu này nằm ngoài phạm vi hỗ trợ của trợ lý Farta Market.'),
+                    'source' => 'capability-guard',
+                    'code' => $denied ? 'ACTION_NOT_ALLOWED' : 'UNSUPPORTED_REQUEST',
+                ], $route, $startedAt);
+            }
+            if ($route['intent'] === ChatIntent::MultiIntent) {
+                return $this->multiIntentResponse(
+                    $request,
+                    $validated['message'],
+                    $validated['cart'] ?? [],
+                    $route,
+                    $english,
+                    $startedAt,
+                );
+            }
+            if ($route->semanticIntent === 'product_search'
+                && preg_match('/\b(?:khoang|tam|hop ly|around|about|approximately|reasonable)\b/', $this->normalize($validated['message'])) === 1) {
+                return $this->respond($request, [
+                    'reply' => $english
+                        ? 'Please provide one exact product, category, or a clear price range so I can use the catalog safely.'
+                        : 'Bạn vui lòng cho biết sản phẩm, danh mục hoặc khoảng giá rõ ràng để tôi tra cứu chính xác.',
+                    'source' => 'clarification',
+                    'code' => 'CLARIFICATION_REQUIRED',
+                ], $route, $startedAt);
+            }
+            $routeProduct = $this->normalize((string) ($route->entities['product_name'] ?? ''));
+            if ($route->semanticIntent === 'clarification'
+                && $route->intent === ChatIntent::CartActionRequest
+                && ($routeProduct === '' || $routeProduct === 'di' || str_starts_with($routeProduct, 'some '))) {
+                return $this->respond($request, [
+                    'reply' => $english
+                        ? 'Please provide one exact product and a whole quantity from 1 to 100.'
+                        : 'Bạn vui lòng cho biết một sản phẩm chính xác và số lượng nguyên từ 1 đến 100.',
+                    'source' => 'clarification',
+                    'code' => 'CLARIFICATION_REQUIRED',
+                ], $route, $startedAt);
+            }
             if ($route['intent'] === ChatIntent::OrderQuery) {
                 return $this->orderResponse($request, $validated['message'], $route, $english, $startedAt);
             }
             if ($route['intent'] === ChatIntent::CartQuery) {
                 return $this->cartResponse($request, $validated['cart'] ?? [], $route, $english, $startedAt);
             }
+            if ($route['intent'] === ChatIntent::ShippingInfo) {
+                return $this->shippingResponse($request, $route, $english, $startedAt);
+            }
             if ($route['intent'] === ChatIntent::KnowledgeQuery) {
                 return $this->knowledgeResponse($request, $validated['message'], $route, $english, $startedAt);
+            }
+            if ($route['intent'] === ChatIntent::GeneralChat) {
+                return $this->generalChatResponse($request, $validated['message'], $route, $english, $startedAt);
+            }
+            if ($route['intent'] === ChatIntent::CatalogList) {
+                return $this->catalogListResponse($request, $route, $english, $startedAt);
             }
             if ($route['intent'] === ChatIntent::ProductSearch
                 && collect($route['filters'])->contains(fn ($value) => $value !== null)) {
                 return $this->filteredProductResponse($request, $route, $english, $startedAt);
+            }
+            if (($route['clarification_reason'] ?? null) === 'multi_intent') {
+                return $this->respond($request, [
+                    'reply' => $english
+                        ? 'I found more than one request. Please ask one at a time so I can use the correct verified source.'
+                        : 'Tôi nhận thấy bạn đang hỏi nhiều nội dung cùng lúc. Bạn vui lòng hỏi từng nội dung để tôi dùng đúng nguồn đã kiểm chứng.',
+                    'source' => 'clarification',
+                    'code' => 'MULTI_INTENT_CLARIFICATION_REQUIRED',
+                ], $route, $startedAt);
             }
 
             [$products, $categories] = $this->catalog();
@@ -91,7 +172,8 @@ class ChatController extends Controller
                         $validated['message'],
                         $products,
                         $categories,
-                        $english
+                        $english,
+                        $route
                     )
                 )
                 : $this->createGroundedCatalogResponse(
@@ -99,12 +181,16 @@ class ChatController extends Controller
                     $validated['message'],
                     $products,
                     $categories,
-                    $english
+                    $english,
+                    $route
                 );
             $source = 'catalog';
+            if (str_contains((string) ($response['code'] ?? ''), 'CLARIFICATION_REQUIRED')) {
+                $source = 'clarification';
+            }
 
             if ($response === null) {
-                if ($route['intent'] === ChatIntent::Clarification) {
+                if ($route['intent'] === ChatIntent::Clarification || $route->semanticIntent === 'clarification') {
                     return $this->respond($request, [
                         'reply' => $english
                             ? 'Would you like help with products, your cart, your orders, payment, shipping, or store policies?'
@@ -190,10 +276,299 @@ class ChatController extends Controller
         }
     }
 
-    /** @param array<string, mixed> $route */
+    /**
+     * Compose only pre-routed, deterministic subrequests. Each branch revalidates
+     * its entities against the authoritative service before producing output.
+     *
+     * @param  array<int, array{product_id: int, quantity: int}>  $cart
+     */
+    private function multiIntentResponse(
+        Request $request,
+        string $message,
+        array $cart,
+        ChatRouteFrame $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        [$catalog] = $this->catalog();
+        $wholeMessageMatches = $this->matchProducts($this->normalize($message), $catalog);
+        $sharedProduct = $wholeMessageMatches->count() === 1 ? $wholeMessageMatches->first() : null;
+
+        if (($route['composition'] ?? null) === 'shipping_eligibility') {
+            $productRequest = collect($route['subrequests'])->first(
+                fn (ChatRouteFrame $item): bool => $item->intent === ChatIntent::ProductDetail
+            );
+            $query = (string) ($productRequest['query'] ?? $message);
+            $matches = $this->matchProducts($this->normalize($query), $catalog);
+            $product = $matches->count() === 1
+                ? $matches->first()
+                : ($sharedProduct ?? (is_int($productRequest?->contextProductId)
+                    ? $catalog->firstWhere('id', $productRequest->contextProductId)
+                    : null));
+            $quantity = (int) ($productRequest['entities']['quantity'] ?? 0);
+            if (! $product || $quantity < 1 || $quantity > 100) {
+                $settings = SiteSetting::current();
+                $fee = number_format((int) $settings->shipping_fee, 0, ',', '.');
+                $threshold = number_format((int) $settings->free_shipping_threshold, 0, ',', '.');
+
+                return $this->respond($request, [
+                    'reply' => $english
+                        ? "I need one exact product and a whole quantity from 1 to 100 to calculate eligibility. Standard shipping costs {$fee} VND; orders from {$threshold} VND receive free shipping."
+                        : "Tôi cần một sản phẩm chính xác và số lượng nguyên từ 1 đến 100 để tính điều kiện. Phí giao hàng tiêu chuẩn là {$fee}đ; đơn từ {$threshold}đ được miễn phí giao hàng.",
+                    'source' => 'multi-source',
+                    'composition' => 'shipping_eligibility',
+                    'subresponses' => [
+                        ['intent' => 'product_detail', 'source' => 'clarification', 'status' => 'clarification', 'code' => 'CLARIFICATION_REQUIRED'],
+                        ['intent' => 'shipping_info', 'source' => 'site-settings', 'status' => 'verified'],
+                    ],
+                ], $route, $startedAt);
+            }
+
+            $settings = SiteSetting::current();
+            $subtotal = (int) round((float) $product->price * $quantity);
+            $threshold = (int) $settings->free_shipping_threshold;
+            $qualifies = $subtotal >= $threshold;
+            $missing = max(0, $threshold - $subtotal);
+            $shipping = $qualifies ? 0 : (int) $settings->shipping_fee;
+            $total = $subtotal + $shipping;
+            $reply = $english
+                ? sprintf(
+                    '%d × %s has a subtotal of %s VND. Shipping is %s VND and the final total is %s VND. The free-shipping threshold is %s VND, so this purchase %s.',
+                    $quantity,
+                    $product->name,
+                    number_format($subtotal, 0, ',', '.'),
+                    number_format($shipping, 0, ',', '.'),
+                    number_format($total, 0, ',', '.'),
+                    number_format($threshold, 0, ',', '.'),
+                    $qualifies ? 'qualifies for free shipping' : 'does not qualify; add '.number_format($missing, 0, ',', '.').' VND more'
+                )
+                : sprintf(
+                    '%d × %s có tạm tính %sđ. Phí giao hàng là %sđ và tổng thanh toán là %sđ. Ngưỡng miễn phí giao hàng là %sđ, nên đơn này %s.',
+                    $quantity,
+                    $product->name,
+                    number_format($subtotal, 0, ',', '.'),
+                    number_format($shipping, 0, ',', '.'),
+                    number_format($total, 0, ',', '.'),
+                    number_format($threshold, 0, ',', '.'),
+                    $qualifies ? 'đủ điều kiện miễn phí giao hàng' : 'chưa đủ; cần thêm '.number_format($missing, 0, ',', '.').'đ'
+                );
+
+            return $this->respond($request, [
+                'reply' => $reply,
+                'products' => [$this->productTool->card($product)],
+                'source' => 'multi-source',
+                'composition' => 'shipping_eligibility',
+                'subresponses' => [
+                    ['intent' => 'product_detail', 'source' => 'catalog', 'status' => 'verified'],
+                    ['intent' => 'shipping_info', 'source' => 'site-settings', 'status' => 'verified'],
+                ],
+            ], $route, $startedAt);
+        }
+
+        $parts = [];
+        $cards = collect();
+        $suggestedActions = collect();
+        $citations = collect();
+        $subresponses = [];
+        $retrievalMs = 0;
+
+        foreach ($route['subrequests'] as $subrequest) {
+            $intent = $subrequest['intent'];
+            $query = (string) $subrequest['query'];
+            $part = null;
+            $source = 'catalog';
+            $code = null;
+            $answerStatus = 'verified';
+
+            if ($subrequest->semanticIntent === 'shipping_calculation') {
+                $matches = $this->matchProducts($this->normalize($query), $catalog);
+                $product = $matches->count() === 1
+                    ? $matches->first()
+                    : ($sharedProduct ?? (is_int($subrequest->contextProductId)
+                        ? $catalog->firstWhere('id', $subrequest->contextProductId)
+                        : null));
+                $quantity = (int) ($subrequest->entities['quantity'] ?? 0);
+                if (! $product || $quantity < 1 || $quantity > 100) {
+                    $part = $english
+                        ? 'I need one exact product and a whole quantity from 1 to 100 for this calculation.'
+                        : 'Tôi cần một sản phẩm chính xác và số lượng nguyên từ 1 đến 100 cho phép tính này.';
+                    $source = 'clarification';
+                    $code = 'CLARIFICATION_REQUIRED';
+                    $answerStatus = 'clarification';
+                } else {
+                    $settings = SiteSetting::current();
+                    $subtotal = (int) round((float) $product->price * $quantity);
+                    $shipping = $subtotal >= (int) $settings->free_shipping_threshold ? 0 : (int) $settings->shipping_fee;
+                    $total = $subtotal + $shipping;
+                    $part = $english
+                        ? sprintf('%d × %s: subtotal %s VND, shipping %s VND, final total %s VND.', $quantity, $product->name, number_format($subtotal), number_format($shipping), number_format($total))
+                        : sprintf('%d × %s: tạm tính %sđ, phí giao hàng %sđ, tổng thanh toán %sđ.', $quantity, $product->name, number_format($subtotal, 0, ',', '.'), number_format($shipping, 0, ',', '.'), number_format($total, 0, ',', '.'));
+                    $cards->push($this->productTool->card($product));
+                    $source = 'site-settings';
+                }
+            } elseif ($intent === ChatIntent::Unsupported) {
+                $denied = ($subrequest['decision_state'] ?? '') === 'denied_action';
+                $part = $english
+                    ? ($denied
+                        ? 'This assistant cannot perform that account, order, payment, inventory, or administrative action.'
+                        : 'That part of the request is outside the Farta Market assistant’s supported scope.')
+                    : ($denied
+                        ? 'Trợ lý không được phép thực hiện thao tác tài khoản, đơn hàng, thanh toán, tồn kho hoặc quản trị đó.'
+                        : 'Phần yêu cầu đó nằm ngoài phạm vi hỗ trợ của trợ lý Farta Market.');
+                $source = 'capability-guard';
+                $code = $denied ? 'ACTION_NOT_ALLOWED' : 'UNSUPPORTED_REQUEST';
+                $answerStatus = $denied ? 'denied' : 'unsupported';
+            } elseif ($intent === ChatIntent::ShippingInfo) {
+                $settings = SiteSetting::current();
+                $fee = number_format((int) $settings->shipping_fee, 0, ',', '.');
+                $threshold = number_format((int) $settings->free_shipping_threshold, 0, ',', '.');
+                $part = $english
+                    ? "Standard shipping costs {$fee} VND; orders from {$threshold} VND receive free shipping."
+                    : "Phí giao hàng tiêu chuẩn là {$fee}đ; đơn từ {$threshold}đ được miễn phí giao hàng.";
+                $source = 'site-settings';
+            } elseif ($intent === ChatIntent::CatalogList) {
+                $listed = $catalog->take(ChatProductTool::MAX_OUTPUT)->values();
+                $part = $listed->isEmpty()
+                    ? ($english ? 'The active catalog is currently empty.' : 'Danh mục đang bán hiện chưa có sản phẩm.')
+                    : ($english ? 'Active products: ' : 'Sản phẩm đang bán: ').$listed->pluck('name')->join(', ').'.';
+                $cards = $cards->concat($listed->map(fn (Product $item) => $this->productTool->card($item)));
+            } elseif (in_array($intent, [ChatIntent::ProductDetail, ChatIntent::CartActionRequest], true)) {
+                $candidate = trim((string) ($subrequest['entities']['product_name'] ?? ''));
+                $matches = $this->matchProducts(
+                    $candidate !== '' ? $this->normalize($candidate) : $this->normalize($query),
+                    $catalog,
+                );
+                $product = $matches->count() === 1 ? $matches->first() : ($matches->isEmpty() ? $sharedProduct : null);
+                if (! $product) {
+                    // Keep a recognized branch visible.  Returning a whole
+                    // request-level clarification here used to silently drop
+                    // any sibling that was already safe and answerable.
+                    $part = $english
+                        ? 'I need the exact product name for this part of your request.'
+                        : 'Tôi cần tên sản phẩm chính xác cho phần yêu cầu này.';
+                    $source = 'clarification';
+                    $code = 'CLARIFICATION_REQUIRED';
+                    $answerStatus = 'clarification';
+                } elseif ($intent === ChatIntent::ProductDetail) {
+                    $part = $this->productFacts($product, $english, $subrequest->semanticIntent);
+                    $cards->push($this->productTool->card($product));
+                } else {
+                    $quantity = (int) ($subrequest['entities']['quantity'] ?? 0);
+                    if ($quantity < 1 || $quantity > 100) {
+                        $part = $english
+                            ? 'Please provide a whole-number quantity from 1 to 100 for this product.'
+                            : 'Bạn vui lòng cho biết số lượng nguyên từ 1 đến 100 cho sản phẩm này.';
+                        $source = 'clarification';
+                        $code = 'CLARIFICATION_REQUIRED';
+                        $answerStatus = 'clarification';
+                    } else {
+                        $checked = $this->buildAddToCartResponse($request, (int) $product->id, $quantity, $english);
+                        $part = $checked['reply'];
+                        $code = $checked['code'] ?? null;
+                        $cards = $cards->concat($checked['products'] ?? []);
+                        $suggestedActions = $suggestedActions->concat($checked['suggested_actions'] ?? []);
+                    }
+                }
+            } elseif ($intent === ChatIntent::ProductSearch) {
+                $found = $this->productTool->search([
+                    'query' => $query,
+                    ...$subrequest['filters'],
+                    'limit' => ChatProductTool::MAX_OUTPUT,
+                ]);
+                $part = $found->isEmpty()
+                    ? ($english ? 'No matching active product was found.' : 'Không tìm thấy sản phẩm đang bán phù hợp.')
+                    : ($english ? 'Matching products: ' : 'Sản phẩm phù hợp: ').$found->pluck('name')->join(', ').'.';
+                $cards = $cards->concat($found->map(fn (Product $item) => $this->productTool->card($item)));
+            } elseif ($intent === ChatIntent::KnowledgeQuery) {
+                $retrievalStartedAt = microtime(true);
+                $topic = (string) ($subrequest['entities']['topic'] ?? '');
+                $retrieval = $this->knowledgeRetriever->retrieve(
+                    $query,
+                    $english ? 'en' : 'vi',
+                    $topic !== '' && $topic !== 'unknown' ? $topic : null,
+                    $subrequest['required_evidence_domain'] ?? null,
+                );
+                $retrievalMs += (int) round((microtime(true) - $retrievalStartedAt) * 1000);
+                $answer = $this->knowledgeAnswer->answer($query, $retrieval, $english);
+                $part = $answer['reply'];
+                $source = $answer['source'] ?? 'knowledge';
+                $code = $answer['code'] ?? null;
+                $answerStatus = $answer['answer_status'] ?? ($code === 'NO_EVIDENCE' ? 'refused_unverified' : 'verified');
+                $citations = $citations->concat($answer['citations'] ?? []);
+            } elseif ($intent === ChatIntent::CartQuery) {
+                $source = 'cart';
+                if (! $this->verifiedCustomer($request)) {
+                    $part = $english
+                        ? 'Sign in with a verified customer account to view the cart.'
+                        : 'Hãy đăng nhập tài khoản khách hàng đã xác minh để xem giỏ hàng.';
+                    $code = 'AUTH_REQUIRED_FOR_CART';
+                    $answerStatus = 'auth_required';
+                } else {
+                    $resolved = $this->cartTool->resolve($cart);
+                    $part = $resolved['items'] === []
+                        ? ($english ? 'Your cart is empty.' : 'Giỏ hàng của bạn đang trống.')
+                        : ($english ? 'Verified cart: ' : 'Giỏ hàng đã xác minh: ').collect($resolved['items'])
+                            ->map(fn (array $item): string => $item['quantity'].' × '.$item['product']['name'])->join(', ').'.';
+                    $cards = $cards->concat(collect($resolved['items'])->pluck('product')->filter());
+                }
+            } elseif ($intent === ChatIntent::OrderQuery) {
+                $source = 'orders';
+                $orderReference = trim((string) ($subrequest->entities['order_reference'] ?? $subrequest->entities['order_id'] ?? ''));
+                $result = $orderReference !== ''
+                    ? $this->orderTool->getCustomerOrder($request->user('sanctum'), (int) $orderReference)
+                    : $this->orderTool->getCustomerRecentOrder($request->user('sanctum'));
+                if ($result['status'] !== 'ok') {
+                    $code = $result['status'] === 'auth_required' ? 'AUTH_REQUIRED'
+                        : ($result['status'] === 'customer_only' ? 'CUSTOMER_ONLY'
+                            : ($result['status'] === 'forbidden' ? 'ACTION_NOT_ALLOWED' : null));
+                    $answerStatus = $result['status'];
+                    $part = $english
+                        ? ($result['status'] === 'forbidden' ? 'You cannot access an order outside your account.'
+                            : ($result['status'] === 'not_found' ? 'No matching order was found in your account.' : 'Sign in with a customer account to view that order.'))
+                        : ($result['status'] === 'forbidden' ? 'Bạn không thể truy cập đơn hàng ngoài tài khoản của mình.'
+                            : ($result['status'] === 'not_found' ? 'Không tìm thấy đơn tương ứng trong tài khoản của bạn.' : 'Hãy đăng nhập tài khoản khách hàng để xem đơn đó.'));
+                } else {
+                    $order = $result['order'];
+                    $part = $english
+                        ? "Order #{$order['id']} is {$order['status']}; payment is {$order['payment_status']}."
+                        : "Đơn #{$order['id']} có trạng thái {$order['status']}; thanh toán {$order['payment_status']}.";
+                }
+            }
+
+            if ($part === null) {
+                $part = $english
+                    ? 'I need more detail for this part of your request.'
+                    : 'Tôi cần thêm thông tin cho phần yêu cầu này.';
+                $source = 'clarification';
+                $code = 'CLARIFICATION_REQUIRED';
+                $answerStatus = 'clarification';
+            }
+            $parts[] = $part;
+            $subresponses[] = [
+                'intent' => $intent->value,
+                'resource' => $subrequest->resource,
+                'operation' => $subrequest->operation,
+                'mutation_target' => $subrequest->mutationTarget?->value,
+                'source' => $source,
+                'status' => $answerStatus,
+                'code' => $code,
+            ];
+        }
+
+        return $this->respond($request, [
+            'reply' => implode("\n", array_values(array_unique($parts))),
+            'products' => $cards->unique('id')->values()->all(),
+            'suggested_actions' => $suggestedActions->values()->all(),
+            'citations' => $citations->unique('source_id')->values()->all(),
+            'source' => 'multi-source',
+            'composition' => 'parallel',
+            'subresponses' => $subresponses,
+        ], $route, $startedAt, $retrievalMs);
+    }
+
     private function filteredProductResponse(
         Request $request,
-        array $route,
+        ChatRouteFrame $route,
         bool $english,
         float $startedAt,
     ): JsonResponse {
@@ -221,11 +596,10 @@ class ChatController extends Controller
         ], $route, $startedAt, $retrievalMs);
     }
 
-    /** @param array<string, mixed> $route */
     private function cartResponse(
         Request $request,
         array $cart,
-        array $route,
+        ChatRouteFrame $route,
         bool $english,
         float $startedAt,
     ): JsonResponse {
@@ -263,18 +637,16 @@ class ChatController extends Controller
         ], $route, $startedAt);
     }
 
-    /** @param array<string, mixed> $route */
     private function orderResponse(
         Request $request,
         string $message,
-        array $route,
+        ChatRouteFrame $route,
         bool $english,
         float $startedAt,
     ): JsonResponse {
-        $normalized = $this->normalize($message);
-        preg_match('/(?:don|order|#)\s*#?\s*(\d{1,18})\b/', $normalized, $matches);
-        $result = isset($matches[1])
-            ? $this->orderTool->getCustomerOrder($request->user('sanctum'), (int) $matches[1])
+        $orderReference = trim((string) ($route->entities['order_reference'] ?? $route->entities['order_id'] ?? ''));
+        $result = $orderReference !== ''
+            ? $this->orderTool->getCustomerOrder($request->user('sanctum'), (int) $orderReference)
             : $this->orderTool->getCustomerRecentOrder($request->user('sanctum'));
 
         if ($result['status'] === 'auth_required') {
@@ -294,6 +666,15 @@ class ChatController extends Controller
                 'source' => 'orders',
                 'code' => 'CUSTOMER_ONLY',
             ], $route, $startedAt, 0, 403);
+        }
+        if ($result['status'] === 'forbidden') {
+            return $this->respond($request, [
+                'reply' => $english
+                    ? 'You cannot access an order outside your account.'
+                    : 'Bạn không thể truy cập đơn hàng ngoài tài khoản của mình.',
+                'source' => 'orders',
+                'code' => 'ACTION_NOT_ALLOWED',
+            ], $route, $startedAt, 403);
         }
         if ($result['status'] === 'not_found') {
             return $this->respond($request, [
@@ -317,21 +698,29 @@ class ChatController extends Controller
         ], $route, $startedAt);
     }
 
-    /** @param array<string, mixed> $route */
     private function knowledgeResponse(
         Request $request,
         string $message,
-        array $route,
+        ChatRouteFrame $route,
         bool $english,
         float $startedAt,
     ): JsonResponse {
         $retrievalStartedAt = microtime(true);
-        $retrieval = $this->knowledgeRetriever->retrieve($message, $english ? 'en' : 'vi');
+        $topic = (string) ($route['entities']['topic'] ?? '');
+        $retrieval = $this->knowledgeRetriever->retrieve(
+            $message,
+            $english ? 'en' : 'vi',
+            $topic !== '' && $topic !== 'unknown' ? $topic : null,
+            $route['required_evidence_domain'] ?? null,
+        );
         $retrievalMs = (int) round((microtime(true) - $retrievalStartedAt) * 1000);
         $answer = $this->knowledgeAnswer->answer($message, $retrieval, $english);
         $answer['_telemetry'] = [
             ...($answer['_telemetry'] ?? []),
+            ...$retrieval['timings'],
             'chunk_count' => count($retrieval['chunks']),
+            'retrieved_source_ids' => $retrieval['retrieved_source_ids'],
+            'accepted_evidence_ids' => $retrieval['accepted_evidence_ids'],
         ];
         $answer['retrieval'] = [
             'mode' => $retrieval['mode'],
@@ -341,14 +730,108 @@ class ChatController extends Controller
         return $this->respond($request, $answer, $route, $startedAt, $retrievalMs);
     }
 
+    private function shippingResponse(
+        Request $request,
+        ChatRouteFrame $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        $settings = SiteSetting::current();
+        $fee = number_format((int) $settings->shipping_fee, 0, ',', '.');
+        $threshold = number_format((int) $settings->free_shipping_threshold, 0, ',', '.');
+
+        return $this->respond($request, [
+            'reply' => $english
+                ? "Standard shipping costs {$fee} VND. Orders from {$threshold} VND receive free shipping."
+                : "Phí giao hàng tiêu chuẩn là {$fee}đ. Đơn hàng từ {$threshold}đ được miễn phí giao hàng.",
+            'source' => 'site-settings',
+            'answer_status' => 'verified',
+            'citations' => [],
+        ], $route, $startedAt);
+    }
+
+    private function generalChatResponse(
+        Request $request,
+        string $message,
+        ChatRouteFrame $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        $normalized = $this->normalize($message);
+        $this->clearContext($request);
+        if ($this->containsPhrase($normalized, 'cam on') || preg_match('/\b(?:thank|thanks)\b/', $normalized) === 1) {
+            $reply = $english
+                ? 'You are welcome. I am here whenever you need help with Farta Market.'
+                : 'Rất vui được hỗ trợ bạn. Khi cần thông tin về Farta Market, bạn cứ nhắn nhé.';
+        } elseif (in_array($normalized, ['alo', 'xin chao', 'chao', 'hello', 'hi', 'hey'], true)) {
+            $reply = $english
+                ? 'Hi! I can help with products, current price and stock, your signed-in cart and orders, shipping, and verified store information.'
+                : 'Xin chào! Tôi có thể hỗ trợ sản phẩm, giá và tồn kho hiện tại, giỏ hàng và đơn của tài khoản đã đăng nhập, giao hàng và thông tin cửa hàng đã kiểm chứng.';
+        } else {
+            $reply = $english
+                ? 'I can find products, check current price and stock, explain verified store information, review your signed-in cart, and look up your own orders.'
+                : 'Tôi có thể tìm sản phẩm, kiểm tra giá và tồn kho hiện tại, giải thích thông tin cửa hàng đã kiểm chứng, xem giỏ hàng khi bạn đăng nhập và tra cứu đơn của chính bạn.';
+        }
+
+        return $this->respond($request, [
+            'reply' => $reply,
+            'source' => 'assistant',
+        ], $route, $startedAt);
+    }
+
+    private function catalogListResponse(
+        Request $request,
+        ChatRouteFrame $route,
+        bool $english,
+        float $startedAt,
+    ): JsonResponse {
+        [$products, $categories] = $this->catalog();
+        $categoryId = $route->contextCategoryId;
+        if (! is_int($categoryId)) {
+            $normalizedQuery = $this->normalize($route->query);
+            $categoryId = $categories->sortByDesc(fn (Category $category) => mb_strlen($category->name))
+                ->first(fn (Category $category) => $this->containsPhrase($normalizedQuery, $this->normalize($category->name)))?->id;
+        }
+        if (is_int($categoryId)) {
+            $products = $products->where('category_id', $categoryId)->values();
+        }
+        $listed = $products->sort(function (Product $left, Product $right): int {
+            $stock = ((int) $right->inventory > 0) <=> ((int) $left->inventory > 0);
+
+            return $stock !== 0 ? $stock : strcasecmp($left->name, $right->name);
+        })->values();
+
+        if ($listed->isEmpty()) {
+            $reply = $english
+                ? 'Farta Market currently has no active products.'
+                : 'Farta Market hiện chưa có sản phẩm đang bán.';
+        } else {
+            $names = $listed->pluck('name')->join(', ');
+            $count = $products->count();
+            $categoryName = $listed->first()?->category?->name;
+            $reply = is_int($categoryId) && $categoryName
+                ? ($english
+                    ? "The {$categoryName} category currently includes: {$names}."
+                    : "Danh mục {$categoryName} hiện có: {$names}.")
+                : ($english
+                    ? "Farta Market currently has {$count} active product(s). Available products include: {$names}."
+                    : "Farta Market hiện có {$count} sản phẩm đang bán. Một số sản phẩm gồm: {$names}.");
+        }
+
+        return $this->respond($request, [
+            'reply' => $reply,
+            'products' => $listed->map(fn (Product $item) => $this->productTool->card($item))->all(),
+            'source' => 'catalog',
+        ], $route, $startedAt);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
-     * @param  array<string, mixed>  $route
      */
     private function respond(
         Request $request,
         array $payload,
-        array $route,
+        ChatRouteFrame $route,
         float $startedAt,
         int $retrievalMs = 0,
         int $status = 200,
@@ -377,14 +860,24 @@ class ChatController extends Controller
             'message' => $reply,
             'reply' => $reply,
             'intent' => $route['intent']->value,
+            'semantic_intent' => $route->semanticIntent ?? $route['intent']->value,
+            'resource' => $route->resource,
+            'operation' => $route->operation,
+            'mentioned_resources' => $route->mentionedResources,
+            'mutation_target' => $route->mutationTarget?->value,
             'products' => $products,
             'suggested_actions' => $actions,
             'conversation' => ['id' => $conversationId],
             // Legacy field is intentionally inert; cart writes require a visible user click.
             'action' => ['type' => 'none'],
             'source' => $payload['source'] ?? 'catalog',
+            'decision_state' => $route['decision_state'] ?? 'supported',
         ];
-        foreach (['code', 'order', 'auth', 'answer_status', 'citations', 'retrieval'] as $key) {
+        $this->rememberMutationTarget($request, $route);
+        if ($products !== []) {
+            $this->rememberCards($request, $products);
+        }
+        foreach (['code', 'order', 'auth', 'answer_status', 'citations', 'retrieval', 'composition', 'subresponses'] as $key) {
             if (array_key_exists($key, $payload)) {
                 $response[$key] = $payload[$key];
             }
@@ -403,12 +896,22 @@ class ChatController extends Controller
             'suggested_action_count' => count($actions),
             'answer_status' => $response['answer_status'] ?? null,
             'citation_source_ids' => collect($response['citations'] ?? [])->pluck('source_id')->all(),
+            'concept_operation' => $route['concepts']['operation'] ?? null,
+            'required_evidence_topic' => $route['required_evidence_domain']['topic'] ?? null,
+            'retrieved_source_ids' => $payload['_telemetry']['retrieved_source_ids'] ?? [],
+            'accepted_evidence_ids' => $payload['_telemetry']['accepted_evidence_ids'] ?? [],
             'retrieval_mode' => $response['retrieval']['mode'] ?? null,
             'chunk_count' => $payload['_telemetry']['chunk_count'] ?? 0,
             'vector_fallback' => $response['retrieval']['vector_fallback'] ?? null,
             'retrieval_ms' => $retrievalMs,
+            'intent_router_ms' => $route['_telemetry']['intent_router_ms'] ?? 0,
+            'database_ms' => $payload['_telemetry']['database_ms'] ?? 0,
+            'sparse_ms' => $payload['_telemetry']['sparse_ms'] ?? 0,
+            'qdrant_dense_ms' => $payload['_telemetry']['qdrant_dense_ms'] ?? 0,
+            'fusion_ms' => $payload['_telemetry']['fusion_ms'] ?? 0,
             'generation_ms' => $payload['_telemetry']['generation_ms'] ?? 0,
             'verification_ms' => $payload['_telemetry']['verification_ms'] ?? 0,
+            'llm_ms' => ($payload['_telemetry']['generation_ms'] ?? 0) + ($payload['_telemetry']['verification_ms'] ?? 0),
             'total_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'status' => $status,
         ]);
@@ -427,12 +930,12 @@ class ChatController extends Controller
     }
 
     private function createGroundedCatalogResponse(
-        Request $request, string $raw, Collection $products, Collection $categories, bool $english,
+        Request $request, string $raw, Collection $products, Collection $categories, bool $english, ChatRouteFrame $route,
     ): ?array {
         $message = $this->normalize($raw);
         $context = $this->context($request);
 
-        if ($this->isNegativeMessage($message)) {
+        if ($this->contextResolver->isNegative($message)) {
             $this->clearContext($request);
 
             return ['reply' => $english
@@ -440,7 +943,7 @@ class ChatController extends Controller
                 : 'Không sao. Khi cần tìm sản phẩm khác, bạn cứ nhắn cho tôi.'];
         }
 
-        if ($this->isAffirmative($message)) {
+        if ($this->contextResolver->isAffirmative($message)) {
             if (($context['stage'] ?? '') === 'confirmation') {
                 $this->clearContext($request);
 
@@ -452,28 +955,6 @@ class ChatController extends Controller
                 : 'Bạn hãy cho tôi biết tên sản phẩm và số lượng nguyên từ 1 đến 100.'];
         }
 
-        if (in_array($message, ['alo', 'xin chao', 'chao', 'hello', 'hi', 'hey'], true)) {
-            $this->clearContext($request);
-
-            return ['reply' => $english
-                ? 'Hi! I can help you check products, stock, prices, or add items to your cart.'
-                : 'Xin chào! Tôi có thể giúp bạn kiểm tra sản phẩm, tồn kho, giá hoặc thêm sản phẩm vào giỏ hàng.'];
-        }
-
-        if ($this->containsPhrase($message, 'cam on') || preg_match('/\b(?:thank|thanks)\b/', $message)) {
-            $this->clearContext($request);
-
-            return ['reply' => $english ? 'You are welcome. I am here whenever you need help with Farta Market.' : 'Rất vui được hỗ trợ bạn. Khi cần thông tin về Farta Market, bạn cứ nhắn nhé.'];
-        }
-
-        if (preg_match('/\b(ban (?:co the )?(?:lam duoc|giup(?: duoc)?) gi|what can you do|how can you help)\b/', $message)) {
-            $this->clearContext($request);
-
-            return ['reply' => $english
-                ? 'I can find products, check current price and stock, explain verified store policies, review your signed-in cart, and look up your own orders.'
-                : 'Tôi có thể tìm sản phẩm, kiểm tra giá và tồn kho hiện tại, giải thích chính sách đã kiểm chứng, xem giỏ hàng khi bạn đăng nhập và tra cứu đơn của chính bạn.'];
-        }
-
         // These facts have no source in the catalog. A model cannot supply them.
         if (preg_match('/\b(khuyen mai|giam gia|ma giam|coupon|discount|don hang cua|trang thai don|order status|payment status|da thanh toan|dinh duong|nutrition|chua benh|medical)\b/', $message)) {
             $this->clearContext($request);
@@ -481,56 +962,69 @@ class ChatController extends Controller
             return $this->fallback($english);
         }
 
-        if ($this->isCatalogListingQuestion($message)) {
-            $this->clearContext($request);
-            $listedProducts = $products->sort(function (Product $left, Product $right): int {
-                $stock = ((int) $right->inventory > 0) <=> ((int) $left->inventory > 0);
-
-                return $stock !== 0 ? $stock : strcasecmp($left->name, $right->name);
-            })->take(ChatProductTool::MAX_OUTPUT)->values();
-            if ($listedProducts->isEmpty()) {
-                return ['reply' => $english
-                    ? 'Farta Market currently has no active products.'
-                    : 'Farta Market hiện chưa có sản phẩm đang bán.'];
-            }
-            $names = $listedProducts->pluck('name')->join(', ');
-            $count = $products->count();
-
-            return [
-                'reply' => $english
-                    ? "Farta Market currently has {$count} active product(s). Available products include: {$names}."
-                    : "Farta Market hiện có {$count} sản phẩm đang bán. Một số sản phẩm gồm: {$names}.",
-                'products' => $listedProducts->map(fn (Product $item) => $this->productTool->card($item))->all(),
-            ];
+        $entityProduct = $route['intent'] === ChatIntent::CartActionRequest
+            ? trim((string) ($route['entities']['product_name'] ?? ''))
+            : '';
+        $matches = $this->matchProducts($entityProduct !== '' ? $this->normalize($entityProduct) : $message, $products);
+        if ($matches->isEmpty() && $entityProduct !== '') {
+            $matches = $this->matchProducts($message, $products);
         }
-
-        $category = $categories->sortByDesc(fn ($item) => mb_strlen($item->name))
-            ->first(fn ($item) => $this->containsPhrase($message, $this->normalize($item->name)));
-        if ($category && $this->isCategoryBrowseQuestion($message)) {
-            return $this->categoryResponse($request, $category, $products, $english);
-        }
-
-        $matches = $this->matchProducts($message, $products);
+        $purchaseTopic = $route['intent'] === ChatIntent::CartActionRequest;
         if ($matches->count() > 1) {
-            $this->clearContext($request);
+            if (! $purchaseTopic) {
+                return [
+                    'reply' => ($english ? 'Matching catalog products: ' : 'Các sản phẩm phù hợp: ')
+                        .$matches->pluck('name')->join(', ').'.',
+                    'products' => $matches->map(fn (Product $item) => $this->productTool->card($item))->all(),
+                ];
+            }
 
             return ['reply' => $english
                 ? 'Please choose one product by its full name before adding it to your cart.'
-                : 'Bạn hãy chọn một sản phẩm bằng tên đầy đủ trước khi thêm vào giỏ hàng.'];
+                : 'Bạn hãy chọn một sản phẩm bằng tên đầy đủ trước khi thêm vào giỏ hàng.',
+                'code' => 'CLARIFICATION_REQUIRED'];
         }
 
         $product = $matches->first();
-        $purchase = $this->isPurchaseRequest($message, $raw);
-        $purchaseTopic = $this->hasPurchaseTopic($message);
+        // A bare quantity is the bounded second turn after the server asks
+        // for quantity. It creates a confirmation offer, never a fresh cart
+        // request, even though the router can recognize its cart context.
+        $quantityReply = ($context['stage'] ?? '') === 'quantity' && $this->isQuantityOnly($message);
+        $purchase = $purchaseTopic && ! $quantityReply && ! $route->requiresCartConfirmation;
         $usesContextProduct = false;
+        $contextProductId = $route['context_product_id'] ?? ($context['product_id'] ?? null);
+        $contextProductIds = collect($route->entities['context_product_ids'] ?? [])
+            ->filter(fn (mixed $id): bool => is_int($id) && $id > 0)->values();
+
+        if (! $product && ! $purchaseTopic && $route['intent'] === ChatIntent::ProductDetail
+            && $contextProductIds->count() > 1) {
+            $contextProducts = $contextProductIds->map(fn (int $id) => $products->firstWhere('id', $id))->filter()->values();
+            if ($contextProducts->count() === $contextProductIds->count()) {
+                return [
+                    'reply' => $contextProducts
+                        ->map(fn (Product $item): string => $this->productFacts($item, $english, $route->semanticIntent))
+                        ->join(' '),
+                    'products' => $contextProducts->map(fn (Product $item) => $this->productTool->card($item))->all(),
+                ];
+            }
+        }
+
+        if (! $product && $route['intent'] === ChatIntent::ProductDetail
+            && ($context['stage'] ?? '') === 'context' && is_int($contextProductId)) {
+            $product = $products->firstWhere('id', $contextProductId);
+            $usesContextProduct = $product !== null;
+        }
 
         if (! $product && ($purchase
             || ($context['stage'] ?? '') === 'quantity'
             || ($purchaseTopic && ($context['stage'] ?? '') === 'context'))) {
-            $product = $products->firstWhere('id', $context['product_id'] ?? 0);
+            $product = is_int($contextProductId) ? $products->firstWhere('id', $contextProductId) : null;
             $usesContextProduct = $product !== null;
         }
         $quantity = $this->extractQuantity($raw, $product);
+        if ($purchaseTopic && $quantity['status'] === 'valid' && $route->requiresCartConfirmation) {
+            $purchase = true;
+        }
 
         if ($product && ($purchase || $purchaseTopic)) {
             if ($quantity['status'] !== 'valid') {
@@ -551,9 +1045,16 @@ class ChatController extends Controller
             if (! $purchase) {
                 return $this->offer($request, $product, $quantity['value'], $english);
             }
-            $this->clearContext($request);
+            $result = $this->buildAddToCartResponse($request, $product->id, $quantity['value'], $english);
+            if (($result['code'] ?? null) === 'AUTH_REQUIRED_FOR_CART') {
+                // Retain only the product reference so a guest can keep asking about it.
+                // Authentication never resumes or executes the previous cart request.
+                $this->remember($request, $product, 'context');
+            } else {
+                $this->clearContext($request);
+            }
 
-            return $this->buildAddToCartResponse($request, $product->id, $quantity['value'], $english);
+            return $result;
         }
 
         if ($product && ($context['stage'] ?? '') === 'quantity'
@@ -569,32 +1070,48 @@ class ChatController extends Controller
             }
         }
 
-        if ($product && $matches->isNotEmpty()) {
+        if ($product && ($matches->isNotEmpty() || ($route['intent'] === ChatIntent::ProductDetail && $usesContextProduct))) {
             $this->remember($request, $product, 'context');
 
             return [
-                'reply' => $this->productFacts($product, $english),
+                'reply' => $this->productFacts($product, $english, $route->semanticIntent),
                 'products' => [$this->productTool->card($product)],
             ];
         }
 
         $this->clearContext($request);
         if ($purchase || $purchaseTopic) {
-            return ['reply' => $english
+            return [
+                'reply' => $english
                 ? 'Please specify one available product by its full name and a whole quantity from 1 to 100.'
-                : 'Bạn hãy chọn một sản phẩm đang bán bằng tên đầy đủ và số lượng nguyên từ 1 đến 100.'];
+                : 'Bạn hãy chọn một sản phẩm đang bán bằng tên đầy đủ và số lượng nguyên từ 1 đến 100.',
+                'code' => 'CLARIFICATION_REQUIRED',
+            ];
         }
 
-        if ($category) {
-            return $this->categoryResponse($request, $category, $products, $english);
+        if ($route->semanticIntent === 'clarification'
+            && (($route->entities['context_reference'] ?? null) !== null
+                || ($route->concepts['reference_required'] ?? false) === true)) {
+            return null;
         }
 
-        if ($this->isCatalogQuestion($message)) {
+        if ($route->semanticIntent === 'clarification'
+            && preg_match('/^(?:gia bao nhieu|how much is it)$|\b(?:gia hop ly|reasonable price)\b/', $message) === 1) {
+            return null;
+        }
+
+        if ($route['intent'] === ChatIntent::ProductDetail
+            || ($route->semanticIntent === 'clarification'
+                && trim((string) ($route->entities['product_name'] ?? '')) !== '')) {
             $names = $categories->take(3)->pluck('name')->join(', ');
 
             return ['reply' => $english
                 ? 'Farta Market does not currently have that product or category.'.($names !== '' ? " Available categories: {$names}." : '')
                 : 'Farta Market hiện chưa có sản phẩm hoặc danh mục đó.'.($names !== '' ? " Các danh mục đang có: {$names}." : '')];
+        }
+
+        if ($route['intent'] === ChatIntent::Clarification || $route->semanticIntent === 'clarification') {
+            return null;
         }
 
         return null;
@@ -625,17 +1142,45 @@ class ChatController extends Controller
             return null;
         }
         $context = Cache::get($this->contextKey($request));
+        $productIds = is_array($context['product_ids'] ?? null)
+            ? array_values($context['product_ids'])
+            : (is_int($context['product_id'] ?? null) ? [$context['product_id']] : []);
+        $stage = $context['stage'] ?? null;
+        $mutationTarget = is_string($context['mutation_target'] ?? null)
+            ? ChatMutationTarget::tryFrom($context['mutation_target'])
+            : null;
         if (! is_array($context)
             || ($context['owner_id'] ?? null) !== $this->ownerId($request)
             || ($context['expires_at'] ?? 0) <= now()->timestamp
-            || ! in_array($context['stage'] ?? '', ['context', 'quantity', 'confirmation'], true)
-            || ! is_int($context['product_id'] ?? null)
+            || ! in_array($stage, ['context', 'quantity', 'confirmation', 'mutation_target'], true)
+            || ($stage === 'mutation_target' && ($productIds !== [] || $mutationTarget === null))
+            || ($stage !== 'mutation_target' && $productIds === [])
+            || count($productIds) > ChatProductTool::MAX_OUTPUT
+            || count(array_filter($productIds, fn ($id) => ! is_int($id) || $id < 1)) > 0
             || (($context['stage'] ?? '') === 'confirmation'
                 && (! is_int($context['quantity'] ?? null) || $context['quantity'] < 1 || $context['quantity'] > 100))) {
             $this->clearContext($request);
 
             return null;
         }
+
+        if ($stage === 'mutation_target') {
+            return [...$context, 'product_ids' => []];
+        }
+
+        // Context stores references, never product facts. Re-read active
+        // products before a follow-up can use them.
+        $activeIds = Product::query()->whereIn('id', $productIds)->where('is_active', true)->pluck('id')->all();
+        sort($activeIds);
+        $expectedIds = $productIds;
+        sort($expectedIds);
+        if ($activeIds !== $expectedIds) {
+            $this->clearContext($request);
+
+            return null;
+        }
+
+        $context['product_ids'] = $productIds;
 
         return $context;
     }
@@ -650,12 +1195,64 @@ class ChatController extends Controller
         if ($request->hasSession()) {
             Cache::put($this->contextKey($request), [
                 'product_id' => (int) $product->id,
+                'product_ids' => [(int) $product->id],
+                'category_id' => $product->category_id ? (int) $product->category_id : null,
+                'last_result_type' => 'single_product',
                 'quantity' => $quantity,
                 'stage' => $stage,
                 'owner_id' => $this->ownerId($request),
                 'expires_at' => now()->timestamp + self::CONTEXT_SECONDS,
             ], self::CONTEXT_SECONDS);
         }
+    }
+
+    private function rememberMutationTarget(Request $request, ChatRouteFrame $route): void
+    {
+        if (! $request->hasSession()
+            || $route->operation !== 'mutate'
+            || $route->mutationTarget === null) {
+            return;
+        }
+
+        Cache::put($this->contextKey($request), [
+            'product_id' => null,
+            'product_ids' => [],
+            'category_id' => null,
+            'last_result_type' => 'mutation_target',
+            'mutation_target' => $route->mutationTarget->value,
+            'quantity' => null,
+            'stage' => 'mutation_target',
+            'owner_id' => $this->ownerId($request),
+            'expires_at' => now()->timestamp + self::CONTEXT_SECONDS,
+        ], self::CONTEXT_SECONDS);
+    }
+
+    /** @param array<int, array<string, mixed>> $cards */
+    private function rememberCards(Request $request, array $cards): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+        $existing = $this->context($request);
+        if (in_array($existing['stage'] ?? null, ['quantity', 'confirmation'], true)) {
+            return;
+        }
+        $ids = collect($cards)->pluck('id')->filter(fn ($id) => is_int($id) && $id > 0)
+            ->unique()->take(ChatProductTool::MAX_OUTPUT)->values()->all();
+        if ($ids === []) {
+            return;
+        }
+        $categoryIds = collect($cards)->pluck('category.id')->filter(fn ($id) => is_int($id) && $id > 0)->unique();
+        Cache::put($this->contextKey($request), [
+            'product_id' => count($ids) === 1 ? $ids[0] : null,
+            'product_ids' => $ids,
+            'category_id' => $categoryIds->count() === 1 ? $categoryIds->first() : null,
+            'last_result_type' => count($ids) === 1 ? 'single_product' : 'product_list',
+            'quantity' => null,
+            'stage' => 'context',
+            'owner_id' => $this->ownerId($request),
+            'expires_at' => now()->timestamp + self::CONTEXT_SECONDS,
+        ], self::CONTEXT_SECONDS);
     }
 
     private function clearContext(Request $request): void
@@ -701,16 +1298,30 @@ class ChatController extends Controller
 
     private function askQuantity(Product $product, bool $english): array
     {
-        return ['reply' => $english
-            ? "How many {$product->name} would you like to add? Please use one whole quantity from 1 to 100."
-            : "Bạn muốn thêm bao nhiêu {$product->name} vào giỏ hàng? Vui lòng dùng một số lượng nguyên từ 1 đến 100."];
+        return [
+            'reply' => $english
+                ? "How many {$product->name} would you like to add? Please use one whole quantity from 1 to 100."
+                : "Bạn muốn thêm bao nhiêu {$product->name} vào giỏ hàng? Vui lòng dùng một số lượng nguyên từ 1 đến 100.",
+            'code' => 'CLARIFICATION_REQUIRED',
+        ];
     }
 
-    private function productFacts(Product $product, bool $english): string
+    private function productFacts(Product $product, bool $english, ?string $semanticIntent = null): string
     {
         $price = number_format((float) $product->price, 0, ',', '.');
         $inventory = (int) $product->inventory;
         $category = $product->category?->name;
+
+        if ($semanticIntent === 'price') {
+            return $english
+                ? "{$product->name} currently costs {$price} VND per item."
+                : "{$product->name} hiện có giá {$price}đ mỗi sản phẩm.";
+        }
+        if ($semanticIntent === 'stock_availability') {
+            return $english
+                ? sprintf('%s has exactly %d item(s) in stock and is currently %s.', $product->name, $inventory, $inventory > 0 ? 'available' : 'out of stock')
+                : sprintf('%s hiện có tồn kho chính xác %d sản phẩm và đang %s.', $product->name, $inventory, $inventory > 0 ? 'còn hàng' : 'hết hàng');
+        }
 
         return $english
             ? sprintf('%s costs %s VND, has exactly %d item(s) in stock, is %s%s.', $product->name, $price, $inventory,
@@ -725,8 +1336,22 @@ class ChatController extends Controller
             $alias = collect($this->productAliases($product))
                 ->filter(fn ($alias) => $this->containsPhrase($message, $alias))
                 ->sortByDesc(fn ($alias) => strlen($alias))->first();
+            $position = false;
+            if (is_string($alias)) {
+                preg_match(
+                    '/(?:^|\s)('.preg_quote($alias, '/').')(?=$|\s)/',
+                    $message,
+                    $positionMatch,
+                    PREG_OFFSET_CAPTURE,
+                );
+                $position = $positionMatch[1][1] ?? false;
+            }
 
-            return ['product' => $product, 'alias' => $alias];
+            return [
+                'product' => $product,
+                'alias' => $alias,
+                'position' => $position,
+            ];
         })->filter(fn ($match) => $match['alias'] !== null);
 
         // A full name can disambiguate its shorter alias, but two full names cannot.
@@ -740,17 +1365,34 @@ class ChatController extends Controller
 
                 return ! $this->containsPhrase($this->normalize($remainder), $match['alias']);
             });
-        })->pluck('product')->values();
+        })->sortBy(fn (array $match): int => is_int($match['position']) ? $match['position'] : PHP_INT_MAX)
+            ->pluck('product')->values();
     }
 
     private function productAliases(Product $product): array
     {
-        $words = explode(' ', $this->normalize($product->name));
+        $canonical = $this->normalize($product->name);
+        $words = explode(' ', $canonical);
         $aliases = [implode(' ', $words)];
-        while (count($words) > 1 && in_array(end($words), ['tuoi', 'hop', 'uc', 'keo', 'tim', 'nat'], true)) {
+        while (count($words) > 1 && in_array(end($words), ['tuoi', 'uc', 'keo', 'tim', 'nat'], true)) {
             array_pop($words);
             $aliases[] = implode(' ', $words);
         }
+
+        $translations = [
+            'rau cu tuoi' => ['rau cu', 'combo rau cu', 'vegetable combo', 'fresh vegetables'],
+            'thit bo nat' => ['thit bo nac', 'lean beef', 'beef'],
+            'sua hop' => ['hop sua', 'boxed milk', 'boxed milks', 'milk'],
+            'cam tuoi' => ['cam', 'fresh orange', 'fresh oranges', 'orange', 'oranges'],
+            'tao uc' => ['tao', 'australian apple', 'australian apples'],
+            'nho tim' => ['nho', 'purple grape', 'purple grapes'],
+            'dua hau' => ['watermelon'],
+            'xoai keo' => ['xoai', 'mango'],
+            'hamburger' => ['burger', 'burgers'],
+            'chuoi' => ['banana', 'bananas'],
+            'oi' => ['guava', 'guavas'],
+        ];
+        $aliases = [...$aliases, ...($translations[$canonical] ?? [])];
 
         return array_values(array_unique(array_filter($aliases)));
     }
@@ -767,12 +1409,20 @@ class ChatController extends Controller
         }
         $inventory = (int) $product->inventory;
         if ($inventory <= 0) {
-            return ['reply' => $english ? "{$product->name} is currently out of stock." : "{$product->name} hiện đã hết hàng."];
+            return [
+                'reply' => $english ? "{$product->name} is currently out of stock." : "{$product->name} hiện đã hết hàng.",
+                'products' => [$this->productTool->card($product)],
+                'code' => 'UNAVAILABLE',
+            ];
         }
         if ($quantity > $inventory) {
-            return ['reply' => $english
-                ? "{$product->name} only has {$inventory} item(s) left. Please choose a smaller quantity."
-                : "{$product->name} chỉ còn {$inventory} sản phẩm. Bạn vui lòng chọn số lượng ít hơn."];
+            return [
+                'reply' => $english
+                    ? "You requested {$quantity} {$product->name}, but only {$inventory} item(s) remain. Please choose a smaller quantity."
+                    : "Bạn yêu cầu {$quantity} {$product->name}, nhưng chỉ còn {$inventory} sản phẩm. Bạn vui lòng chọn số lượng ít hơn.",
+                'products' => [$this->productTool->card($product)],
+                'code' => 'UNAVAILABLE',
+            ];
         }
 
         if (! $this->verifiedCustomer($request)) {
@@ -811,74 +1461,17 @@ class ChatController extends Controller
             && $user->hasVerifiedEmail();
     }
 
-    private function numberWords(): array
-    {
-        $vi = [1 => 'mot', 'hai', 'ba', 'bon', 'nam', 'sau', 'bay', 'tam', 'chin'];
-        $en = [1 => 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-        $teens = [10 => 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-        $tens = [2 => 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-        $words = ['khong' => 0, 'zero' => 0, 'mot tram' => 100, 'one hundred' => 100, 'a hundred' => 100];
-        for ($number = 1; $number < 100; $number++) {
-            $ten = intdiv($number, 10);
-            $unit = $number % 10;
-            $vietnamese = $ten === 0 ? $vi[$unit] : ($ten === 1 ? 'muoi' : $vi[$ten].' muoi');
-            if ($ten > 0 && $unit > 0) {
-                $vietnamese .= ' '.($unit === 5 ? 'lam' : $vi[$unit]);
-            }
-            $english = $number < 10 ? $en[$unit] : ($number < 20 ? $teens[$number] : $tens[$ten].($unit > 0 ? ' '.$en[$unit] : ''));
-            $words[$vietnamese] = $number;
-            $words[$english] = $number;
-            $words[str_replace('lam', 'nam', $vietnamese)] = $number;
-            if ($unit === 4) {
-                $words[str_replace('bon', 'tu', $vietnamese)] = $number;
-            }
-        }
-
-        return $words;
-    }
-
     private function extractQuantity(string $raw, ?Product $product = null): array
     {
-        $text = strtolower(Str::ascii(str_replace(['−', '–', '—'], '-', $raw)));
-        // Vietnamese question-ending "không?" is not the quantity zero.
-        $text = preg_replace('/\b(?:duoc )?khong[?.!\s]*$/', '', $text);
-        if ($product) {
-            foreach ($this->productAliases($product) as $alias) {
-                $text = preg_replace('/\b'.preg_quote($alias, '/').'\b/', ' ', $text);
-            }
-        }
-        if (preg_match('/\d\p{L}|\p{L}\d/u', $text) || preg_match('/\b(am|minus|negative)\b/', $this->normalize($text))) {
-            return ['status' => 'invalid', 'value' => null];
-        }
-        preg_match_all('/[+\-−]?\s*\d+(?:\s*[.,]\s*\d+)*/u', $text, $digits);
-        $quantities = [];
-        foreach ($digits[0] as $token) {
-            $token = trim($token);
-            if (! preg_match('/^\d+$/', $token) || strlen($token) > 3 || (int) $token < 1 || (int) $token > 100) {
-                return ['status' => 'invalid', 'value' => null];
-            }
-            $quantities[] = (int) $token;
-        }
-        $words = $this->numberWords();
-        $vocabulary = array_unique(explode(' ', implode(' ', array_keys($words)).' tram nghin ngan trieu linh le hundred thousand million'));
-        $pattern = '(?:'.implode('|', array_map(fn ($word) => preg_quote($word, '/'), $vocabulary)).')';
-        preg_match_all('/\b'.$pattern.'(?:\s+'.$pattern.')*\b/', $this->normalize($text), $groups);
-        foreach ($groups[0] as $group) {
-            if (! isset($words[$group]) || $words[$group] < 1 || preg_match('/\b(am|minus|negative)\b/', $this->normalize($text))) {
-                return ['status' => 'invalid', 'value' => null];
-            }
-            $quantities[] = $words[$group];
-        }
-
-        return ['status' => count($quantities) === 1 ? 'valid' : (count($quantities) > 1 ? 'ambiguous' : 'missing'),
-            'value' => count($quantities) === 1 ? $quantities[0] : null];
+        return $this->entityExtractor->quantity(
+            $raw,
+            $product ? $this->productAliases($product) : [],
+        );
     }
 
     private function isQuantityOnly(string $message): bool
     {
-        $words = implode('|', array_map(fn ($word) => preg_quote($word, '/'), array_keys($this->numberWords())));
-
-        return preg_match('/^(?:\d+|'.$words.')(?: (?:qua|cai|hop|kg|san pham|items?|units?))?(?: nhe|please)?$/', $message) === 1;
+        return $this->entityExtractor->quantityOnly($message);
     }
 
     private function isProductQuantityReply(string $message, Product $product): bool
@@ -888,61 +1481,6 @@ class ChatController extends Controller
         }
 
         return $this->isQuantityOnly($this->normalize($message));
-    }
-
-    private function isPurchaseRequest(string $message, string $raw): bool
-    {
-        if ($this->isNegativeMessage($message)) {
-            return false;
-        }
-        // Only anchored, explicit requests authorize immediate actions. Questions get a server offer.
-        if (str_contains($raw, '?') || preg_match('/\b(co nen|co the mua|muon mua khong|mua duoc khong|would you|should i|do you)\b/', $message)) {
-            return false;
-        }
-
-        return preg_match('/^(?:(?:co|yes) )?(?:(?:xin|vui long|toi muon|minh muon|toi can|cho toi|giup toi|please|i want to|i would like to|can you|could you) )?(?:mua|dat|lay|buy|order|them\b.*\bgio|add\b.*\bcart)\b/', $message) === 1;
-    }
-
-    private function hasPurchaseTopic(string $message): bool
-    {
-        return preg_match('/\b(mua|dat|lay|them (?:vao )?gio|buy|order|add to cart)\b/', $message) === 1;
-    }
-
-    private function isNegativeMessage(string $message): bool
-    {
-        return in_array($message, ['khong', 'khong can', 'thoi', 'huy', 'no', 'no thanks', 'cancel'], true)
-            || preg_match('/\b(?:khong|dung|chua|huy|do not|dont|don t|no|not|never|stop|cancel)\b.*\b(?:mua|dat|lay|them|muon|buy|order|add|want)\b/', $message) === 1;
-    }
-
-    private function isAffirmative(string $message): bool
-    {
-        return in_array($message, ['co', 'co a', 'co nhe', 'dong y', 'duoc', 'ok', 'okay', 'yes', 'yes please'], true);
-    }
-
-    private function isCatalogQuestion(string $message): bool
-    {
-        foreach (['gia', 'price', 'bao nhieu', 'ton kho', 'so luong', 'con hang', 'con khong', 'het hang', 'available', 'stock',
-            'quantity', 'co ban', 'sell', 'san pham', 'product', 'danh muc', 'category'] as $signal) {
-            if ($this->containsPhrase($message, $signal)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function isCatalogListingQuestion(string $message): bool
-    {
-        return $this->containsPhrase($message, 'danh sach san pham')
-            || $this->containsPhrase($message, 'what products do you have')
-            || preg_match('/\b(?:shop|cua hang|farta market)\b.*\b(?:co|ban)\b.*\b(?:san pham|mat hang)\b.*\b(?:nao|gi)\b/', $message) === 1
-            || preg_match('/^(?:hien tai )?hien co (?:nhung )?(?:san pham|mat hang) (?:nao|gi)$/', $message) === 1
-            || preg_match('/^(?:shop|cua hang)(?: ban)? ban gi$/', $message) === 1;
-    }
-
-    private function isCategoryBrowseQuestion(string $message): bool
-    {
-        return preg_match('/\b(gom nhung gi|co nhung gi|co gi|trong danh muc|what is in|products in)\b/', $message) === 1;
     }
 
     private function buildSystemPrompt(Collection $products): string

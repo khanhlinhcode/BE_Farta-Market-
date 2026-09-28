@@ -1,0 +1,150 @@
+{
+  "manifest_version": "farta-v11-toolchain-v2-r2-manifest.1.0",
+  "revision": "V11 Toolchain V2-r2 structural evidence-domain canonicalization",
+  "recorded_at_utc": "2026-09-28T07:28:30Z",
+  "freeze_status": "FROZEN",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "root_cause": "A nested shipping_current_value route carried the application-internal evidence-domain alias shipping. Runtime Adapter V2-r1 emitted that alias directly although the frozen V11 schema requires shipping_settings.",
+  "failure_evidence": {
+    "r1_run_id": "final-v11-r1-20260928T070446Z",
+    "r1_state_sha256": "204c9f33dd890a435a0280bb91910ed9826d395a5e9cd7014eceed6a733d5ca0",
+    "r1_state": "EXECUTION_INCOMPLETE",
+    "cases_started": 12,
+    "cases_completed": 11,
+    "cases_failed": 1,
+    "last_record": "v11r1-p012",
+    "failure": "V2 prediction required_evidence_domain contains an unknown enum value."
+  },
+  "canonicalization_rule": {
+    "scope_source": "Structural parent/branch nesting only.",
+    "mapping_source": "Typed semantic_intent and typed route evidence domain only.",
+    "shipping_current_value": "shipping or shipping_settings -> shipping_settings",
+    "shipping_calculation": "shipping or product_price_and_shipping_settings -> product_price_and_shipping_settings",
+    "store_contact": "contact or store_contact_settings -> store_contact_settings",
+    "gold_case_utterance_response_text": "FORBIDDEN",
+    "unknown_or_conflicting_domain": "FAIL_CLOSED"
+  },
+  "internal_domain_audit": {
+    "shipping": "STRUCTURAL_ALIAS",
+    "contact": "STRUCTURAL_ALIAS",
+    "returns": "FAIL_CLOSED_UNMAPPED",
+    "shipping_policy": "FAIL_CLOSED_UNMAPPED",
+    "storage": "FAIL_CLOSED_UNMAPPED",
+    "all_other_registered_application_domains": "SCHEMA_CANONICAL"
+  },
+  "inherited_identities": {
+    "toolchain_v2_r1": "29714cce29739581347fe36c3fd2ab179a88d8f81cf1dfdb07fba6e0ea639418",
+    "evaluator_v2_r1": "0fcce11e5650340c6112372e3f879948555696ed66edb2c64ecfd60e68dee9ef",
+    "runtime_adapter_v2_r1": "ff1db1e229c5498a0599a8cbf3c3223dc9c3e1b972c448107c8bd97fbcfd9ed8",
+    "scorer_v2_r1": "adff5766ebed64125561be979c72f691240f563d54bfe3ff8b81a415fb8bf798",
+    "harness_r1": "b5f628d48b6adae8f52b44997a087616d64f36aeadd2cfcdd7ddc63a25f78fe2"
+  },
+  "revised_components": {
+    "evidence_domain_canonicalizer_v2_r2": {
+      "version": "farta-final-v11-evidence-domain-canonicalizer.2.0.2",
+      "semantic_identity": "2d314bdd29b592a0dbc36ea4498373163c8d02466f6bbda1527d6335cdf3f75f",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11EvidenceDomainCanonicalizerV2R2.php"
+      ],
+      "source_file_sha256": "1551289ef74a90950f5e4c20093dff4741ead4bf1584931a93802dedfee25b23"
+    },
+    "runtime_adapter_v2_r2": {
+      "version": "farta-final-v11-runtime-adapter.2.0.2",
+      "semantic_identity": "8b9d2b6b4673b95b06660da24ca4884754fa2f0bb2778ff5bbef1717ce53d71f",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11EvidenceDomainCanonicalizerV2R2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R2.php"
+      ],
+      "source_file_sha256": "54ceb4a00be6b17dc4e9feef6779bb23a45493f9d34a4b98c1e77db460f3db7e"
+    },
+    "scorer_v2_r2": {
+      "version": "farta-final-v11-offline-scorer.2.0.2",
+      "semantic_identity": "ede3466e3216b48cc22e8a61b59684a89e8e22ba8b24af9704f2b0da1f965178",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11OfflineScorerV2.php",
+        "tests/Support/FinalV11OfflineScorerV2R2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R2.php"
+      ],
+      "source_file_sha256": "027f38e63678677a5ada5415b6e4d7ac61743f95de95e0a5e58e77ec9d1e3fb2"
+    },
+    "harness_r2": {
+      "version": "farta-v11-final-execution-harness.1.0.2",
+      "semantic_identity": "d97c62400bf0cfa0115f4fed77e6899932bbc110b272f51211d0c59e52248de5",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV11ExecutionHarnessR1.php",
+        "tests/Support/FinalV11ExecutionHarnessR2.php",
+        "tests/Support/FinalV11OfflineScorerV2R2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R2.php"
+      ],
+      "source_file_sha256": "20ea7af2aa22c9046b348ad35f82eef3adff5ba52ab7afdf6ce13e503ebaa2ea"
+    },
+    "toolchain_v2_r2": {
+      "semantic_identity": "401e530d55c8d3e2dc87885eeeff365fc59fffaaa70ca9bb2d4f60c0115726dc",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-runtime-adapter-v2-contract.json",
+        "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+        "scripts/v11-toolchain-v2-preflight",
+        "scripts/v11-toolchain-v2-r2-preflight",
+        "tests/Feature/FinalV11ToolchainV2PreflightTest.php",
+        "tests/Feature/FinalV11ToolchainV2R1RemediationTest.php",
+        "tests/Feature/FinalV11ToolchainV2R2RemediationTest.php",
+        "tests/Fixtures/v11_toolchain_v2_r1_synthetic.php",
+        "tests/Fixtures/v11_toolchain_v2_r2_synthetic.php",
+        "tests/Fixtures/v11_toolchain_v2_synthetic_frames.php",
+        "tests/Support/FinalV11EvaluationV2.php",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11EvidenceDomainCanonicalizerV2R2.php",
+        "tests/Support/FinalV11ExecutionHarnessR1.php",
+        "tests/Support/FinalV11ExecutionHarnessR2.php",
+        "tests/Support/FinalV11OfflineScorerV2.php",
+        "tests/Support/FinalV11OfflineScorerV2R1.php",
+        "tests/Support/FinalV11OfflineScorerV2R2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R2.php",
+        "tests/Support/FinalV11RuntimeEvidenceHarnessV2.php"
+      ]
+    }
+  },
+  "compatibility": {
+    "prediction_field_order": "PASS_UNCHANGED",
+    "prediction_payload_schema": "PASS_UNCHANGED",
+    "scoring_formulas": "PASS_UNCHANGED",
+    "scoring_thresholds": "PASS_UNCHANGED",
+    "security_scope_rules": "PASS_UNCHANGED"
+  },
+  "validation": {
+    "tests_passed": 124,
+    "tests_total": 124,
+    "assertions_passed": 703,
+    "assertions_total": 703,
+    "focused_r2_tests_passed": 18,
+    "focused_r2_tests_total": 18,
+    "focused_r2_assertions_passed": 43,
+    "focused_r2_assertions_total": 43,
+    "focused_style_files_passed": 10,
+    "focused_style_files_total": 10,
+    "formatting": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS",
+    "gold_isolation": "PASS",
+    "preflight": "PASS"
+  },
+  "build_execution_state": {
+    "v11_requests": 0,
+    "v11_executed": false,
+    "scoring_started": false
+  },
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

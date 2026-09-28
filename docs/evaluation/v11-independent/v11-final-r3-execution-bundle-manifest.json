@@ -1,0 +1,99 @@
+{
+  "manifest_version": "farta-v11-final-r3-replacement-execution-bundle-manifest.1.0",
+  "recorded_at_utc": "2026-09-28T07:56:38Z",
+  "bundle_status": "READY_FOR_SEPARATELY_AUTHORIZED_R3_EXECUTION",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "semantic_scope": "Future R3 execution semantics only. Synthetic tests, fixtures, preflight scripts, generated reports, manifests, timestamps, and future execution outputs are excluded.",
+  "ordered_semantic_files": [
+    "docs/evaluation/v11-independent/v11-final-r3-execution-bundle-config.json",
+    "scripts/v11-final-r3-execution",
+    "tests/Feature/FinalV11ReplacementExecutionR3Test.php",
+    "tests/Support/FinalV11ReplacementExecutionGuardR3.php",
+    "tests/Support/FinalV11ReplacementExecutionR3.php"
+  ],
+  "execution_bundle_semantic_identity": "458672e5cd9eae1f4d3c9112015bcf30ba2f48744fa35dd0ccd9b5c2d393dda3",
+  "frozen_identities": {
+    "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+    "v11_dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "v11_audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+    "v11_final_manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+    "historical_execution_state": "c1146a3256a3a45fada6bc12868362187dd57771fc38d4aa78bec8eee478ef51",
+    "r1_execution_state": "204c9f33dd890a435a0280bb91910ed9826d395a5e9cd7014eceed6a733d5ca0",
+    "r2_execution_state": "37d9dacf168cf9b00ce435790a7f0fd1df2bfa4c0edbf0e8c4457826373cf569",
+    "r2_execution_bundle": "873e13d70de314a015f2c68ed3b89c90952d37fc5841830c257bf46123745cd8",
+    "security_intent_canonicalizer_v2_r3": "bb22b631778faeaa34995fa1254bd654f1b6787210a346d0490a72329cf98616",
+    "runtime_adapter_v2_r3": "93b28a3d8202195d48a404e6d2a7de9ddc91658a466f5965a43ff9b7a17713c4",
+    "scorer_v2_r3": "82febd17d1487e26384cd9eae90b2c388866299ee89a8dbed7a00d32e6d98d91",
+    "harness_r3": "f4ad6efc0f982983ef9d3e5af625b7d1a73116f0c85898ad9feecefae424b873",
+    "toolchain_v2_r3": "beb1ca7c0431e3d7b2d67990b554f9713a53c0963fc15af0fc1d16baab053486"
+  },
+  "prior_incomplete_runs": [
+    {
+      "run_id": "final-v11-20260928T060655Z",
+      "state": "EXECUTION_INCOMPLETE",
+      "capture_reused": false
+    },
+    {
+      "run_id": "final-v11-r1-20260928T070446Z",
+      "state": "EXECUTION_INCOMPLETE",
+      "capture_reused": false
+    },
+    {
+      "run_id": "final-v11-r2-20260928T073537Z",
+      "state": "EXECUTION_INCOMPLETE",
+      "capture_reused": false
+    }
+  ],
+  "authorization_gate": {
+    "environment_variable": "V11_FINAL_R3_EXECUTION_AUTHORIZATION",
+    "exact_value": "RUN_FROZEN_V11_R3_REPLACEMENT_ONCE",
+    "status": "PASS"
+  },
+  "reserved_future_outputs": [
+    "docs/evaluation/v11-independent/v11-final-r3-execution-state.json",
+    "docs/evaluation/v11-independent/v11-final-r3-raw-capture.jsonl",
+    "docs/evaluation/v11-independent/v11-final-r3-scored-results.json",
+    "docs/evaluation/v11-independent/v11-final-r3-score-report.md",
+    "docs/evaluation/v11-independent/v11-final-r3-execution-manifest.json"
+  ],
+  "policies": {
+    "distinct_output_namespace": "PASS",
+    "overwrite": "REFUSE",
+    "resume": "NONE",
+    "retry": "NONE",
+    "start_record": "FIRST_RECORD",
+    "capture_write": "ONLY_AFTER_COMPLETE_IN_MEMORY_CAPTURE",
+    "scoring_gate": "CAPTURE_COMPLETED",
+    "historical_capture_reused": false,
+    "r1_capture_reused": false,
+    "r2_capture_reused": false
+  },
+  "validation": {
+    "tests_passed": 148,
+    "tests_total": 148,
+    "assertions_passed": 802,
+    "assertions_total": 802,
+    "focused_bundle_tests_passed": 32,
+    "focused_bundle_tests_total": 32,
+    "focused_bundle_assertions_passed": 90,
+    "focused_bundle_assertions_total": 90,
+    "focused_style_files_passed": 10,
+    "focused_style_files_total": 10,
+    "formatting": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS",
+    "gold_isolation": "PASS",
+    "preflight": "PASS"
+  },
+  "build_execution_state": {
+    "v11_requests": 0,
+    "v11_executed": false,
+    "scoring_started": false
+  },
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

@@ -58,7 +58,7 @@ it('returns exact inventory from the database without calling the model', functi
         ->assertJsonPath('source', 'catalog')
         ->assertJsonPath(
             'reply',
-            'Cam Tươi có giá 45.000đ, tồn kho chính xác 30 sản phẩm, trạng thái còn hàng, thuộc danh mục Trái Cây.',
+            'Cam Tươi hiện có tồn kho chính xác 30 sản phẩm và đang còn hàng.',
         );
 
     Http::assertNothingSent();
@@ -235,8 +235,8 @@ it('answers capability questions deterministically', function (string $message) 
     $this->postJson('/api/chat', ['message' => $message])
         ->assertOk()
         ->assertJsonPath('intent', 'general_chat')
-        ->assertJsonPath('source', 'catalog')
-        ->assertJsonFragment(['message' => 'Tôi có thể tìm sản phẩm, kiểm tra giá và tồn kho hiện tại, giải thích chính sách đã kiểm chứng, xem giỏ hàng khi bạn đăng nhập và tra cứu đơn của chính bạn.']);
+        ->assertJsonPath('source', 'assistant')
+        ->assertJsonFragment(['message' => 'Tôi có thể tìm sản phẩm, kiểm tra giá và tồn kho hiện tại, giải thích thông tin cửa hàng đã kiểm chứng, xem giỏ hàng khi bạn đăng nhập và tra cứu đơn của chính bạn.']);
 
     Http::assertNothingSent();
 })->with([

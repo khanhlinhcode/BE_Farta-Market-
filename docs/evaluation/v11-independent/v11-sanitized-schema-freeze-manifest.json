@@ -1,0 +1,48 @@
+{
+  "manifest_version": "farta-v11-sanitized-schema-freeze-manifest.1.0",
+  "schema_contract_version": "farta-v11-sanitized-schema-contract.1.0",
+  "compatible_with": "farta-v10.3.0",
+  "hash_algorithm": "SHA-256",
+  "frozen_at_utc": "2026-09-27T07:55:13Z",
+  "artifacts": {
+    "json_contract": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+      "sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d"
+    },
+    "markdown_contract": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.md",
+      "sha256": "216e1f80789770d4f48e6a852d05ee1e7b4909b035b9b223107a4afc5f31b57b"
+    }
+  },
+  "source_categories_consulted": [
+    "evaluator parser and validator declarations",
+    "machine-checkable evaluator contract inventory"
+  ],
+  "sanitization_checks": {
+    "json_parse": "PASS",
+    "json_markdown_semantic_agreement": "PASS",
+    "required_field_source_parity": "PASS",
+    "enum_source_parity": "PASS",
+    "enum_duplicate_scan": "PASS",
+    "nullable_and_type_contract_review": "PASS",
+    "historical_utterance_scan": "PASS",
+    "historical_identifier_scan": "PASS",
+    "candidate_data_scan": "PASS",
+    "failure_analysis_scan": "PASS",
+    "historical_count_scan": "PASS",
+    "runtime_assumption_scan": "PASS",
+    "content_bearing_literal_scan": "PASS"
+  },
+  "forbidden_content_scan": {
+    "status": "PASS",
+    "historical_utterance_exposure": 0,
+    "historical_case_id_exposure": 0,
+    "candidate_output_exposure": 0,
+    "failure_analysis_exposure": 0,
+    "historical_counts_included": false,
+    "sample_values_included": false,
+    "content_bearing_allowlist_values_included": false
+  },
+  "freeze_status": "FROZEN",
+  "post_freeze_edit_policy": "Any content change invalidates the recorded hashes and requires a new contract and manifest version."
+}

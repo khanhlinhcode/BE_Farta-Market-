@@ -17,10 +17,13 @@ final class ChatOrderTool
             return ['status' => 'customer_only'];
         }
 
-        $order = Order::query()
-            ->where('user_id', $user->getKey())
-            ->whereKey($orderId)
-            ->first();
+        $order = Order::query()->whereKey($orderId)->first();
+
+        if ($order && (int) $order->user_id !== (int) $user->getKey()) {
+            // The same denial is returned for every foreign order; no order
+            // fields are serialized across the authorization boundary.
+            return ['status' => 'forbidden'];
+        }
 
         return $order
             ? ['status' => 'ok', 'order' => $this->serialize($order)]

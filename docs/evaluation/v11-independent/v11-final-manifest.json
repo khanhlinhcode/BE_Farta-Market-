@@ -1,0 +1,66 @@
+{
+  "manifest_version": "farta-v11-final-audit-manifest.1.0",
+  "revision": "V11-final-audited",
+  "parent_revision": "V11-author-r3-final-entity-cleanup",
+  "dataset_schema_version": "farta-v10.3.0",
+  "frozen_at_utc": "2026-09-27T11:10:26Z",
+  "hash_algorithm": "SHA-256",
+  "parent_r3": {
+    "dataset_path": "docs/evaluation/v11-independent/v11-author-r3-candidate-dataset.json",
+    "dataset_sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb"
+  },
+  "artifacts": {
+    "final_dataset": {
+      "path": "docs/evaluation/v11-independent/v11-final-audited-dataset.json",
+      "sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb"
+    },
+    "audit_report": {
+      "path": "docs/evaluation/v11-independent/v11-r3-fresh-audit-report.md",
+      "sha256": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea"
+    }
+  },
+  "counts": {
+    "primary_cases": 160,
+    "multi_turn_scenarios": 20,
+    "scenario_turns": 40,
+    "multi_intent_primary_cases": 20,
+    "multi_intent_branches": 40,
+    "entity_objects_audited": 240
+  },
+  "historical_leakage_audit": {
+    "versions_checked": "V0-V10",
+    "raw_instances_scanned": 5038,
+    "union_unique_utterances": 2521,
+    "true_leakage_count": 0,
+    "uncertain_count": 0,
+    "status": "PASS"
+  },
+  "r2_to_r3_change_scope": {
+    "entity_field_changes": 17,
+    "affected_entity_objects": 17,
+    "unit_changes": 13,
+    "account_target_changes": 4,
+    "utterance_changes": 0,
+    "quantity_changes": 0,
+    "other_entity_slot_changes": 0,
+    "behavior_gold_changes": 0,
+    "schema_changes": 0,
+    "status": "PASS"
+  },
+  "audit_status": {
+    "unit_audit": "PASS",
+    "account_target_audit": "PASS",
+    "full_entity_audit": "PASS",
+    "multi_intent_entity_scope": "PASS",
+    "follow_up_entity_scope": "PASS",
+    "claim_authority": "PASS",
+    "security": "PASS",
+    "schema": "PASS",
+    "generated_data_quality": "ACCEPTABLE",
+    "distribution": "PASS",
+    "double_pass_fresh_reload": "PASS"
+  },
+  "candidate_executed": false,
+  "freeze_status": "FROZEN",
+  "post_freeze_edit_policy": "Any content change invalidates the recorded hashes and requires a new audited freeze."
+}

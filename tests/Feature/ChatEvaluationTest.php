@@ -38,11 +38,28 @@ it('measures the local router and database retrieval baseline', function () {
 
     $fixture = require base_path('tests/Fixtures/chat_evaluation.php');
     $router = app(ChatIntentRouter::class);
+    $intentCases = [...$fixture['intent'], ...$fixture['intent_v2']];
     $productTool = app(ChatProductTool::class);
     $routerStarted = microtime(true);
     $correct = 0;
-    foreach ($fixture['intent'] as $case) {
-        $correct += $router->route($case['query'])['intent']->value === $case['expected'] ? 1 : 0;
+    $baselineCorrect = 0;
+    $expandedCorrect = 0;
+    $routerLatencies = [];
+    $intentFailures = [];
+    foreach ($intentCases as $index => $case) {
+        $caseStartedAt = microtime(true);
+        $predicted = $router->route($case['query'])['intent']->value;
+        $matches = $predicted === $case['expected'];
+        if (! $matches) {
+            $intentFailures[] = ['query' => $case['query'], 'expected' => $case['expected'], 'predicted' => $predicted];
+        }
+        $routerLatencies[] = (microtime(true) - $caseStartedAt) * 1000;
+        $correct += $matches ? 1 : 0;
+        if ($index < count($fixture['intent'])) {
+            $baselineCorrect += $matches ? 1 : 0;
+        } else {
+            $expandedCorrect += $matches ? 1 : 0;
+        }
     }
     $routerMs = (microtime(true) - $routerStarted) * 1000;
 
@@ -65,22 +82,39 @@ it('measures the local router and database retrieval baseline', function () {
     }
     $retrievalMs = (microtime(true) - $retrievalStarted) * 1000;
 
+    sort($routerLatencies);
+    $percentile = function (array $values, float $percentile): float {
+        $index = (int) ceil(($percentile / 100) * count($values)) - 1;
+
+        return round($values[max(0, min($index, count($values) - 1))], 3);
+    };
     $metrics = [
-        'fixture_version' => 3,
-        'intent_cases' => count($fixture['intent']),
-        'intent_accuracy' => round($correct / count($fixture['intent']), 4),
+        'fixture_version' => 5,
+        'intent_cases' => count($intentCases),
+        'intent_accuracy' => round($correct / count($intentCases), 4),
+        'baseline_intent_accuracy' => round($baselineCorrect / count($fixture['intent']), 4),
+        'expanded_intent_accuracy' => round($expandedCorrect / count($fixture['intent_v2']), 4),
         'retrieval_cases' => count($fixture['retrieval']),
         'hit_rate_at_5' => round(array_sum($hits) / count($hits), 4),
         'mrr_at_5' => round(array_sum($reciprocalRanks) / count($reciprocalRanks), 4),
         'ndcg_at_5' => round(array_sum($discountedGains) / count($discountedGains), 4),
         'router_total_ms' => round($routerMs, 2),
+        'router_p50_ms' => $percentile($routerLatencies, 50),
+        'router_p95_ms' => $percentile($routerLatencies, 95),
+        'router_p99_ms' => $percentile($routerLatencies, 99),
         'retrieval_total_ms' => round($retrievalMs, 2),
+        'intent_failures' => $intentFailures,
     ];
 
     fwrite(STDOUT, "\nCHAT_EVALUATION ".json_encode($metrics, JSON_UNESCAPED_SLASHES)."\n");
 
-    expect(count($fixture['intent']) + count($fixture['retrieval']))->toBeGreaterThanOrEqual(50)
+    expect(count($intentCases) + count($fixture['retrieval']))->toBeGreaterThanOrEqual(150)
         ->and($metrics['intent_accuracy'])->toBeGreaterThanOrEqual(0.95)
+        // This older fixture still labels one clear out-of-scope request as
+        // clarification. The current contract correctly returns unsupported;
+        // retain and print the disagreement instead of changing its gold row.
+        ->and($metrics['baseline_intent_accuracy'])->toBeGreaterThanOrEqual(0.95)
+        ->and($metrics['expanded_intent_accuracy'])->toBeGreaterThanOrEqual(0.95)
         ->and($metrics['hit_rate_at_5'])->toBeGreaterThanOrEqual(0.9)
         ->and($metrics['mrr_at_5'])->toBeGreaterThanOrEqual(0.8)
         ->and($metrics['ndcg_at_5'])->toBeGreaterThanOrEqual(0.7);

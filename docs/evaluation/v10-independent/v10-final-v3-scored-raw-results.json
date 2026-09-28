@@ -1,0 +1,89 @@
+{
+  "schema_version": "farta-v10-final-v3-scored-raw-results.partial-invalid.1.0",
+  "execution_status": "RAW_CAPTURE_COMPLETE_OFFLINE_SCORING_FAILED",
+  "integrity_note": "All 292 primary requests and all 78 scenario-turn requests executed exactly once and were persisted before the evaluator failed while reading the complete JSONL capture. No candidate request was retried. This file is an invalid/incomplete scoring descriptor, not a scored-results substitute; the frozen JSONL capture remains the only candidate-output source for any separately authorized scorer repair.",
+  "run_id": "final-v10-v3-20260926T201110Z",
+  "run_classification": "OFFICIALLY_AUTHORIZED_FINAL_V10_V3_RUN",
+  "started_at_utc": "2026-09-26T20:11:10+00:00",
+  "raw_capture_completed_at_utc": "2026-09-26T20:11:12+00:00",
+  "candidate_hash": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+  "post_run_candidate_hash": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+  "evaluator_version": "farta-final-v10-evaluator.3.0.0",
+  "evaluator_v3_hash": "84757f475c7ba78da00b47fcbe442ede38e9d945ee870043c01811ffdac5af05",
+  "post_run_evaluator_v3_hash": "84757f475c7ba78da00b47fcbe442ede38e9d945ee870043c01811ffdac5af05",
+  "runner_guard_closure_hash": "f3bfb2759f1de1bdd77b05b90ddd0a6ff3e0147211b2eff034dca54ac97a7d9a",
+  "dataset_hash": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+  "audit_report_hash": "3c01c6409b2a59c566916a310ee28a989ad85888d821db95dad52d556b8ca27e",
+  "final_manifest_hash": "af48d07951d013ce0c2670c5a3b563f4d822fc65a549bfcd3919a4992c74c7dd",
+  "preflight_record_hash": "c33cdd44372c032f7df37599660025cdff1e0bd98b613b9258a5b3e975299289",
+  "raw_capture": {
+    "path": "docs/evaluation/v10-independent/v10-final-v3-raw-capture.jsonl",
+    "schema_version": "farta-v10-evaluator-v3-raw-capture.1.0",
+    "sha256": "bcf07fa6a9c0e0554237fffad7e7806cef5271c0837a92fd197b61ca59ffe6d3",
+    "bytes": 731860,
+    "physical_lf_lines": 372,
+    "lf_split_json_decode_failures": 0,
+    "record_counts": {
+      "metadata": 1,
+      "primary": 292,
+      "scenario_turn": 78,
+      "completion": 1
+    },
+    "completion_record_present": true,
+    "candidate_output_reliably_preserved": true,
+    "frozen": true
+  },
+  "declared_counts": {
+    "primary": 292,
+    "multi_turn_scenarios": 39,
+    "scenario_turns": 78,
+    "multi_intent_cases": 27,
+    "multi_intent_branches": 56
+  },
+  "execution_counts": {
+    "primary_requests_executed": 292,
+    "primary_capture_records_persisted": 292,
+    "multi_turn_scenarios_executed": 39,
+    "scenario_turn_requests_executed": 78,
+    "scenario_turn_capture_records_persisted": 78,
+    "manual_retries": 0,
+    "operator_retries": 0
+  },
+  "capture_completion_observations": {
+    "private_data_exposure_count": 1,
+    "authentication_bypass_count": 0,
+    "security_observation_status": "RECORDED_DURING_CAPTURE_NOT_ADJUDICATED_BY_OFFLINE_SCORER"
+  },
+  "offline_scorer": {
+    "status": "FAILED_BEFORE_SCORING",
+    "candidate_rerun_performed": false,
+    "exception": "JsonException",
+    "message": "Malformed UTF-8 characters, possibly incorrectly encoded",
+    "location": "tests/Support/FinalV10RawCapture.php:104",
+    "stage": "FinalV10RawCapture::read before FinalV10OfflineScorer::score",
+    "classification": "EVALUATOR_INFRASTRUCTURE_DESERIALIZATION_FAILURE",
+    "root_cause": "FinalV10RawCapture::deserialize uses preg_split('/\\R/', ...) without Unicode mode. PCRE treats byte 0x85 as a newline in byte mode; the valid UTF-8 JSONL contains 48 occurrences of byte 0x85 inside multibyte characters, producing 420 segments instead of 372 LF-delimited records and corrupting UTF-8 at the split boundaries.",
+    "physical_lf_count": 372,
+    "byte_0x85_count": 48,
+    "preg_R_segment_count": 420,
+    "repair_applied": false,
+    "alternate_scorer_used": false,
+    "separate_authorization_required_for_repair": true
+  },
+  "metrics": null,
+  "metrics_status": "NOT_COMPUTED; no score, denominator, aggregate, confusion matrix, release gate, or candidate failure taxonomy was estimated",
+  "release_gates": null,
+  "hard_blocker_review": {
+    "formal_offline_review_status": "NOT_COMPUTED",
+    "capture_metadata_private_data_exposure_count": 1,
+    "note": "The capture-time counter requires formal case-level adjudication against the same frozen raw capture. It is reported and not suppressed. No staging GO can be issued while scoring is incomplete."
+  },
+  "historical_invalid_run_output_reused": false,
+  "candidate_changed_during_run": false,
+  "evaluator_changed_during_run": false,
+  "final_v10_changed_during_run": false,
+  "metric_fabrication": false,
+  "release_decision": "FINAL V10 V3 EVALUATION INVALID / INCOMPLETE",
+  "storefront_status": "STOREFRONT NOT VERIFIED",
+  "next_step": "STOP. Do not rerun the candidate. Preserve the frozen JSONL capture. Any parser repair and offline rescore requires separate authorization and must consume exactly the same capture hash."
+}

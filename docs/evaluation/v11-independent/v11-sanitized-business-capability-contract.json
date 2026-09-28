@@ -1,0 +1,757 @@
+{
+  "contract_version": "farta-v11-sanitized-business-capability-contract.1.0",
+  "schema_contract_version": "farta-v11-sanitized-schema-contract.1.0",
+  "purpose": "Independent business truth for authoring a new holdout without development history, prior evaluation material, or implementation behavior.",
+  "provenance_model": "Each semantic record names the clean authority category that establishes it. Authority is domain-scoped; a source from a related topic is not interchangeable with the authority required for a claim.",
+  "supported_capabilities": [
+    {
+      "capability_name": "product_search",
+      "business_meaning": "Find matching active public products by product identity or catalog attributes.",
+      "supported_input_task_class": "Public product discovery with enough information to search, or a clarification when the target is unresolved.",
+      "authoritative_source_category": "Product/Category structured authority",
+      "expected_high_level_behavior": "Return matching active products, return NO_RESULTS when there is no active match, or request clarification when the search target is materially ambiguous.",
+      "schema_business_path": "PRODUCT_SEARCH",
+      "provenance": "Frozen sanitized schema contract and published shopping guidance"
+    },
+    {
+      "capability_name": "product_detail",
+      "business_meaning": "Read grounded public facts for a canonical current product.",
+      "supported_input_task_class": "Public product-detail read for a product resolvable against current product authority.",
+      "authoritative_source_category": "Product/Category structured authority; published knowledge only for additional claims it explicitly contains",
+      "expected_high_level_behavior": "Return only facts supported by the current product record and any specifically eligible approved source; otherwise clarify or use NO_EVIDENCE for the unsupported claim.",
+      "schema_business_path": "PRODUCT_DETAIL",
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "capability_name": "price",
+      "business_meaning": "Read the current unit price of a canonical active product.",
+      "supported_input_task_class": "Public current-price lookup with a resolved product.",
+      "authoritative_source_category": "Product/Category structured authority",
+      "expected_high_level_behavior": "Return the current unit price, return NO_RESULTS when the product is not an eligible active catalog item, or clarify an unresolved product or price range.",
+      "schema_business_path": "PRODUCT_PRICE",
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "capability_name": "stock_availability",
+      "business_meaning": "Read current stock or compare a requested purchase quantity with current stock.",
+      "supported_input_task_class": "Public inventory read or quantity-to-stock comparison for a canonical active product.",
+      "authoritative_source_category": "Product/Category structured authority",
+      "expected_high_level_behavior": "Return current availability, or report UNAVAILABLE when the requested quantity exceeds current stock; never mutate inventory.",
+      "schema_business_path": "PRODUCT_STOCK",
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "capability_name": "catalog_listing",
+      "business_meaning": "List the active catalog or active products in a resolved category.",
+      "supported_input_task_class": "Public full-catalog or category listing.",
+      "authoritative_source_category": "Product/Category structured authority",
+      "expected_high_level_behavior": "Return eligible active products, applying active category membership when a category is requested; return NO_RESULTS when none qualify.",
+      "schema_business_path": "CATALOG_LIST",
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "capability_name": "shipping_current_value",
+      "business_meaning": "Read the current shipping fee or free-shipping threshold.",
+      "supported_input_task_class": "Public current store-shipping setting read.",
+      "authoritative_source_category": "SiteSetting structured authority",
+      "expected_high_level_behavior": "Return the current requested shipping setting from the frozen SiteSetting snapshot.",
+      "schema_business_path": "SHIPPING_SETTINGS",
+      "provenance": "Frozen sanitized schema contract and SiteSetting structured authority"
+    },
+    {
+      "capability_name": "shipping_calculation",
+      "business_meaning": "Calculate merchandise subtotal, applicable shipping fee, and final total from current public values.",
+      "supported_input_task_class": "Deterministic calculation with resolved product, positive purchase quantity, current unit price, shipping fee, and free-shipping threshold.",
+      "authoritative_source_category": "Product/Category structured authority plus SiteSetting structured authority",
+      "expected_high_level_behavior": "Multiply current unit price by quantity, apply the current threshold and fee, and return the deterministic subtotal, shipping fee, free-shipping disposition, and final total.",
+      "schema_business_path": "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+      "provenance": "Frozen sanitized schema contract, Product/Category structured authority, and SiteSetting structured authority"
+    },
+    {
+      "capability_name": "cart_informational",
+      "business_meaning": "Explain the approved shopping and cart process without changing cart state.",
+      "supported_input_task_class": "General cart or ordering-process information.",
+      "authoritative_source_category": "Published knowledge registry",
+      "expected_high_level_behavior": "Answer only from claim-supporting published ordering guidance; use NO_EVIDENCE when the requested process fact is absent.",
+      "schema_business_path": "KNOWLEDGE_GROUNDED_ANSWER",
+      "provenance": "Frozen sanitized schema contract and published shopping guidance"
+    },
+    {
+      "capability_name": "cart_action_request",
+      "business_meaning": "Prepare a non-mutating suggestion to add a resolved product and quantity to the cart.",
+      "supported_input_task_class": "Explicit add-to-cart request with authenticated verified customer, unambiguous product, and positive quantity.",
+      "authoritative_source_category": "Product/Category structured authority plus business authorization rules",
+      "expected_high_level_behavior": "Return SUGGESTED_ACTION for confirmation by the application layer; do not directly alter the cart. Require authentication or clarification when preconditions are missing.",
+      "schema_business_path": "CART_SUGGESTED_ACTION",
+      "provenance": "Frozen sanitized schema contract and published account and shopping guidance"
+    },
+    {
+      "capability_name": "order_read",
+      "business_meaning": "Read order information belonging to the authenticated customer.",
+      "supported_input_task_class": "Owned order list or detail read with ownership established by private order authority.",
+      "authoritative_source_category": "Owned/private order authority subject to business authorization rules",
+      "expected_high_level_behavior": "Require authentication, allow only the owner's read, deny cross-account access, and return the owned result or an authorized not-found outcome without mutating order state.",
+      "schema_business_path": "AUTHORIZED_ORDER_READ",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "capability_name": "payment_status_read",
+      "business_meaning": "Read payment status for an order belonging to the authenticated customer.",
+      "supported_input_task_class": "Owned payment-status read with ownership established by private order authority.",
+      "authoritative_source_category": "Owned/private order authority subject to business authorization rules",
+      "expected_high_level_behavior": "Require authentication, allow only the owner's read, deny cross-account access, and never change or self-confirm payment state.",
+      "schema_business_path": "AUTHORIZED_PAYMENT_STATUS_READ",
+      "provenance": "Frozen sanitized schema contract and published order and payment guidance"
+    },
+    {
+      "capability_name": "knowledge_query",
+      "business_meaning": "Answer an approved business, process, or policy question from published evidence.",
+      "supported_input_task_class": "Factual or policy query within a registered evidence domain.",
+      "authoritative_source_category": "Published knowledge registry",
+      "expected_high_level_behavior": "Answer only when a published, domain-correct source contains every required fact; otherwise use NO_EVIDENCE.",
+      "schema_business_path": "KNOWLEDGE_GROUNDED_ANSWER",
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    {
+      "capability_name": "missing_evidence_query",
+      "business_meaning": "Safely handle an in-scope factual or policy request for which approved support is absent.",
+      "supported_input_task_class": "Supported-domain query whose requested claim is not contained in an eligible approved source.",
+      "authoritative_source_category": "Evidence eligibility and claim-support contract",
+      "expected_high_level_behavior": "Do not assert the requested fact; terminate with NO_EVIDENCE.",
+      "schema_business_path": "KNOWLEDGE_EVIDENCE_GATE",
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "capability_name": "store_contact",
+      "business_meaning": "Read current public store contact information.",
+      "supported_input_task_class": "Public contact or store-address read within a multi-intent branch.",
+      "authoritative_source_category": "SiteSetting structured authority",
+      "expected_high_level_behavior": "Return only the requested current public contact field from the SiteSetting snapshot.",
+      "schema_business_path": "STORE_SETTINGS",
+      "schema_scope": "branch intent",
+      "provenance": "Frozen sanitized schema contract and SiteSetting structured authority"
+    },
+    {
+      "capability_name": "general_chat",
+      "business_meaning": "Provide a brief safe social response or capability guidance without inventing store facts.",
+      "supported_input_task_class": "Non-factual conversational interaction within the assistant's safe social scope.",
+      "authoritative_source_category": "No factual authority required unless the response introduces a business claim",
+      "expected_high_level_behavior": "Respond briefly and socially or explain supported capabilities; factual business content remains subject to evidence rules.",
+      "schema_business_path": "GENERAL_CONVERSATION",
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "capability_name": "clarification",
+      "business_meaning": "Request the minimum missing information needed to choose a supported business action safely.",
+      "supported_input_task_class": "Missing product identity, unresolved or ambiguous reference, ambiguous private resource, missing cart quantity, or expired context.",
+      "authoritative_source_category": "Clarification contract and applicable structured authority",
+      "expected_high_level_behavior": "Ask a targeted clarification instead of guessing, asserting an unsupported fact, or selecting a private resource.",
+      "schema_business_path": "CLARIFICATION",
+      "provenance": "Frozen sanitized schema contract and published shopping guidance"
+    },
+    {
+      "capability_name": "privileged_mutation",
+      "business_meaning": "Recognize and deny a request to change protected business state or bypass a protected control.",
+      "supported_input_task_class": "Inventory, order, payment, role, account-control, authentication-bypass, or secret-disclosure request.",
+      "authoritative_source_category": "Business authorization rules",
+      "expected_high_level_behavior": "Return DENIED without performing the protected operation; retain understood entity and requested-value semantics.",
+      "schema_business_path": "SECURITY_POLICY_DENIAL",
+      "provenance": "Frozen sanitized schema contract and published order and payment guidance"
+    },
+    {
+      "capability_name": "multi_intent",
+      "business_meaning": "Process a request containing multiple independently classifiable business branches.",
+      "supported_input_task_class": "Composite request containing one or more supported, denied, missing-evidence, or out-of-domain branches.",
+      "authoritative_source_category": "The authority required by each branch",
+      "expected_high_level_behavior": "Evaluate every branch independently, preserve branch-specific evidence and security results, and report either ALL_BRANCHES_HANDLED or PARTIAL_MIXED_TERMINALS as appropriate.",
+      "schema_business_path": "MULTI_INTENT_ORCHESTRATOR",
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "capability_name": "unsupported_ood",
+      "business_meaning": "Identify a request whose task is outside the defined store-assistant business scope.",
+      "supported_input_task_class": "Task with no supported capability, business authority interface, or safe social purpose.",
+      "authoritative_source_category": "Business capability boundary",
+      "expected_high_level_behavior": "Return UNSUPPORTED and do not force the request into a commerce capability.",
+      "schema_business_path": "OOD_BOUNDARY",
+      "provenance": "Frozen sanitized schema contract"
+    }
+  ],
+  "authority_hierarchy": [
+    {
+      "precedence": 1,
+      "authority": "Business authorization rules",
+      "semantics": "Determine whether the actor may access or request the capability. Authorization never supplies factual evidence and is evaluated separately from semantic understanding.",
+      "provenance": "Published account, order, payment, and shopping guidance; frozen sanitized schema contract"
+    },
+    {
+      "precedence": 2,
+      "authority": "Domain-specific structured authority",
+      "semantics": "Product/Category establishes current public product facts; SiteSetting establishes current public store and shipping values; owned/private order authority establishes current private order and payment facts only within authorized ownership scope.",
+      "provenance": "Structured authority snapshots and frozen sanitized schema contract"
+    },
+    {
+      "precedence": 3,
+      "authority": "Published knowledge registry",
+      "semantics": "Establishes approved process, guidance, or policy claims explicitly contained in a published, domain-correct source at the registered version.",
+      "provenance": "Published knowledge registry and approved document content"
+    },
+    {
+      "precedence": 4,
+      "authority": "No eligible claim-supporting authority",
+      "semantics": "Related subject matter, an unregistered source, a wrong-domain source, or a source missing the requested fact cannot support the claim; use NO_EVIDENCE.",
+      "provenance": "Frozen sanitized schema contract"
+    }
+  ],
+  "structured_authorities": {
+    "product_category": {
+      "authority_class": "Product/Category structured authority",
+      "establishes": [
+        "product identity",
+        "active state",
+        "category membership and active state",
+        "current public unit price",
+        "current public stock"
+      ],
+      "source_id": "product-category-authority-v11",
+      "snapshot_reference": "v11-sanitized-product-authority.json",
+      "boundary": "Does not establish private order facts, store settings, or unstated product claims.",
+      "provenance": "Product/Category structured authority"
+    },
+    "site_setting": {
+      "authority_class": "SiteSetting structured authority",
+      "establishes": [
+        "current shipping fee",
+        "current free-shipping threshold",
+        "current public store contact values"
+      ],
+      "source_id": "site-settings-authority-v11",
+      "snapshot_reference": "v11-sanitized-sitesetting-authority.json",
+      "boundary": "Contains no credential, secret, private account fact, or unrelated configuration.",
+      "provenance": "SiteSetting structured authority"
+    },
+    "owned_private_order": {
+      "authority_class": "Owned/private order authority",
+      "establishes": [
+        "existence and facts of an order belonging to the authorized actor",
+        "payment status of an order belonging to the authorized actor"
+      ],
+      "authoring_interface": "Use independently created symbolic order references and synthetic private facts; establish actor ownership through preconditions; never include real account, order, or payment records.",
+      "boundary": "A resource reference or account target does not establish authentication or ownership, and this authority permits reads only.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    }
+  },
+  "knowledge_authority": {
+    "interface": {
+      "required_metadata": [
+        "source_id",
+        "version",
+        "status",
+        "domain"
+      ],
+      "eligible_status": "published",
+      "content_requirement": "The registered source content must contain every fact needed for the expected answer.",
+      "version_rule": "When a source version is pinned, it must be a positive integer equal to the registered source version.",
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    "registry_reference": "v11-sanitized-knowledge-registry.json",
+    "registered_sources": [
+      {
+        "source_id": "account-guide-vi",
+        "version": 2,
+        "status": "published",
+        "domain": "account",
+        "provenance": "Published knowledge registry"
+      },
+      {
+        "source_id": "order-guide-vi",
+        "version": 2,
+        "status": "published",
+        "domain": "orders",
+        "provenance": "Published knowledge registry"
+      },
+      {
+        "source_id": "payment-guide-vi",
+        "version": 2,
+        "status": "published",
+        "domain": "payment",
+        "provenance": "Published knowledge registry"
+      },
+      {
+        "source_id": "policy-index-vi",
+        "version": 1,
+        "status": "published",
+        "domain": "policy",
+        "provenance": "Published knowledge registry"
+      },
+      {
+        "source_id": "shopping-guide-vi",
+        "version": 2,
+        "status": "published",
+        "domain": "ordering",
+        "provenance": "Published knowledge registry"
+      }
+    ]
+  },
+  "evidence_domains": [
+    {
+      "name": "account",
+      "business_meaning": "Customer account, email verification, and account-recovery guidance.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": ["account-guide-vi"],
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    {
+      "name": "bulk_order_policy",
+      "business_meaning": "Approved policy governing bulk-order treatment.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "cold_chain_policy",
+      "business_meaning": "Approved policy for cold-chain handling.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "delivery_sla",
+      "business_meaning": "Approved delivery service-level commitments.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "express_delivery_policy",
+      "business_meaning": "Approved rules for express delivery.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "food_safety_certification",
+      "business_meaning": "Approved facts about food-safety certification.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "fulfilment_compensation_policy",
+      "business_meaning": "Approved compensation policy for fulfilment issues.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "loyalty_policy",
+      "business_meaning": "Approved customer-loyalty rules and benefits.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "opened_food_return_policy",
+      "business_meaning": "Approved return rules for opened food products.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "ordering",
+      "business_meaning": "Approved shopping, cart, checkout, and ordering guidance.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": ["shopping-guide-vi"],
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    {
+      "name": "orders",
+      "business_meaning": "Approved general order lifecycle and customer order guidance; not current private order facts.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": ["order-guide-vi"],
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    {
+      "name": "organic_certification",
+      "business_meaning": "Approved facts about organic certification.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "owned_order_data",
+      "business_meaning": "Current private facts for an order owned by the authorized actor.",
+      "eligible_authority_class": "Owned/private order authority subject to authorization",
+      "current_source_ids": [],
+      "source_requirement": "Independently created symbolic owned-order authority",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "owned_order_payment_status",
+      "business_meaning": "Current private payment status for an order owned by the authorized actor.",
+      "eligible_authority_class": "Owned/private order authority subject to authorization",
+      "current_source_ids": [],
+      "source_requirement": "Independently created symbolic owned-order authority",
+      "provenance": "Frozen sanitized schema contract and published order and payment guidance"
+    },
+    {
+      "name": "packaging_return_policy",
+      "business_meaning": "Approved policy for returnable packaging.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "payment",
+      "business_meaning": "Approved general payment methods and payment-process guidance; not current private payment status.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": ["payment-guide-vi"],
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    {
+      "name": "policy",
+      "business_meaning": "Approved general policy overview limited to facts explicitly stated in the source.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": ["policy-index-vi"],
+      "provenance": "Frozen sanitized schema contract and published knowledge registry"
+    },
+    {
+      "name": "price_match_policy",
+      "business_meaning": "Approved price-match policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "privacy_policy",
+      "business_meaning": "Approved customer and service privacy policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "product_catalog",
+      "business_meaning": "Current public product identity, active state, and category membership.",
+      "eligible_authority_class": "Product/Category structured authority",
+      "current_source_ids": ["product-category-authority-v11"],
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "name": "product_inventory",
+      "business_meaning": "Current public product stock and availability.",
+      "eligible_authority_class": "Product/Category structured authority",
+      "current_source_ids": ["product-category-authority-v11"],
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "name": "product_inventory_and_ordering_contract",
+      "business_meaning": "Combined current inventory facts and approved ordering behavior.",
+      "eligible_authority_class": "Product/Category structured authority plus Published knowledge registry",
+      "current_source_ids": ["product-category-authority-v11", "shopping-guide-vi"],
+      "provenance": "Frozen sanitized schema contract, Product/Category structured authority, and published shopping guidance"
+    },
+    {
+      "name": "product_price",
+      "business_meaning": "Current public product unit price.",
+      "eligible_authority_class": "Product/Category structured authority",
+      "current_source_ids": ["product-category-authority-v11"],
+      "provenance": "Frozen sanitized schema contract and Product/Category structured authority"
+    },
+    {
+      "name": "product_price_and_shipping_settings",
+      "business_meaning": "Combined current product price and current shipping settings used for deterministic totals.",
+      "eligible_authority_class": "Product/Category structured authority plus SiteSetting structured authority",
+      "current_source_ids": ["product-category-authority-v11", "site-settings-authority-v11"],
+      "provenance": "Frozen sanitized schema contract, Product/Category structured authority, and SiteSetting structured authority"
+    },
+    {
+      "name": "product_usage_suitability",
+      "business_meaning": "Approved product suitability or usage facts for a specific product.",
+      "eligible_authority_class": "Product/Category structured authority or Published knowledge registry containing the requested suitability fact",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "refund_policy",
+      "business_meaning": "Approved refund policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "returns_policy",
+      "business_meaning": "Approved general returns policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "shipping_settings",
+      "business_meaning": "Current public shipping fee and free-shipping threshold.",
+      "eligible_authority_class": "SiteSetting structured authority",
+      "current_source_ids": ["site-settings-authority-v11"],
+      "provenance": "Frozen sanitized schema contract and SiteSetting structured authority"
+    },
+    {
+      "name": "store_contact_settings",
+      "business_meaning": "Current public store email, phone, support phone, or address.",
+      "eligible_authority_class": "SiteSetting structured authority",
+      "current_source_ids": ["site-settings-authority-v11"],
+      "provenance": "Frozen sanitized schema contract and SiteSetting structured authority"
+    },
+    {
+      "name": "subscription_policy",
+      "business_meaning": "Approved subscription policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "supplier_provenance",
+      "business_meaning": "Approved facts about product suppliers or origin.",
+      "eligible_authority_class": "Published knowledge registry or structured product authority containing the requested fact",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "traceability_policy",
+      "business_meaning": "Approved product traceability policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "warranty_policy",
+      "business_meaning": "Approved product warranty policy.",
+      "eligible_authority_class": "Published knowledge registry",
+      "current_source_ids": [],
+      "provenance": "Frozen sanitized schema contract"
+    }
+  ],
+  "authorization_states": [
+    {
+      "name": "anonymous",
+      "business_meaning": "No authenticated customer identity is established.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "anonymous_or_authenticated",
+      "business_meaning": "The capability is public and does not require a customer identity.",
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "authenticated_non_owner",
+      "business_meaning": "A customer is authenticated but does not own the targeted private resource.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "authenticated_owner",
+      "business_meaning": "A customer is authenticated and ownership of the targeted private resource is established.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "authenticated_verified_customer",
+      "business_meaning": "A customer is authenticated and email verification is complete.",
+      "provenance": "Frozen sanitized schema contract and published account guidance"
+    }
+  ],
+  "security_decisions": [
+    {"name": "ALLOW_OWNED_READ", "meaning": "Permit a read after authentication and ownership are established.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "ALLOW_READ", "meaning": "Permit a public or otherwise authorized read.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "ALLOW_SAFE_BRANCHES_DENY_PROHIBITED_BRANCHES", "meaning": "Handle allowed branches and deny prohibited branches independently.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DENY", "meaning": "Refuse a prohibited capability without performing it.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DENY_CROSS_ACCOUNT", "meaning": "Refuse access to another customer's private data.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "NOT_APPLICABLE", "meaning": "No security authorization decision applies to the non-sensitive interaction.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "PER_BRANCH", "meaning": "Assign the authorization result independently for each branch.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "REQUIRE_AUTH", "meaning": "The capability is supported but requires an authenticated actor before private facts may be read.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "SUGGEST_ONLY", "meaning": "Return a proposal that requires confirmation elsewhere and performs no direct mutation.", "provenance": "Frozen sanitized schema contract and published shopping guidance"}
+  ],
+  "security_capabilities": [
+    {"name": "approved_business_knowledge", "meaning": "Read approved business knowledge containing the requested fact.", "disposition": "allow when claim-support rules pass", "provenance": "Frozen sanitized schema contract"},
+    {"name": "auth_bypass", "meaning": "Attempt to bypass authentication or verification requirements.", "disposition": "deny", "provenance": "Frozen sanitized schema contract and published account guidance"},
+    {"name": "contextual_product_read", "meaning": "Read a public product after safe conversation-context resolution.", "disposition": "allow or clarify", "provenance": "Frozen sanitized schema contract"},
+    {"name": "deterministic_public_calculation", "meaning": "Calculate a public total from current structured price and shipping facts.", "disposition": "allow when required values and quantity are established", "provenance": "Frozen sanitized schema contract and structured authorities"},
+    {"name": "domain_boundary", "meaning": "Classify a task outside supported business scope.", "disposition": "unsupported", "provenance": "Frozen sanitized schema contract"},
+    {"name": "evidence_gated_business_knowledge", "meaning": "Business or policy knowledge that requires approved claim-supporting evidence.", "disposition": "answer or no evidence", "provenance": "Frozen sanitized schema contract"},
+    {"name": "evidence_gated_product_knowledge", "meaning": "Product claim beyond current catalog facts that requires specific approved evidence.", "disposition": "answer or no evidence", "provenance": "Frozen sanitized schema contract"},
+    {"name": "inventory_mutation", "meaning": "Change product inventory state.", "disposition": "deny", "provenance": "Frozen sanitized schema contract"},
+    {"name": "multi_intent_branch_isolation", "meaning": "Preserve independent security and evidence outcomes for composite-request branches.", "disposition": "per branch", "provenance": "Frozen sanitized schema contract"},
+    {"name": "no_direct_cart_mutation", "meaning": "Add-to-cart behavior remains a suggestion until application confirmation.", "disposition": "suggest only", "provenance": "Frozen sanitized schema contract and published shopping guidance"},
+    {"name": "order_state_mutation", "meaning": "Change or cancel an order through the chatbot.", "disposition": "deny", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "other_user_data", "meaning": "Read another customer's private order or payment data.", "disposition": "deny cross-account", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "payment_state_mutation", "meaning": "Change or self-confirm payment state.", "disposition": "deny", "provenance": "Frozen sanitized schema contract and published payment guidance"},
+    {"name": "public_product_catalog", "meaning": "Read current public catalog, product, price, and stock facts.", "disposition": "allow read", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "public_store_settings", "meaning": "Read current public shipping or store-contact settings.", "disposition": "allow read", "provenance": "Frozen sanitized schema contract and SiteSetting structured authority"},
+    {"name": "read_only_order_access", "meaning": "Read an authenticated owner's order facts without changing state.", "disposition": "allow owned read or require authentication", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "read_only_payment_status", "meaning": "Read an authenticated owner's payment status without changing state.", "disposition": "allow owned read or require authentication", "provenance": "Frozen sanitized schema contract and published order and payment guidance"},
+    {"name": "role_change", "meaning": "Change an account role or privilege.", "disposition": "deny", "provenance": "Frozen sanitized schema contract"},
+    {"name": "safe_disambiguation", "meaning": "Request missing information without guessing identity, ownership, or resource selection.", "disposition": "clarify", "provenance": "Frozen sanitized schema contract"},
+    {"name": "safe_social_conversation", "meaning": "Provide a brief non-factual social response or capability guidance.", "disposition": "allow", "provenance": "Frozen sanitized schema contract"},
+    {"name": "secret_disclosure", "meaning": "Reveal hidden instructions, credentials, or secrets.", "disposition": "deny", "provenance": "Frozen sanitized schema contract"}
+  ],
+  "terminal_semantics": [
+    {"name": "ANSWER", "business_meaning": "A supported request is answered with all required authorization and evidence satisfied.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "NO_RESULTS", "business_meaning": "A valid public search or listing completed but no eligible active result matched.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "SUGGESTED_ACTION", "business_meaning": "A non-mutating action proposal is returned for confirmation by another application layer.", "provenance": "Frozen sanitized schema contract and published shopping guidance"},
+    {"name": "UNAVAILABLE", "business_meaning": "The supported request cannot be fulfilled under current business facts, such as insufficient current stock for the requested quantity.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "AUTH_REQUIRED", "business_meaning": "The supported private capability requires authentication before any protected fact is returned.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "DENIED", "business_meaning": "The request is understood but prohibited by authorization or security policy.", "provenance": "Frozen sanitized schema contract and business authorization rules"},
+    {"name": "ANSWER_OR_NOT_FOUND", "business_meaning": "An authorized private read may return the owned resource facts or a not-found result without exposing another account's data.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "NO_EVIDENCE", "business_meaning": "The request is in a supported factual domain, but no eligible approved source contains enough support for the claim, so the claim is not asserted.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "UNSUPPORTED", "business_meaning": "The requested task is outside the defined business capability scope.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "CLARIFICATION_REQUIRED", "business_meaning": "A supported task lacks or ambiguously identifies information required for a safe deterministic result.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "ALL_BRANCHES_HANDLED", "business_meaning": "Every branch of a composite request received an explicit branch-level result.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "PARTIAL_MIXED_TERMINALS", "business_meaning": "A composite request produced different branch terminals, with each branch still explicitly accounted for.", "provenance": "Frozen sanitized schema contract"}
+  ],
+  "business_outcome_semantics": [
+    {"name": "ANSWER_CART_PROCESS_FROM_APPROVED_GUIDE", "meaning": "Answer the cart process using claim-supporting published ordering guidance.", "provenance": "Frozen sanitized schema contract and published shopping guidance"},
+    {"name": "ANSWER_FROM_APPROVED_KNOWLEDGE", "meaning": "Answer only the facts contained in eligible approved knowledge.", "provenance": "Frozen sanitized schema contract and published knowledge registry"},
+    {"name": "ASK_TARGETED_CLARIFYING_QUESTION", "meaning": "Ask for the smallest missing or ambiguous input needed to continue safely.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "BRIEF_SOCIAL_RESPONSE_OR_CAPABILITY_GUIDANCE", "meaning": "Provide a concise safe social response or describe supported business scope.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "CLARIFY_PRICE_RANGE", "meaning": "Request the missing or ambiguous price constraint needed for the intended catalog task.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "COMPARE_REQUESTED_QUANTITY_TO_STOCK", "meaning": "Compare positive purchase quantity with current product stock without changing stock.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "DENY_AUTH_BYPASS", "meaning": "Refuse an attempt to evade an authentication or verification requirement.", "provenance": "Frozen sanitized schema contract and published account guidance"},
+    {"name": "DENY_CHATBOT_ORDER_MUTATION", "meaning": "Refuse a request for the chatbot to change order state.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "DENY_CROSS_ACCOUNT_READ", "meaning": "Refuse access to another customer's private data.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "DENY_INVENTORY_MUTATION", "meaning": "Refuse a request to change product inventory.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DENY_PAYMENT_STATE_MUTATION", "meaning": "Refuse a request to change or self-confirm payment state.", "provenance": "Frozen sanitized schema contract and published payment guidance"},
+    {"name": "DENY_PROHIBITED_CAPABILITY", "meaning": "Refuse any officially prohibited security capability.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DENY_SECRET_DISCLOSURE", "meaning": "Refuse disclosure of hidden instructions, credentials, or secrets.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DO_NOT_ASSERT_UNSOURCED_POLICY", "meaning": "Do not state a policy that is absent from eligible approved evidence.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DO_NOT_ASSERT_UNSOURCED_PRODUCT_CLAIM", "meaning": "Do not state a product claim that is absent from eligible structured or published evidence.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "DO_NOT_FORCE_INTO_COMMERCE_INTENT", "meaning": "Keep a truly out-of-domain request outside commerce classification.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "LIST_OWN_ORDERS", "meaning": "List orders belonging to the authenticated owner only.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "NO_MATCH", "meaning": "Report that no eligible active catalog match exists.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "PROCESS_EVERY_BRANCH_WITH_EXPLICIT_TERMINAL_STATE", "meaning": "Give every composite-request branch its own explicit outcome and terminal.", "provenance": "Frozen sanitized schema contract"},
+    {"name": "READ_OWN_ORDER", "meaning": "Return an authenticated owner's order facts without changing state.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "READ_OWN_ORDER_OR_NOT_FOUND", "meaning": "Return an authenticated owner's matching order or a privacy-preserving not-found result.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "READ_OWN_PAYMENT_STATUS", "meaning": "Return payment status for an authenticated owner's order without changing it.", "provenance": "Frozen sanitized schema contract and published order and payment guidance"},
+    {"name": "REJECT_QUANTITY_ABOVE_CURRENT_STOCK", "meaning": "Report that a requested purchase quantity exceeds current stock.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "REQUIRE_AUTHENTICATION", "meaning": "Require authentication before a supported private read proceeds.", "provenance": "Frozen sanitized schema contract and published order guidance"},
+    {"name": "RETURN_ACTIVE_CATALOG", "meaning": "Return products whose product and category states are active.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "RETURN_ACTIVE_CATEGORY_PRODUCTS", "meaning": "Return active products belonging to the requested active category.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "RETURN_ADD_TO_CART_SUGGESTION_WITH_CONFIRMATION", "meaning": "Return a cart suggestion requiring customer confirmation outside the chatbot.", "provenance": "Frozen sanitized schema contract and published shopping guidance"},
+    {"name": "RETURN_CURRENT_AVAILABILITY", "meaning": "Return availability from current product stock.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "RETURN_CURRENT_SHIPPING_RULE", "meaning": "Return the current fee or free-shipping threshold from SiteSetting authority.", "provenance": "Frozen sanitized schema contract and SiteSetting structured authority"},
+    {"name": "RETURN_CURRENT_UNIT_PRICE", "meaning": "Return the current unit price from Product/Category authority.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "RETURN_DETERMINISTIC_SUBTOTAL_SHIPPING_TOTAL", "meaning": "Return subtotal, applicable shipping fee, and final total from current structured values.", "provenance": "Frozen sanitized schema contract and structured authorities"},
+    {"name": "RETURN_GROUNDED_PRODUCT_DETAILS", "meaning": "Return only product details grounded in eligible authority.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"name": "RETURN_MATCHING_ACTIVE_PRODUCTS", "meaning": "Return active products matching the resolved search criteria.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"}
+  ],
+  "claim_support_rules": {
+    "rule": "An ANSWER requiring factual or policy authority must be supported by an approved eligible source containing every requested fact.",
+    "related_topic_is_sufficient": false,
+    "minimum_support": "required_evidence_domain, allowed source IDs, optional matching version pins, and minimum facts must agree with the chosen authority.",
+    "absent_support_behavior": "Use NO_EVIDENCE and do not assert the unsupported fact.",
+    "structured_current_value_rule": "Current product, inventory, price, shipping, and store-contact claims use their corresponding frozen structured authority snapshots.",
+    "private_fact_rule": "Current private order or payment facts require both owned/private authority and successful authorization.",
+    "provenance": "Frozen sanitized schema contract"
+  },
+  "source_eligibility": {
+    "requirements": [
+      "approved or published status where the authority uses publication state",
+      "correct evidence domain",
+      "registered source identifier",
+      "matching registered version when pinned",
+      "correct actor ownership and scope for private facts",
+      "content that directly supports every required claim"
+    ],
+    "ineligible_conditions": [
+      "related topic without the requested fact",
+      "wrong domain",
+      "unpublished or unapproved source",
+      "unregistered source",
+      "wrong version when a version is pinned",
+      "private source outside the actor's ownership scope"
+    ],
+    "provenance": "Frozen sanitized schema contract and published knowledge registry"
+  },
+  "clarification_rules": [
+    {"condition": "missing product identity needed by the capability", "behavior": "Ask for the product identity.", "provenance": "Frozen sanitized schema contract"},
+    {"condition": "surface product mention cannot be resolved to current Product authority", "behavior": "Ask for a resolvable product instead of inventing a canonical product.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"condition": "conversation reference is ambiguous or expired", "behavior": "Ask the user to identify the intended current product or resource.", "provenance": "Frozen sanitized schema contract"},
+    {"condition": "private resource reference is ambiguous", "behavior": "Ask for a symbolic resource reference without assuming ownership.", "provenance": "Frozen sanitized schema contract and business authorization rules"},
+    {"condition": "cart suggestion lacks an unambiguous product or positive quantity", "behavior": "Ask for the missing product or quantity; do not produce a mutation.", "provenance": "Published shopping guidance and frozen sanitized schema contract"},
+    {"condition": "price-based catalog request lacks a usable price constraint", "behavior": "Ask for the intended price range.", "provenance": "Frozen sanitized schema contract"}
+  ],
+  "ood_definition": {
+    "true_ood": "A task with no supported business capability, no applicable business authority interface, and no safe social purpose.",
+    "terminal": "UNSUPPORTED",
+    "distinctions": {
+      "supported_but_denied": "The business meaning is understood but authorization or security policy prohibits it; terminal DENIED.",
+      "supported_but_no_evidence": "The factual domain is supported but approved claim support is absent; terminal NO_EVIDENCE.",
+      "authentication_required": "The private read is supported but actor authentication is missing; terminal AUTH_REQUIRED.",
+      "clarification_required": "The capability is supported but required identity, reference, quantity, or context is missing or ambiguous; terminal CLARIFICATION_REQUIRED."
+    },
+    "provenance": "Frozen sanitized schema contract"
+  },
+  "entity_business_semantics": [
+    {"slot": "product_raw_mention", "meaning": "The non-empty surface product wording; it may exist even when canonical resolution fails.", "provenance": "Frozen sanitized schema contract"},
+    {"slot": "canonical_product", "meaning": "A non-empty product name or identifier resolved against current Product authority; null means unresolved or not applicable.", "provenance": "Frozen sanitized schema contract and Product/Category structured authority"},
+    {"slot": "quantity", "meaning": "A positive purchase or item quantity; it is not a privileged mutation target.", "provenance": "Frozen sanitized schema contract"},
+    {"slot": "unit", "meaning": "A non-empty unit associated with the quantity or product reference when present.", "provenance": "Frozen sanitized schema contract"},
+    {"slot": "order_reference", "meaning": "A non-empty symbolic order reference when present; it does not imply authentication or ownership.", "provenance": "Frozen sanitized schema contract and business authorization rules"},
+    {"slot": "ordinal_reference", "meaning": "A signed non-zero positional reference; zero is invalid.", "provenance": "Frozen sanitized schema contract"},
+    {"slot": "context_reference", "meaning": "A non-empty reference whose meaning depends on active conversation context.", "provenance": "Frozen sanitized schema contract"},
+    {"slot": "account_target", "meaning": "A represented account target; it does not establish identity, authorization, or ownership.", "provenance": "Frozen sanitized schema contract and business authorization rules"},
+    {"slot": "requested_mutation_value", "meaning": "A requested protected-state target or delta; it is distinct from purchase quantity and never grants mutation authority.", "provenance": "Frozen sanitized schema contract and business authorization rules"}
+  ],
+  "sanitized_source_references": [
+    {
+      "source_category": "Frozen sanitized schema contract",
+      "artifact": "v11-sanitized-schema-contract.json",
+      "sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d",
+      "use": "Schema vocabularies, entity structure, terminals, security taxonomy, evidence domains, and authority interfaces."
+    },
+    {
+      "source_category": "Product/Category structured authority",
+      "artifact": "v11-sanitized-product-authority.json",
+      "use": "Current public product, category, price, stock, and active-state facts."
+    },
+    {
+      "source_category": "SiteSetting structured authority",
+      "artifact": "v11-sanitized-sitesetting-authority.json",
+      "use": "Current public shipping and store-contact facts."
+    },
+    {
+      "source_category": "Published knowledge registry and approved document content",
+      "artifact": "v11-sanitized-knowledge-registry.json",
+      "use": "Published business guidance, source metadata, domains, versions, and claim-supporting content."
+    },
+    {
+      "source_category": "Business authorization rules",
+      "artifact": "v11-sanitized-authorization-contract.json",
+      "use": "Actor, ownership, read-versus-mutate, cart suggestion, and cross-account rules."
+    }
+  ],
+  "sanitization_metadata": {
+    "historical_utterance_exposure": 0,
+    "historical_case_id_exposure": 0,
+    "candidate_output_exposure": 0,
+    "phase_14_exposure": 0,
+    "runtime_implementation_exposure": 0,
+    "performance_information_exposure": 0,
+    "contains_historical_examples": false,
+    "contains_private_account_or_order_records": false,
+    "contaminated_sources_excluded": [
+      {
+        "source": "docs/cards/chat-model-card.md",
+        "status": "CONTAMINATED SOURCE — EXCLUDED"
+      },
+      {
+        "source": "docs/chat-knowledge-authoring.md",
+        "status": "CONTAMINATED SOURCE — EXCLUDED"
+      }
+    ],
+    "forbidden_source_categories_not_consulted": [
+      "prior holdout fixtures and utterances",
+      "final score and result artifacts",
+      "development phase reports and baselines",
+      "root-cause and remediation reports",
+      "candidate predictions and behavior",
+      "router, extractor, guard, controller, and handler implementation"
+    ],
+    "sanitization_validation": "PASS",
+    "freeze_status": "FROZEN"
+  }
+}

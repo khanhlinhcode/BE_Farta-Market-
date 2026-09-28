@@ -1,0 +1,103 @@
+{
+  "schema_version": "farta-v10-evaluator-manifest.2.0",
+  "evaluator_version": "farta-final-v10-evaluator.2.0.0",
+  "freeze_status": "FROZEN",
+  "frozen_at_utc": "2026-09-26T18:47:18Z",
+  "hash_algorithm": "sha256 over sorted repository-relative path, NUL, file bytes, NUL",
+  "evaluator_sha256": "b99c121399112ca4d138f44a5bf6804d100658536c17c571efeb55b0ce89eda1",
+  "hashed_files": [
+    "tests/Feature/FinalV10EvaluatorRecoveryTest.php",
+    "tests/Feature/FinalV10ScoredRunTest.php",
+    "tests/Fixtures/v10_evaluator_development_raw_results.php",
+    "tests/Support/FinalV10Evaluation.php",
+    "tests/Support/FinalV10Metrics.php",
+    "tests/Support/FinalV10Report.php",
+    "tests/Unit/FinalV10EvaluationContractTest.php"
+  ],
+  "changed_evaluator_files": [
+    "tests/Support/FinalV10Evaluation.php",
+    "tests/Support/FinalV10Metrics.php",
+    "tests/Support/FinalV10Report.php",
+    "tests/Feature/FinalV10ScoredRunTest.php"
+  ],
+  "evaluator_tests": [
+    "tests/Unit/FinalV10EvaluationContractTest.php",
+    "tests/Feature/FinalV10EvaluatorRecoveryTest.php",
+    "tests/Fixtures/v10_evaluator_development_raw_results.php"
+  ],
+  "metric_contract": {
+    "version": "farta-v10.3.0-frozen",
+    "definitions_changed": false,
+    "release_gates_changed": false,
+    "missing_predictions": "scored as failures and retained in denominators",
+    "zero_denominators": "null for ratio values; threshold gates fail; never promoted to 100 percent",
+    "multi_intent_alignment": "fixed branch ordinal; omitted branches fail parent completeness",
+    "entity_slots": [
+      "product_raw_mention",
+      "canonical_product",
+      "quantity",
+      "unit",
+      "order_reference",
+      "ordinal_reference",
+      "context_reference",
+      "account_target",
+      "requested_mutation_value"
+    ]
+  },
+  "normalization_rules": {
+    "scope": "textual entity equality only",
+    "steps": [
+      "Unicode to ASCII",
+      "lowercase",
+      "non-alphanumeric characters to spaces",
+      "whitespace squish"
+    ],
+    "numeric_comparison": "numeric value equality after float conversion",
+    "array_comparison": "ordered recursive equality",
+    "unknown_metric_entity_fields": "raise evaluator exception; never silently discard"
+  },
+  "error_handling_rules": {
+    "candidate_response_error": "retain the case, preserve the runtime error, and score the available or missing prediction",
+    "infrastructure_timeout": "retain runtime_error and attribute earliest failure to INFRASTRUCTURE",
+    "evaluator_exception": "invalidate the evaluation; do not skip or retry a case",
+    "missing_prediction_field": "score as prediction failure; do not skip"
+  },
+  "serialization_schema": {
+    "name": "farta-v10-final-replacement-raw-results.1.0",
+    "encoding": "JSON UTF-8, pretty printed, unescaped Unicode/slashes, preserved zero fractions, exceptions on encode/decode errors",
+    "required_record_fields": [
+      "case_id",
+      "gold",
+      "prediction",
+      "scores",
+      "runtime_error",
+      "latency_ms"
+    ],
+    "round_trip_validation": "PASS"
+  },
+  "root_cause": {
+    "executed_call": "Collection::filter('is_string') in FinalV10Evaluation::acceptedSourceIds",
+    "location_before_patch": "tests/Support/FinalV10Evaluation.php:319",
+    "framework_behavior": "Collection filter callbacks receive value and key",
+    "php_contract": "is_string accepts exactly one argument",
+    "repair": "typed closure checks only the collection value"
+  },
+  "validation": {
+    "red_regression_reproduction": "PASS: failed before patch with ArgumentCountError",
+    "green_regression": "PASS",
+    "focused_and_development_tests": "PASS: 29 tests, 517 assertions",
+    "development_fixture_sha256": "28e388187061052ff359297e1ee5d8d9c2932ed6c80d9d58fcce766192a41e03",
+    "deterministic_rescoring": "PASS: identical metrics from two scores of the same round-tripped development raw results",
+    "php_syntax": "PASS",
+    "pint": "PASS: 7 evaluator files",
+    "composer_validate_strict": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "frozen_candidate_sha256": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+  "frozen_final_v10": {
+    "dataset_sha256": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+    "audit_report_sha256": "3c01c6409b2a59c566916a310ee28a989ad85888d821db95dad52d556b8ca27e",
+    "manifest_sha256": "af48d07951d013ce0c2670c5a3b563f4d822fc65a549bfcd3919a4992c74c7dd"
+  },
+  "recovery_decision": "EVALUATOR RECOVERY PASS"
+}

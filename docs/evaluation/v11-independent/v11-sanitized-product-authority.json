@@ -1,0 +1,186 @@
+{
+  "artifact_version": "farta-v11-sanitized-product-authority.1.0",
+  "snapshot_version": 1,
+  "authority_type": "Product/Category structured authority",
+  "source_id": "product-category-authority-v11",
+  "currency": "VND",
+  "scope": [
+    "public product identity",
+    "active state",
+    "category membership",
+    "current unit price",
+    "current stock"
+  ],
+  "authoring_rules": [
+    "Only an active product in an active category is eligible for active catalog and search expectations.",
+    "A canonical product must match a product in this snapshot.",
+    "Price and stock assertions must use the values in this frozen snapshot.",
+    "A category listing must use the category membership and active states in this snapshot."
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Thịt Tươi",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Trái Cây",
+      "active": true
+    },
+    {
+      "id": 3,
+      "name": "Thức Ăn Nhanh",
+      "active": true
+    },
+    {
+      "id": 4,
+      "name": "Rau Củ",
+      "active": true
+    },
+    {
+      "id": 5,
+      "name": "Sữa",
+      "active": true
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Thịt bò nạt",
+      "active": true,
+      "category": {
+        "id": 1,
+        "name": "Thịt Tươi",
+        "active": true
+      },
+      "current_unit_price_vnd": 200000,
+      "current_stock": 20
+    },
+    {
+      "id": 2,
+      "name": "Chuối",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 17800,
+      "current_stock": 20
+    },
+    {
+      "id": 3,
+      "name": "Ổi",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 25000,
+      "current_stock": 20
+    },
+    {
+      "id": 4,
+      "name": "Dưa hấu",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 44020,
+      "current_stock": 20
+    },
+    {
+      "id": 5,
+      "name": "Nho tím",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 120000,
+      "current_stock": 20
+    },
+    {
+      "id": 6,
+      "name": "Hamburger",
+      "active": true,
+      "category": {
+        "id": 3,
+        "name": "Thức Ăn Nhanh",
+        "active": true
+      },
+      "current_unit_price_vnd": 86000,
+      "current_stock": 20
+    },
+    {
+      "id": 7,
+      "name": "Xoài keo",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 69000,
+      "current_stock": 20
+    },
+    {
+      "id": 8,
+      "name": "Táo Úc",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 53000,
+      "current_stock": 20
+    },
+    {
+      "id": 9,
+      "name": "Cam Tươi",
+      "active": true,
+      "category": {
+        "id": 2,
+        "name": "Trái Cây",
+        "active": true
+      },
+      "current_unit_price_vnd": 45000,
+      "current_stock": 30
+    },
+    {
+      "id": 10,
+      "name": "Rau Củ Tươi",
+      "active": true,
+      "category": {
+        "id": 4,
+        "name": "Rau Củ",
+        "active": true
+      },
+      "current_unit_price_vnd": 65000,
+      "current_stock": 25
+    },
+    {
+      "id": 11,
+      "name": "Sữa Hộp",
+      "active": true,
+      "category": {
+        "id": 5,
+        "name": "Sữa",
+        "active": true
+      },
+      "current_unit_price_vnd": 32000,
+      "current_stock": 40
+    }
+  ],
+  "privacy": {
+    "contains_private_account_data": false,
+    "contains_private_order_data": false
+  },
+  "provenance": "Product/Category structured authority"
+}

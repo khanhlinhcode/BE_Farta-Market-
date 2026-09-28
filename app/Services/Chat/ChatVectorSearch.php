@@ -17,20 +17,39 @@ final class ChatVectorSearch
     }
 
     /** @return array<int, int> chunk database IDs in rank order */
-    public function search(string $query, int $limit = 5): array
+    /** @param array<int, string> $allowedSourceIds */
+    public function search(string $query, int $limit = 5, array $allowedSourceIds = [], ?string $topic = null): array
     {
         if (! $this->syncEnabled()) {
             throw new RuntimeException('Qdrant Cloud Inference is disabled.');
         }
 
-        $points = $this->client()->post($this->endpoint('/points/query'), [
+        $payload = [
             'query' => [
                 'text' => $query,
                 'model' => $this->model(),
             ],
             'limit' => min(20, max(1, $limit)),
             'with_payload' => true,
-        ])->throw()->json('result.points', []);
+        ];
+        $must = [];
+        if ($allowedSourceIds !== []) {
+            $must[] = [
+                'key' => 'source_id',
+                'match' => ['any' => array_values(array_unique($allowedSourceIds))],
+            ];
+        }
+        if ($topic !== null && $topic !== '') {
+            $must[] = [
+                'key' => 'topic',
+                'match' => ['value' => $topic],
+            ];
+        }
+        if ($must !== []) {
+            $payload['filter'] = ['must' => $must];
+        }
+        $points = $this->client()->post($this->endpoint('/points/query'), $payload)
+            ->throw()->json('result.points', []);
 
         return collect(is_array($points) ? $points : [])
             ->map(fn ($point) => $point['payload']['chunk_id'] ?? null)

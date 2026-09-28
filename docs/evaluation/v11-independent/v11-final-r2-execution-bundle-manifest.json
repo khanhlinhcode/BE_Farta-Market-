@@ -1,0 +1,93 @@
+{
+  "manifest_version": "farta-v11-final-r2-replacement-execution-bundle-manifest.1.0",
+  "recorded_at_utc": "2026-09-28T07:28:30Z",
+  "bundle_status": "READY_FOR_SEPARATELY_AUTHORIZED_R2_EXECUTION",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "semantic_scope": "Future R2 execution semantics only. Synthetic tests, fixtures, preflight scripts, generated reports, manifests, timestamps, and future execution outputs are excluded.",
+  "ordered_semantic_files": [
+    "docs/evaluation/v11-independent/v11-final-r2-execution-bundle-config.json",
+    "scripts/v11-final-r2-execution",
+    "tests/Feature/FinalV11ReplacementExecutionR2Test.php",
+    "tests/Support/FinalV11ReplacementExecutionGuardR2.php",
+    "tests/Support/FinalV11ReplacementExecutionR2.php"
+  ],
+  "execution_bundle_semantic_identity": "873e13d70de314a015f2c68ed3b89c90952d37fc5841830c257bf46123745cd8",
+  "frozen_identities": {
+    "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+    "v11_dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "v11_audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+    "v11_final_manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+    "historical_raw_capture": "2f5f7cac8fdc0fad0f01d491b31f10423e28c0fff3aac638a090b36fe407f081",
+    "historical_execution_state": "c1146a3256a3a45fada6bc12868362187dd57771fc38d4aa78bec8eee478ef51",
+    "r1_execution_state": "204c9f33dd890a435a0280bb91910ed9826d395a5e9cd7014eceed6a733d5ca0",
+    "evaluator_v2_r1": "0fcce11e5650340c6112372e3f879948555696ed66edb2c64ecfd60e68dee9ef",
+    "evidence_domain_canonicalizer_v2_r2": "2d314bdd29b592a0dbc36ea4498373163c8d02466f6bbda1527d6335cdf3f75f",
+    "runtime_adapter_v2_r2": "8b9d2b6b4673b95b06660da24ca4884754fa2f0bb2778ff5bbef1717ce53d71f",
+    "scorer_v2_r2": "ede3466e3216b48cc22e8a61b59684a89e8e22ba8b24af9704f2b0da1f965178",
+    "harness_r2": "d97c62400bf0cfa0115f4fed77e6899932bbc110b272f51211d0c59e52248de5",
+    "toolchain_v2_r2": "401e530d55c8d3e2dc87885eeeff365fc59fffaaa70ca9bb2d4f60c0115726dc"
+  },
+  "prior_incomplete_runs": [
+    {
+      "run_id": "final-v11-20260928T060655Z",
+      "state": "EXECUTION_INCOMPLETE",
+      "capture_reused": false
+    },
+    {
+      "run_id": "final-v11-r1-20260928T070446Z",
+      "state": "EXECUTION_INCOMPLETE",
+      "capture_reused": false
+    }
+  ],
+  "authorization_gate": {
+    "environment_variable": "V11_FINAL_R2_EXECUTION_AUTHORIZATION",
+    "exact_value": "RUN_FROZEN_V11_R2_REPLACEMENT_ONCE",
+    "status": "PASS"
+  },
+  "reserved_future_outputs": [
+    "docs/evaluation/v11-independent/v11-final-r2-execution-state.json",
+    "docs/evaluation/v11-independent/v11-final-r2-raw-capture.jsonl",
+    "docs/evaluation/v11-independent/v11-final-r2-scored-results.json",
+    "docs/evaluation/v11-independent/v11-final-r2-score-report.md",
+    "docs/evaluation/v11-independent/v11-final-r2-execution-manifest.json"
+  ],
+  "policies": {
+    "distinct_output_namespace": "PASS",
+    "overwrite": "REFUSE",
+    "resume": "NONE",
+    "retry": "NONE",
+    "start_record": "FIRST_RECORD",
+    "capture_write": "ONLY_AFTER_COMPLETE_IN_MEMORY_CAPTURE",
+    "scoring_gate": "CAPTURE_COMPLETED",
+    "historical_capture_reused": false,
+    "r1_capture_reused": false
+  },
+  "validation": {
+    "tests_passed": 124,
+    "tests_total": 124,
+    "assertions_passed": 703,
+    "assertions_total": 703,
+    "focused_bundle_tests_passed": 30,
+    "focused_bundle_tests_total": 30,
+    "focused_bundle_assertions_passed": 79,
+    "focused_bundle_assertions_total": 79,
+    "focused_style_files_passed": 10,
+    "focused_style_files_total": 10,
+    "formatting": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS",
+    "gold_isolation": "PASS",
+    "preflight": "PASS"
+  },
+  "build_execution_state": {
+    "v11_requests": 0,
+    "v11_executed": false,
+    "scoring_started": false
+  },
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

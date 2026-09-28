@@ -1,0 +1,118 @@
+{
+  "manifest_version": "farta-v11-final-execution-harness-manifest.1.0",
+  "revision": "V11 final-execution harness build and freeze",
+  "recorded_at_utc": "2026-09-28T05:55:10Z",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_algorithm": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "harness_identity": "5bf892ec4ba037bb2054984996ccd398d21409f1d4227155bac32cdd5bc53f87",
+  "ordered_semantic_files": [
+    "tests/Support/FinalV11ExecutionGuard.php",
+    "tests/Support/FinalV11ExecutionHarness.php",
+    "tests/Fixtures/v11_final_execution_harness_synthetic.php",
+    "tests/Feature/FinalV11ExecutionHarnessTest.php",
+    "tests/Feature/FinalV11FinalExecutionTest.php",
+    "docs/evaluation/v11-independent/v11-final-execution-harness-config.json",
+    "scripts/v11-final-execution-harness-preflight",
+    "scripts/v11-final-execution"
+  ],
+  "semantic_files": [
+    {
+      "path": "tests/Support/FinalV11ExecutionGuard.php",
+      "sha256": "37fc8acbf048f833e3fe14620500e468c0e943de963fd69a166e1fb57625a04b"
+    },
+    {
+      "path": "tests/Support/FinalV11ExecutionHarness.php",
+      "sha256": "47752fa3b4a641dd01ff910f72438ec53ef3d303b510fbe0793dcb6c95aa8bfd"
+    },
+    {
+      "path": "tests/Fixtures/v11_final_execution_harness_synthetic.php",
+      "sha256": "ddfdd5d362207a31be9443e502112b0ae4fad873aab62cd0f7a574ab76c072f9"
+    },
+    {
+      "path": "tests/Feature/FinalV11ExecutionHarnessTest.php",
+      "sha256": "5b6df63d414889beb02e930c485c614698ecf06e658b348049f463455c53ccc2"
+    },
+    {
+      "path": "tests/Feature/FinalV11FinalExecutionTest.php",
+      "sha256": "fb5daf6fc7f3fd240923093197bf3bfde06b60e649b8be6dc9cdc9c9b1719c60"
+    },
+    {
+      "path": "docs/evaluation/v11-independent/v11-final-execution-harness-config.json",
+      "sha256": "70233fff71ada764ad73931d9f97c5780aa7da735482cf2978850b06892aede7"
+    },
+    {
+      "path": "scripts/v11-final-execution-harness-preflight",
+      "sha256": "bc2e26a3a20e41060621614d731d72a67b80f4c82ec52cc02ca9c077a0392334"
+    },
+    {
+      "path": "scripts/v11-final-execution",
+      "sha256": "7717aff9417f9f35b4a247755ee8609af95048985ca31cb9544e009661b6d4f3"
+    }
+  ],
+  "identities": {
+    "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+    "v11_dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "v11_audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+    "v11_manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+    "toolchain_v2": "9fcf7f1de8f42156074a65ac71255098c1945144bcbb940cfc222a02ecbdbd9b",
+    "evaluator_v2": "df40ceb8336814629eeb5ae93a0dce5e623a2c3d8e2f964f24e5789f3a1ba2de",
+    "scorer_v2": "6dd5ebece571b35eb89b4c9d244300e64b9a2c9491294f1b13277f6d6a406f09",
+    "runtime_adapter_v2": "4567cd4db35fbd34bac3f82a536b24bb20032227aa8dc6808964fd2399ec899e",
+    "evaluation_contract": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20",
+    "fact_verification_contract": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604",
+    "runtime_adapter_contract": "53b1ae811888f62d09a379c6e8905f2604528ac6c1bb9e22ffd7b1420aaa20cb"
+  },
+  "execution_target": "LOCAL_CANDIDATE",
+  "candidate_entry_point": "POST /api/chat through the Laravel in-process test kernel",
+  "execution_mode": "FROZEN_RUNNER_REQUIRES_SEPARATE_AUTHORIZATION",
+  "authorization": {
+    "environment_variable": "V11_FINAL_EXECUTION_AUTHORIZATION",
+    "required_value": "RUN_FROZEN_V11_ONCE"
+  },
+  "one_shot_guard": {
+    "version": "farta-v11-final-execution-guard.1.0",
+    "state_path": "docs/evaluation/v11-independent/v11-final-execution-state.json",
+    "initial_creation": "exclusive",
+    "states": [
+      "EXECUTION_LOCK_ACQUIRED",
+      "EXECUTING",
+      "EXECUTION_INCOMPLETE",
+      "COMPLETED"
+    ],
+    "retry": false,
+    "resume": false,
+    "second_execution": "REFUSE"
+  },
+  "raw_capture": {
+    "format": "JSONL",
+    "schema_version": "farta-v11-evaluator-v1-raw-capture.1.0",
+    "writer": "Tests\\Support\\FinalV11RawCapture",
+    "finalization": "SHA-256 then chmod 0444",
+    "overwrite": false
+  },
+  "test_suite": {
+    "ordered_files": [
+      "tests/Fixtures/v11_final_execution_harness_synthetic.php",
+      "tests/Feature/FinalV11ExecutionHarnessTest.php"
+    ],
+    "semantic_identity": "f1f7ed094d3580619ab5f672f34f85dd7b3e10a3c1a7005879f5e08d7ded0ca0",
+    "command": "scripts/v11-final-execution-harness-preflight",
+    "tests_passed": 16,
+    "tests_total": 16,
+    "assertions_passed": 76,
+    "assertions_total": 76,
+    "synthetic_only": true
+  },
+  "dataset_counts": {
+    "primary_cases": 160,
+    "multi_turn_scenarios": 20,
+    "scenario_turns": 40,
+    "multi_intent_branches": 40,
+    "entity_objects": 240
+  },
+  "candidate_modified": false,
+  "toolchain_v2_modified": false,
+  "v11_requests": 0,
+  "v11_executed": false,
+  "status": "READY_FOR_FINAL_EXECUTION"
+}

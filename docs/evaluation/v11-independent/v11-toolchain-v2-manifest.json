@@ -1,0 +1,109 @@
+{
+  "manifest_version": "farta-v11-toolchain-v2-manifest.1.0",
+  "revision": "V11 Toolchain V2 build and preflight",
+  "recorded_at_utc": "2026-09-28T05:07:08Z",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_algorithm": "Sort relative paths; hash each relative path, NUL, exact file bytes, NUL using SHA-256.",
+  "semantic_identity": "9fcf7f1de8f42156074a65ac71255098c1945144bcbb940cfc222a02ecbdbd9b",
+  "ordered_semantic_files": [
+    "tests/Support/FinalV11EvaluationV2.php",
+    "tests/Support/FinalV11OfflineScorerV2.php",
+    "tests/Support/FinalV11RuntimeAdapterV2.php",
+    "tests/Support/FinalV11RuntimeEvidenceHarnessV2.php",
+    "tests/Fixtures/v11_toolchain_v2_synthetic_frames.php",
+    "tests/Feature/FinalV11ToolchainV2PreflightTest.php",
+    "docs/evaluation/v11-independent/v11-runtime-adapter-v2-contract.json",
+    "scripts/v11-toolchain-v2-preflight"
+  ],
+  "candidate_identity": {
+    "expected": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+    "observed": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+    "status": "UNCHANGED"
+  },
+  "v1_components_preserved": {
+    "evaluator_v1": "66963e4fa9d21ac832b8d9c4654ad32909b6fb57239dafabed8aaf8ea4767eb2",
+    "offline_scorer_v1": "adb279e855ee8efd09b56af9994204c9f72eb19368b4b807005f3ad95b7ef06a"
+  },
+  "v2_components": {
+    "evaluator_v2": {
+      "semantic_identity": "df40ceb8336814629eeb5ae93a0dce5e623a2c3d8e2f964f24e5789f3a1ba2de",
+      "extension_file": {
+        "path": "tests/Support/FinalV11EvaluationV2.php",
+        "sha256": "b0cac68720ae6af4d07c30dbdf86cc28139699e4a935234497c3af124181f973"
+      }
+    },
+    "offline_scorer_v2": {
+      "semantic_identity": "6dd5ebece571b35eb89b4c9d244300e64b9a2c9491294f1b13277f6d6a406f09",
+      "extension_file": {
+        "path": "tests/Support/FinalV11OfflineScorerV2.php",
+        "sha256": "60827578939321f0b431a17717801713cbf31057b17eba829402f2934b9ae7be"
+      }
+    },
+    "runtime_adapter_and_harness": {
+      "semantic_identity": "4567cd4db35fbd34bac3f82a536b24bb20032227aa8dc6808964fd2399ec899e",
+      "files": [
+        {
+          "path": "tests/Support/FinalV11RuntimeAdapterV2.php",
+          "sha256": "6250d83df431edf70ff01f1aba7c54e38c616bf9dfaadbc767afc6f028923c90"
+        },
+        {
+          "path": "tests/Support/FinalV11RuntimeEvidenceHarnessV2.php",
+          "sha256": "9b906a90369b653f3a8b5487d21fa89ef14004046adca5b0e45feed6e3bc69a7"
+        }
+      ]
+    }
+  },
+  "contracts": {
+    "evaluation_contract": {
+      "path": "docs/evaluation/v11-independent/v11-evaluation-contract.json",
+      "sha256": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20"
+    },
+    "fact_verification_contract": {
+      "path": "docs/evaluation/v11-independent/v11-fact-verification-contract.json",
+      "sha256": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604"
+    },
+    "adapter_v2_contract": {
+      "path": "docs/evaluation/v11-independent/v11-runtime-adapter-v2-contract.json",
+      "sha256": "53b1ae811888f62d09a379c6e8905f2604528ac6c1bb9e22ffd7b1420aaa20cb"
+    }
+  },
+  "validation_artifacts": {
+    "fixture_set": {
+      "path": "tests/Fixtures/v11_toolchain_v2_synthetic_frames.php",
+      "semantic_identity": "4effa7741d2f2d1bdc0eb0c855aeee05ddc793c4a9eae73973ebe614418ec054",
+      "sha256": "e60d2529e33e8f8d1234c1404bf3d096cec4dc0673cad69689f41e2273daf5e3"
+    },
+    "focused_test_suite": {
+      "path": "tests/Feature/FinalV11ToolchainV2PreflightTest.php",
+      "semantic_identity": "bba763bd79805ec31bec9d6476e2dbf38ec5a6a61e5b74ae94b2a5d3148e5386",
+      "sha256": "0a1130defeb28a06ff35d62dddd974fcf5533bd701a0cb75bf778634e64536c2"
+    },
+    "test_report": {
+      "path": "docs/evaluation/v11-independent/v11-toolchain-v2-test-report.json",
+      "sha256": "e63690e65d7d46c5632ff15b781210c5409ec591850d1d9f4016128db128aa91"
+    },
+    "preflight_report": {
+      "path": "docs/evaluation/v11-independent/v11-toolchain-v2-preflight-report.json",
+      "sha256": "b8ee3c5094be044ca1c6c17e18ad284c82ffd4cc8cd67ddad9b35eca4861abb3"
+    },
+    "preflight_command": {
+      "path": "scripts/v11-toolchain-v2-preflight",
+      "sha256": "90d4ee8615ef81678e9a3c81f986020acd40e76b0e49e8172e07046c2a1d0634"
+    }
+  },
+  "frozen_v11_identities": {
+    "dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+    "final_manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e"
+  },
+  "execution_policy": {
+    "mode": "BUILD_AND_PREFLIGHT_ONLY",
+    "candidate_requests": 0,
+    "candidate_executed": false,
+    "raw_capture_created": false,
+    "scoring_started": false,
+    "network_allowed": false
+  },
+  "preflight": "PASS",
+  "freeze_status": "V11 FROZEN / NOT EXECUTED"
+}

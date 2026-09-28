@@ -1,0 +1,99 @@
+{
+  "report_version": "farta-v11-final-execution-harness-preflight.1.0",
+  "recorded_at_utc": "2026-09-28T05:55:10Z",
+  "harness_identity": "5bf892ec4ba037bb2054984996ccd398d21409f1d4227155bac32cdd5bc53f87",
+  "status": "PASS",
+  "gates": {
+    "1_local_candidate_invocation": "PASS",
+    "2_no_candidate_modifications": "PASS",
+    "3_toolchain_v2_unchanged": "PASS",
+    "4_evaluator_v2_unchanged": "PASS",
+    "5_scorer_v2_unchanged": "PASS",
+    "6_contracts_unchanged": "PASS",
+    "7_frozen_v11_identities": "PASS",
+    "8_synthetic_single_turn": "PASS",
+    "9_synthetic_multi_turn": "PASS",
+    "10_synthetic_multi_intent": "PASS",
+    "11_synthetic_order_mutation": "PASS",
+    "12_synthetic_payment_mutation": "PASS",
+    "13_synthetic_ambiguity": "PASS",
+    "14_synthetic_evidence": "PASS",
+    "15_synthetic_security": "PASS",
+    "16_gold_isolation": "PASS",
+    "17_local_target": "PASS",
+    "18_exactly_once_guard": "PASS",
+    "19_determinism": "PASS",
+    "20_offline": "PASS",
+    "21_raw_capture_schema": "PASS",
+    "22_execution_manifest_generation": "PASS",
+    "23_harness_hash": "PASS",
+    "24_v11_requests_zero": "PASS",
+    "25_v11_not_executed": "PASS",
+    "26_v11_frozen_hashes_unchanged": "PASS"
+  },
+  "runtime_entry_point": {
+    "target": "LOCAL_CANDIDATE",
+    "route": "POST /api/chat",
+    "action": "App\\Http\\Controllers\\ChatController@send",
+    "transport": "Laravel in-process test kernel",
+    "status": "PASS"
+  },
+  "schema": {
+    "dataset_schema": "farta-v10.3.0",
+    "raw_capture_schema": "farta-v11-evaluator-v1-raw-capture.1.0",
+    "status": "PASS"
+  },
+  "raw_capture": {
+    "exclusive_create": "PASS",
+    "round_trip": "PASS",
+    "sha256": "PASS",
+    "read_only_finalization": "PASS"
+  },
+  "execution_lock": {
+    "exclusive_acquire": "PASS",
+    "second_execution_refused": "PASS",
+    "incomplete_state_persisted": "PASS",
+    "automatic_retry": false
+  },
+  "isolation": {
+    "gold": "PASS",
+    "network": "PASS",
+    "production_target": false,
+    "external_http": false,
+    "external_llm": false,
+    "remote_database": false,
+    "remote_evaluator": false,
+    "remote_scorer": false
+  },
+  "determinism": {
+    "normalized_observation": "PASS",
+    "content_hash": "PASS",
+    "excluded_metadata": [
+      "started_at_utc",
+      "completed_at_utc",
+      "recorded_at_utc",
+      "latency_ms"
+    ]
+  },
+  "synthetic_tests": {
+    "passed": 16,
+    "total": 16,
+    "assertions_passed": 76,
+    "assertions_total": 76,
+    "candidate_requests": 0,
+    "v11_requests": 0
+  },
+  "frozen_identities": {
+    "candidate": "UNCHANGED",
+    "v11_dataset": "UNCHANGED",
+    "v11_audit": "UNCHANGED",
+    "v11_manifest": "UNCHANGED",
+    "toolchain_v2": "UNCHANGED",
+    "evaluator_v2": "UNCHANGED",
+    "scorer_v2": "UNCHANGED",
+    "runtime_adapter_v2": "UNCHANGED"
+  },
+  "v11_requests": 0,
+  "v11_executed": false,
+  "harness_status": "READY_FOR_FINAL_EXECUTION"
+}

@@ -1,0 +1,145 @@
+{
+    "manifest_version": "farta-v11-author-r2-freeze-manifest.1.0",
+    "revision": "V11-author-r2",
+    "parent_revision": "V11-author-r1",
+    "dataset_schema_version": "farta-v10.3.0",
+    "schema_contract_version": "farta-v11-sanitized-schema-contract.1.0",
+    "frozen_at_utc": "2026-09-27T09:59:41Z",
+    "hash_algorithm": "SHA-256",
+    "parent_artifacts": {
+        "dataset": {
+            "path": "docs/evaluation/v11-independent/v11-author-r1-candidate-dataset.json",
+            "sha256": "81214b6d7fb877116d6e19298410c2d2c64096875e813d2a2139a6dfe926240a"
+        },
+        "report": {
+            "path": "docs/evaluation/v11-independent/v11-author-r1-report.md",
+            "sha256": "ea117f758ab9b6407f08d10349fa728988f8a3b921432ff35afc72f0c5ba2ee5"
+        },
+        "freeze_manifest": {
+            "path": "docs/evaluation/v11-independent/v11-author-r1-freeze-manifest.json",
+            "sha256": "bca7f76f94720425cbde2a2c7c718747654cbac9c326ceec16955e2ff8fa79c9"
+        }
+    },
+    "sanitized_inputs": [
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+            "sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.md",
+            "sha256": "216e1f80789770d4f48e6a852d05ee1e7b4909b035b9b223107a4afc5f31b57b"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-schema-freeze-manifest.json",
+            "sha256": "d5eddc122a536cace2e7ac773f1f686ddaaa96e6178902d65acfa88b43c7be06"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-business-capability-contract.json",
+            "sha256": "ddaf57dcb1fd0db48b7466370c498d52db729cf8a4714f99c0098548fc1e4b7b"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-business-capability-contract.md",
+            "sha256": "f647a0554563366e160a040870a6ad493edc7baef90d2ea1baff3a03f6bfc9e6"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-product-authority.json",
+            "sha256": "809923e43f8919446b8123ea3ab0cac2f39cc3b50d89bad89f584d3768799f0a"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-sitesetting-authority.json",
+            "sha256": "92e69a3c93bfef417fce7ab76a12e191558cbbe50ec9e645c6422e69bb69f2cb"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-knowledge-registry.json",
+            "sha256": "dc8b013d3235a8fb04cedda63575354ab25fd6482316798952ff7161e6d599e7"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-authorization-contract.json",
+            "sha256": "de05e7d4ebd0429b20c73fd9bb0927a9012a9e358b80a195c878549e56639dc4"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-business-contract-freeze-manifest.json",
+            "sha256": "440f40b5dfc91fd06e1751d7231883503ff1e6d2246a900dbddd1a53c2efd5fa"
+        }
+    ],
+    "artifacts": {
+        "dataset": {
+            "path": "docs/evaluation/v11-independent/v11-author-r2-candidate-dataset.json",
+            "sha256": "b89b78105caad702ebefe1a301f6a1b91a64cf13b5af7659a091e562de9320aa"
+        },
+        "report": {
+            "path": "docs/evaluation/v11-independent/v11-author-r2-report.md",
+            "sha256": "dc6283e475ed688d6dce5bef364557eaa39585c0b00dff6960eb7a40ae1f4de7"
+        }
+    },
+    "counts": {
+        "primary_cases": 160,
+        "multi_turn_scenarios": 20,
+        "scenario_turns": 40,
+        "multi_intent_primary_cases": 20,
+        "multi_intent_branches": 40
+    },
+    "change_budget": {
+        "authorized_affected_records": 12,
+        "entity_field_changes": 16,
+        "mechanically_derived_entity_mirror_changes": 0,
+        "utterance_changes": 0,
+        "schema_changes": 0,
+        "intent_changes": 0,
+        "handler_changes": 0,
+        "terminal_changes": 0,
+        "business_outcome_changes": 0,
+        "source_changes": 0,
+        "authorization_security_changes": 0
+    },
+    "entity_counts": {
+        "r1_combined": {
+            "quantity": 28,
+            "unit": 28,
+            "account_target": 26,
+            "requested_mutation_value": 6
+        },
+        "r2_combined": {
+            "quantity": 33,
+            "unit": 31,
+            "account_target": 23,
+            "requested_mutation_value": 6
+        }
+    },
+    "validation": {
+        "status": "PASS",
+        "input_hashes": "PASS",
+        "input_freeze_status": "PASS",
+        "schema_business_compatibility": "PASS",
+        "json_parse": "PASS",
+        "schema_validation": "PASS",
+        "unique_ids": "PASS",
+        "structural_counts": "PASS",
+        "authorized_corrections": "PASS",
+        "quantity_forward_invariant": "PASS",
+        "quantity_reverse_invariant": "PASS",
+        "unit_forward_invariant": "PASS",
+        "unit_reverse_invariant": "PASS",
+        "account_target_forward_invariant": "PASS",
+        "account_target_reverse_invariant": "PASS",
+        "parent_branch_entity_scope": "PASS",
+        "claim_support_regression": "PASS",
+        "no_evidence_regression": "PASS",
+        "source_authority": "PASS",
+        "evidence_domain": "PASS",
+        "authorization_security": "PASS",
+        "follow_up_structure": "PASS",
+        "multi_intent_structure": "PASS",
+        "zero_utterance_changes": "PASS",
+        "exact_semantic_change_budget": "PASS"
+    },
+    "isolation": {
+        "candidate_executed": false,
+        "candidate_output_accessed": false,
+        "historical_v0_v10_accessed": false,
+        "runtime_implementation_accessed": false,
+        "phase_14_accessed": false
+    },
+    "freeze_status": "FROZEN",
+    "post_freeze_edit_policy": "Any content change invalidates the recorded hashes and requires a new authoring revision and manifest."
+}

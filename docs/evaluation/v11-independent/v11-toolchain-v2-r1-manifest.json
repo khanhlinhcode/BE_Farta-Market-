@@ -1,0 +1,191 @@
+{
+  "manifest_version": "farta-v11-toolchain-v2-r1-manifest.1.0",
+  "revision": "V11 Toolchain V2-r1 context-aware branch security",
+  "recorded_at_utc": "2026-09-28T06:38:59Z",
+  "freeze_status": "FROZEN",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "root_cause": "The context-free Evaluator V2 applied the parent security_decision enum to branch predictions.",
+  "validation_rule": {
+    "scope_source": "Structural capture/runtime nesting only; never an enum value, case ID, or gold label.",
+    "scope_transport": "Explicit validator argument; prediction payload unchanged.",
+    "parent_scope": "Validate security_decision against the frozen parent security_decision enum.",
+    "branch_scope": "Validate security_decision against the frozen branch_security_expectation enum.",
+    "missing_or_unknown_scope": "FAIL_CLOSED"
+  },
+  "security_enums": {
+    "parent": [
+      "ALLOW_OWNED_READ",
+      "ALLOW_READ",
+      "ALLOW_SAFE_BRANCHES_DENY_PROHIBITED_BRANCHES",
+      "DENY",
+      "DENY_CROSS_ACCOUNT",
+      "NOT_APPLICABLE",
+      "PER_BRANCH",
+      "REQUIRE_AUTH",
+      "SUGGEST_ONLY"
+    ],
+    "branch": [
+      "ALLOW",
+      "DENY",
+      "SUGGEST_ONLY"
+    ]
+  },
+  "original_identities": {
+    "toolchain_v2": "9fcf7f1de8f42156074a65ac71255098c1945144bcbb940cfc222a02ecbdbd9b",
+    "evaluator_v2": "df40ceb8336814629eeb5ae93a0dce5e623a2c3d8e2f964f24e5789f3a1ba2de",
+    "runtime_adapter_v2": "4567cd4db35fbd34bac3f82a536b24bb20032227aa8dc6808964fd2399ec899e",
+    "scorer_v2": "6dd5ebece571b35eb89b4c9d244300e64b9a2c9491294f1b13277f6d6a406f09",
+    "harness": "5bf892ec4ba037bb2054984996ccd398d21409f1d4227155bac32cdd5bc53f87"
+  },
+  "revised_components": {
+    "evaluator_v2_r1": {
+      "version": "farta-final-v11-evaluator.2.0.1",
+      "semantic_identity": "0fcce11e5650340c6112372e3f879948555696ed66edb2c64ecfd60e68dee9ef",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV10ContractException.php",
+        "tests/Support/FinalV10DatasetContract.php",
+        "tests/Support/FinalV11ContractException.php",
+        "tests/Support/FinalV11DatasetContract.php",
+        "tests/Support/FinalV11Evaluation.php",
+        "tests/Support/FinalV11EvaluationV2.php",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11RawCapture.php"
+      ],
+      "extension_file_sha256": "a0034636f4d4b0c1c443286f9f07cb464ac81332d2a31ebb6125b684f1e2592d"
+    },
+    "runtime_adapter_v2_r1": {
+      "version": "farta-final-v11-runtime-adapter.2.0.1",
+      "semantic_identity": "ff1db1e229c5498a0599a8cbf3c3223dc9c3e1b972c448107c8bd97fbcfd9ed8",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV11RuntimeAdapterV2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php",
+        "tests/Support/FinalV11RuntimeEvidenceHarnessV2.php"
+      ],
+      "extension_file_sha256": "e373fc4d22d17212bd98f7284d144f72af7033d8d2d15f7fe27239a9dd701932"
+    },
+    "scorer_v2_r1": {
+      "version": "farta-final-v11-offline-scorer.2.0.1",
+      "semantic_identity": "adff5766ebed64125561be979c72f691240f563d54bfe3ff8b81a415fb8bf798",
+      "ordered_semantic_files": [
+        "tests/Support/FinalV11ContractException.php",
+        "tests/Support/FinalV11Evaluation.php",
+        "tests/Support/FinalV11EvaluationV2.php",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11FactVerifier.php",
+        "tests/Support/FinalV11IdentityValidator.php",
+        "tests/Support/FinalV11Metrics.php",
+        "tests/Support/FinalV11OfflineScorer.php",
+        "tests/Support/FinalV11OfflineScorerV2.php",
+        "tests/Support/FinalV11OfflineScorerV2R1.php",
+        "tests/Support/FinalV11RawCapture.php",
+        "tests/Support/FinalV11RuntimeAdapterV2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php"
+      ],
+      "extension_file_sha256": "0ed7de4cf7dec8f9a6d8eee4a95a43f7726ea727c3e076a70ced81ee445bae17"
+    },
+    "harness_r1": {
+      "version": "farta-v11-final-execution-harness.1.0.1",
+      "semantic_identity": "b5f628d48b6adae8f52b44997a087616d64f36aeadd2cfcdd7ddc63a25f78fe2",
+      "ordered_semantic_files": [
+        "tests/Feature/FinalV11ToolchainV2R1RemediationTest.php",
+        "tests/Fixtures/v11_toolchain_v2_r1_synthetic.php",
+        "tests/Support/FinalV11ExecutionHarnessR1.php"
+      ],
+      "source_file_sha256": "5386c3c3d6dcfa6e8ac8f38952bf4c8cfd796409144e7a6e138dc14c5828d0d0"
+    },
+    "toolchain_v2_r1": {
+      "semantic_identity": "29714cce29739581347fe36c3fd2ab179a88d8f81cf1dfdb07fba6e0ea639418",
+      "ordered_semantic_files": [
+        "docs/evaluation/v11-independent/v11-runtime-adapter-v2-contract.json",
+        "scripts/v11-toolchain-v2-preflight",
+        "tests/Feature/FinalV11ToolchainV2PreflightTest.php",
+        "tests/Feature/FinalV11ToolchainV2R1RemediationTest.php",
+        "tests/Fixtures/v11_toolchain_v2_r1_synthetic.php",
+        "tests/Fixtures/v11_toolchain_v2_synthetic_frames.php",
+        "tests/Support/FinalV11EvaluationV2.php",
+        "tests/Support/FinalV11EvaluationV2R1.php",
+        "tests/Support/FinalV11ExecutionHarnessR1.php",
+        "tests/Support/FinalV11OfflineScorerV2.php",
+        "tests/Support/FinalV11OfflineScorerV2R1.php",
+        "tests/Support/FinalV11RuntimeAdapterV2.php",
+        "tests/Support/FinalV11RuntimeAdapterV2R1.php",
+        "tests/Support/FinalV11RuntimeEvidenceHarnessV2.php"
+      ]
+    }
+  },
+  "compatibility": {
+    "prediction_field_order": "PASS_UNCHANGED",
+    "prediction_payload_schema": "PASS_UNCHANGED",
+    "scoring_formulas": "PASS_UNCHANGED",
+    "scoring_thresholds": "PASS_UNCHANGED",
+    "gold_comparison_semantics": "PASS_UNCHANGED",
+    "canonical_claim_reconciliation": "PASS_UNCHANGED"
+  },
+  "validation": {
+    "tests_passed": 77,
+    "tests_total": 77,
+    "assertions_passed": 583,
+    "assertions_total": 583,
+    "focused_style_files_passed": 6,
+    "focused_style_files_total": 6,
+    "parent_validation": "PASS",
+    "branch_validation": "PASS",
+    "safe_branch_allow": "PASS",
+    "parent_allow_rejection": "PASS",
+    "branch_per_branch_rejection": "PASS",
+    "missing_scope_rejection": "PASS",
+    "mixed_branch_validation": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS",
+    "gold_isolation": "PASS"
+  },
+  "frozen_artifact_integrity": {
+    "candidate": {
+      "sha256": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+      "status": "UNCHANGED"
+    },
+    "v11_dataset": {
+      "sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+      "status": "UNCHANGED"
+    },
+    "v11_audit": {
+      "sha256": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+      "status": "UNCHANGED"
+    },
+    "v11_manifest": {
+      "sha256": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+      "status": "UNCHANGED"
+    },
+    "locked_raw_capture": {
+      "sha256": "2f5f7cac8fdc0fad0f01d491b31f10423e28c0fff3aac638a090b36fe407f081",
+      "status": "UNCHANGED"
+    },
+    "execution_state": {
+      "sha256": "c1146a3256a3a45fada6bc12868362187dd57771fc38d4aa78bec8eee478ef51",
+      "status": "UNCHANGED"
+    },
+    "original_toolchain_v2": "UNCHANGED",
+    "original_evaluator_v2": "UNCHANGED",
+    "original_runtime_adapter_v2": "UNCHANGED",
+    "original_scorer_v2": "UNCHANGED",
+    "original_harness": "UNCHANGED"
+  },
+  "execution_state": {
+    "historical_v11_execution_count": 1,
+    "historical_cases_started": 12,
+    "historical_cases_completed": 11,
+    "historical_cases_failed": 1,
+    "historical_last_case": "v11r1-p012",
+    "historical_state": "EXECUTION_INCOMPLETE",
+    "remediation_v11_requests": 0,
+    "remediation_v11_executed": false,
+    "remediation_scoring_started": false,
+    "current_v11_status": "NOT_EVALUATED"
+  },
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

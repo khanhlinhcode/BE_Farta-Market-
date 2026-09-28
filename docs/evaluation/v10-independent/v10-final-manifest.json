@@ -1,0 +1,82 @@
+{
+  "manifest_schema_version": "farta-v10-final-manifest.1.0",
+  "dataset_schema_version": "farta-v10.3.0",
+  "dataset_version": "V10-blind-independent-2026-09-26-r6",
+  "final_release": "V10-final-audited-2026-09-26",
+  "frozen_at_utc": "2026-09-26T17:51:28Z",
+  "freeze_status": "FROZEN",
+  "audit_decision": "PASS",
+  "parent_r6": {
+    "dataset_path": "v10-r6-candidate-dataset.json",
+    "dataset_sha256": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+    "authoring_report_path": "v10-r6-authoring-report.md",
+    "authoring_report_sha256": "d5f08489d214b332420754296622dedca0ef8dd132540526a15388cbc2b8b6cf",
+    "freeze_manifest_path": "v10-r6-freeze-manifest.json",
+    "freeze_manifest_sha256": "8e865be370e11f94345b265c80e85a2e58d49f97e4d943c57a52d8c6e23a19b9"
+  },
+  "artifacts": [
+    {
+      "path": "v10-final-audited-dataset.json",
+      "role": "immutable_final_audited_holdout",
+      "bytes": 668405,
+      "sha256": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+      "byte_identical_to_parent_r6": true,
+      "semantically_identical_to_parent_r6": true
+    },
+    {
+      "path": "v10-r6-fresh-audit-report.md",
+      "role": "fresh_independent_r6_audit_report",
+      "bytes": 18295,
+      "sha256": "3c01c6409b2a59c566916a310ee28a989ad85888d821db95dad52d556b8ca27e"
+    }
+  ],
+  "counts": {
+    "primary_single_turn_cases": 292,
+    "explicit_multi_turn_scenarios": 39,
+    "multi_turn_turns": 78,
+    "multi_intent_primary_cases": 27,
+    "multi_intent_annotated_branches": 56,
+    "entity_bearing_primary_cases": 173,
+    "entity_bearing_primary_cases_branch_inclusive": 178,
+    "account_target_non_null_primary_records": 11,
+    "account_target_non_null_branch_records": 1,
+    "account_target_non_null_total_records": 12,
+    "requested_mutation_value_non_null_primary_records": 14,
+    "requested_mutation_value_non_null_branch_records": 3,
+    "privileged_mutation_primary_cases": 16,
+    "true_ood_primary_cases": 23
+  },
+  "historical_versions_audited": [
+    "V0",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "V7",
+    "V8",
+    "V9"
+  ],
+  "historical_fixture_utterance_records": 2593,
+  "r6_utterance_records": 370,
+  "leakage_audit_status": "PASS_0_TRUE_LEAKAGE",
+  "zero_utterance_change_status": "PASS_0_CHANGES",
+  "account_target_audit_status": "PASS_12_OF_12",
+  "entity_audit_status": "PASS",
+  "quantity_mutation_value_status": "PASS",
+  "claim_support_status": "PASS",
+  "product_category_authority_status": "PASS",
+  "shipping_authority_status": "PASS",
+  "auth_security_status": "PASS",
+  "follow_up_status": "PASS_39_OF_39",
+  "multi_intent_status": "PASS_27_CASES_56_BRANCHES",
+  "evidence_source_status": "PASS",
+  "ood_separation_status": "PASS",
+  "generated_data_quality_status": "PASS",
+  "distribution_schema_status": "PASS",
+  "structural_validation_status": "PASS",
+  "candidate_executed": false,
+  "candidate_scored": false,
+  "post_pass_gold_changes": 0
+}

@@ -1,0 +1,170 @@
+{
+  "manifest_schema_version": "farta-v10-r4-freeze-manifest.1.0",
+  "dataset_schema_version": "farta-v10.3.0",
+  "dataset_version": "V10-blind-independent-2026-09-26-r4",
+  "revision": 4,
+  "parent_revision": 3,
+  "frozen_at_utc": "2026-09-26T15:33:06Z",
+  "freeze_status": "FROZEN",
+  "parent_r3_dataset": {
+    "path": "v10-r3-candidate-dataset.json",
+    "sha256": "f87149909d3bbd0bbad9ecbc4283863efcd0e8a565f06f2079c65c0bdca04ef5"
+  },
+  "artifacts": [
+    {
+      "path": "v10-r4-candidate-dataset.json",
+      "role": "candidate_dataset_revision_4",
+      "bytes": 666925,
+      "sha256": "1f9ee94637ce70fc7e64fb03d94ebf211b85a455e79d80c6c939cd58b995b19b"
+    },
+    {
+      "path": "v10-r4-authoring-report.md",
+      "role": "authoring_report_revision_4",
+      "bytes": 11073,
+      "sha256": "2c75810c110e26e1b39cb48668e9f319b8108527142a8dff63471b1ce456a2fa"
+    }
+  ],
+  "counts": {
+    "primary_single_turn_cases": 292,
+    "explicit_multi_turn_scenarios": 39,
+    "multi_turn_turns": 78,
+    "replacement_primary_cases": 6,
+    "entity_objects_shape_migrated": 426,
+    "account_target_non_null_primary_records": 7,
+    "requested_mutation_value_non_null_entity_objects": 17,
+    "requested_mutation_value_non_null_primary_records": 14,
+    "requested_mutation_value_non_null_branch_records": 3,
+    "entity_bearing_primary_cases": 172,
+    "entity_bearing_primary_cases_branch_inclusive": 176,
+    "multi_intent_primary_cases": 27,
+    "multi_intent_annotated_branches": 56,
+    "privileged_mutation_primary_cases": 16,
+    "true_ood_primary_cases": 23
+  },
+  "replacement_primary_ids": [
+    "V10-ST-0129",
+    "V10-ST-0131",
+    "V10-ST-0132",
+    "V10-ST-0137",
+    "V10-ST-0139",
+    "V10-ST-0142"
+  ],
+  "schema_migration": {
+    "status": "COMPLETE",
+    "old_schema_version": "farta-v10.2.0",
+    "new_schema_version": "farta-v10.3.0",
+    "account_target_support": true,
+    "requested_mutation_value_support": true,
+    "uniform_entity_object_shape": true,
+    "primary_entity_objects_migrated": 292,
+    "multi_intent_branch_entity_objects_migrated": 56,
+    "scenario_turn_entity_objects_migrated": 78
+  },
+  "gold_corrections": {
+    "account_target_primary_ids": [
+      "V10-ST-0155",
+      "V10-ST-0156",
+      "V10-ST-0157",
+      "V10-ST-0158",
+      "V10-ST-0168",
+      "V10-ST-0263",
+      "V10-ST-0264"
+    ],
+    "requested_mutation_value_primary_ids": [
+      "V10-ST-0250",
+      "V10-ST-0251",
+      "V10-ST-0252",
+      "V10-ST-0253",
+      "V10-ST-0254",
+      "V10-ST-0255",
+      "V10-ST-0256",
+      "V10-ST-0257",
+      "V10-ST-0258",
+      "V10-ST-0259",
+      "V10-ST-0260",
+      "V10-ST-0277",
+      "V10-ST-0278",
+      "V10-ST-0280"
+    ],
+    "requested_mutation_value_branch_ids": [
+      "V10-ST-0277/cancel_order",
+      "V10-ST-0278/mark_paid",
+      "V10-ST-0280/mutate_stock"
+    ],
+    "product_entity_preservation_case": "V10-ST-0206",
+    "unsupported_claim_correction_case": "V10-ST-0036"
+  },
+  "distributions": {
+    "language": {
+      "en": 68,
+      "mixed": 48,
+      "vi_conversational": 58,
+      "vi_formal": 67,
+      "vi_no_diacritics": 51
+    },
+    "capability": {
+      "product_search": 24,
+      "product_detail": 18,
+      "price": 18,
+      "stock_availability": 18,
+      "catalog_listing": 12,
+      "shipping_current_value": 12,
+      "shipping_calculation": 16,
+      "cart_informational": 10,
+      "cart_action_request": 18,
+      "order_read": 14,
+      "payment_status_read": 10,
+      "knowledge_query": 20,
+      "missing_evidence_query": 18,
+      "general_chat": 8,
+      "unsupported_ood": 23,
+      "clarification": 10,
+      "privileged_mutation": 16,
+      "multi_intent": 27
+    },
+    "follow_up_subtype": {
+      "singular_reference": 5,
+      "plural_reference": 4,
+      "ordinal_first": 4,
+      "ordinal_second": 4,
+      "ordinal_last": 4,
+      "deictic_that": 5,
+      "ellipsis": 5,
+      "expired_context": 4,
+      "ambiguous_reference": 4
+    }
+  },
+  "validation": {
+    "status": "PASS",
+    "json_parse": true,
+    "r3_parent_hash": true,
+    "primary_count_292": true,
+    "scenario_count_39": true,
+    "turn_count_78": true,
+    "multi_intent_count_27": true,
+    "multi_intent_branch_count_56": true,
+    "unique_ids": true,
+    "required_fields": true,
+    "uniform_entity_schema": true,
+    "terminal_vocabulary": true,
+    "canonical_products_active": true,
+    "quantity_and_mutation_value_separated": true,
+    "account_target_semantics": true,
+    "requested_mutation_value_semantics": true,
+    "auth_and_denial_consistency": true,
+    "evidence_source_references_and_versions_valid": true,
+    "claim_support_contract": true,
+    "shipping_arithmetic": true,
+    "scenario_structure_and_wording_preserved": true,
+    "multi_intent_structure": true,
+    "raw_internal_duplicate_groups": 0,
+    "normalized_internal_duplicate_groups": 0,
+    "replacement_structural_diversity": true,
+    "clean_records_unchanged": true,
+    "candidate_executed": false,
+    "candidate_scored": false,
+    "historical_leakage_audit_run_by_author": false
+  },
+  "independence_status": "DISCLOSED_AMBIENT_CONTEXT_LIMITATION",
+  "freeze_note": "The initiating IDE context exposed R3 audit text before R4 authoring. No audit report file, V0-V9 fixture, historical utterance corpus, candidate output, or runtime implementation was opened or used during R4 authoring. Dataset and report hashes were computed after all internal validation passed; all R4 artifacts are frozen and must not be modified in place."
+}

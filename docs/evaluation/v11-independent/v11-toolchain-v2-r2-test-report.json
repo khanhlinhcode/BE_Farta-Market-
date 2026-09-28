@@ -1,0 +1,39 @@
+{
+  "schema_version": "farta-v11-toolchain-v2-r2-test-report.1.0",
+  "recorded_at_utc": "2026-09-28T07:28:30Z",
+  "status": "PASS",
+  "toolchain_v2_r2": "401e530d55c8d3e2dc87885eeeff365fc59fffaaa70ca9bb2d4f60c0115726dc",
+  "tests_passed": 124,
+  "tests_total": 124,
+  "assertions_passed": 703,
+  "assertions_total": 703,
+  "focused_r2_remediation": {
+    "tests_passed": 18,
+    "tests_total": 18,
+    "assertions_passed": 43,
+    "assertions_total": 43
+  },
+  "focused_r2_bundle": {
+    "tests_passed": 30,
+    "tests_total": 30,
+    "assertions_passed": 79,
+    "assertions_total": 79
+  },
+  "compatibility": {
+    "v2_and_v2_r1_tests_passed": 43,
+    "v2_and_v2_r1_assertions_passed": 131,
+    "frozen_evaluator_tests_passed": 9,
+    "frozen_evaluator_assertions_passed": 263,
+    "phase15_candidate_tests_passed": 24,
+    "phase15_candidate_assertions_passed": 187
+  },
+  "focused_style_files_passed": 10,
+  "focused_style_files_total": 10,
+  "formatting": "PASS",
+  "shell_syntax": "PASS",
+  "json_validation": "PASS",
+  "preflight": "PASS",
+  "v11_requests": 0,
+  "v11_executed": false,
+  "scoring_started": false
+}

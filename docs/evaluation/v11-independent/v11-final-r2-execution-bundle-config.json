@@ -1,0 +1,39 @@
+{
+  "config_version": "farta-v11-final-r2-replacement-execution-config.1.0",
+  "execution_target": "LOCAL_CANDIDATE",
+  "candidate_entry_point": "POST /api/chat (Laravel in-process test kernel)",
+  "runner": "tests/Feature/FinalV11ReplacementExecutionR2Test.php",
+  "command": "scripts/v11-final-r2-execution",
+  "authorization_environment_variable": "V11_FINAL_R2_EXECUTION_AUTHORIZATION",
+  "authorization_value": "RUN_FROZEN_V11_R2_REPLACEMENT_ONCE",
+  "preflight_command": "scripts/v11-final-r2-execution-preflight",
+  "replacement_reason": "EVALUATOR_EVIDENCE_DOMAIN_INFRASTRUCTURE_DEFECT",
+  "historical_run_id": "final-v11-20260928T060655Z",
+  "r1_run_id": "final-v11-r1-20260928T070446Z",
+  "execution_state": "docs/evaluation/v11-independent/v11-final-r2-execution-state.json",
+  "outputs": {
+    "raw_capture": "docs/evaluation/v11-independent/v11-final-r2-raw-capture.jsonl",
+    "scored_results": "docs/evaluation/v11-independent/v11-final-r2-scored-results.json",
+    "score_report": "docs/evaluation/v11-independent/v11-final-r2-score-report.md",
+    "execution_manifest": "docs/evaluation/v11-independent/v11-final-r2-execution-manifest.json"
+  },
+  "network": {
+    "external_http": false,
+    "external_llm": false,
+    "qdrant": false,
+    "remote_database": false,
+    "remote_evaluator": false,
+    "remote_scorer": false
+  },
+  "capture_policy": "IN_MEMORY_THEN_EXCLUSIVE_WRITE_AFTER_COMPLETE",
+  "scoring_gate": "CAPTURE_COMPLETED",
+  "retry_policy": "NONE",
+  "resume_policy": "NONE",
+  "second_execution_policy": "REFUSE",
+  "historical_capture_reused": false,
+  "r1_capture_reused": false,
+  "deterministic_serialization": true,
+  "v11_requests_during_build": 0,
+  "v11_executed_during_build": false,
+  "scoring_started_during_build": false
+}

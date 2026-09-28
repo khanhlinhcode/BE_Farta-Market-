@@ -1,0 +1,94 @@
+{
+  "manifest_version": "farta-v11-sanitized-business-contract-freeze-manifest.1.0",
+  "contract_version": "farta-v11-sanitized-business-capability-contract.1.0",
+  "schema_contract_version": "farta-v11-sanitized-schema-contract.1.0",
+  "hash_algorithm": "SHA-256",
+  "frozen_at_utc": "2026-09-27T08:45:27Z",
+  "artifacts": {
+    "schema_contract": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+      "sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d"
+    },
+    "business_contract_json": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-business-capability-contract.json",
+      "sha256": "ddaf57dcb1fd0db48b7466370c498d52db729cf8a4714f99c0098548fc1e4b7b"
+    },
+    "business_contract_markdown": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-business-capability-contract.md",
+      "sha256": "f647a0554563366e160a040870a6ad493edc7baef90d2ea1baff3a03f6bfc9e6"
+    },
+    "product_authority_snapshot": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-product-authority.json",
+      "sha256": "809923e43f8919446b8123ea3ab0cac2f39cc3b50d89bad89f584d3768799f0a"
+    },
+    "sitesetting_authority_snapshot": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-sitesetting-authority.json",
+      "sha256": "92e69a3c93bfef417fce7ab76a12e191558cbbe50ec9e645c6422e69bb69f2cb"
+    },
+    "knowledge_registry_snapshot": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-knowledge-registry.json",
+      "sha256": "dc8b013d3235a8fb04cedda63575354ab25fd6482316798952ff7161e6d599e7"
+    },
+    "authorization_contract": {
+      "path": "docs/evaluation/v11-independent/v11-sanitized-authorization-contract.json",
+      "sha256": "de05e7d4ebd0429b20c73fd9bb0927a9012a9e358b80a195c878549e56639dc4"
+    }
+  },
+  "clean_source_categories_consulted": [
+    "frozen sanitized schema contract",
+    "Product/Category structured authority",
+    "SiteSetting structured authority",
+    "Published knowledge registry and approved document content",
+    "Owned/private order structured authority interface without private records",
+    "Published business authorization rules"
+  ],
+  "contaminated_sources_explicitly_excluded": [
+    {
+      "source": "docs/cards/chat-model-card.md",
+      "status": "CONTAMINATED SOURCE — EXCLUDED"
+    },
+    {
+      "source": "docs/chat-knowledge-authoring.md",
+      "status": "CONTAMINATED SOURCE — EXCLUDED"
+    }
+  ],
+  "forbidden_source_categories_not_consulted": [
+    "prior holdout fixtures and utterances",
+    "final score and result artifacts",
+    "development phase reports and baselines",
+    "root-cause and remediation reports",
+    "candidate predictions and behavior",
+    "router, extractor, guard, controller, and handler implementation"
+  ],
+  "exposure_counts": {
+    "historical_utterance_exposure": 0,
+    "historical_case_id_exposure": 0,
+    "candidate_output_exposure": 0,
+    "phase_14_exposure": 0,
+    "runtime_implementation_exposure": 0
+  },
+  "validation": {
+    "schema_hash_verification": "PASS",
+    "json_parse": "PASS",
+    "schema_vocabulary_compatibility": "PASS",
+    "json_markdown_taxonomy_agreement": "PASS",
+    "product_snapshot_structured_authority_parity": "PASS",
+    "sitesetting_snapshot_structured_authority_parity": "PASS",
+    "published_knowledge_registry_parity": "PASS",
+    "authorization_contract_review": "PASS",
+    "source_provenance_review": "PASS",
+    "historical_version_literal_scan": "PASS",
+    "historical_case_value_scan": "PASS",
+    "concrete_utterance_field_scan": "PASS",
+    "development_phase_wording_scan": "PASS",
+    "candidate_hash_scan": "PASS",
+    "metric_percentage_scan": "PASS",
+    "failure_count_scan": "PASS",
+    "forbidden_component_name_scan": "PASS",
+    "historical_prediction_scan": "PASS"
+  },
+  "schema_compatibility": "PASS",
+  "sanitization_validation": "PASS",
+  "freeze_status": "FROZEN",
+  "post_freeze_edit_policy": "Any content change invalidates the recorded hashes and requires a new contract and manifest version."
+}

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${V11_FINAL_R1_EXECUTION_AUTHORIZATION:-}" != "" \
+  || "${V11_FINAL_EXECUTION_AUTHORIZATION:-}" != "" \
+  || "${V11_EXECUTE:-0}" != "0" \
+  || "${V11_ALLOW_REQUESTS:-0}" != "0" ]]; then
+  echo "Refusing preflight: execution authorization and request flags must be absent." >&2
+  exit 64
+fi
+
+export AI_CHAT_KNOWLEDGE_GENERATION_ENABLED=false
+export AI_CHAT_QUERY_EXPANSION_ENABLED=false
+export AI_CHAT_VECTOR_SEARCH_ENABLED=false
+export AI_CHAT_QDRANT_INFERENCE_ENABLED=false
+
+php artisan test tests/Feature/FinalV11ReplacementExecutionBundleR1Test.php --compact
+
+echo "V11_REQUESTS = 0"
+echo "V11_EXECUTED = false"
+echo "SCORING_STARTED = false"
+echo "BUNDLE_STATUS = READY_FOR_AUTHORIZED_REPLACEMENT_EXECUTION"

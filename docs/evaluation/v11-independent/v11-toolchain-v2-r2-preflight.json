@@ -1,0 +1,15 @@
+{
+  "schema_version": "farta-v11-toolchain-v2-r2-preflight.1.0",
+  "recorded_at_utc": "2026-09-28T07:28:30Z",
+  "status": "PASS",
+  "status_authorizes_execution": false,
+  "toolchain_v2_r2": "401e530d55c8d3e2dc87885eeeff365fc59fffaaa70ca9bb2d4f60c0115726dc",
+  "r1_failure_reproduced": true,
+  "nested_shipping_domain_remediated": true,
+  "unknown_domain_fail_closed": true,
+  "offline": true,
+  "gold_isolation": true,
+  "v11_requests": 0,
+  "v11_executed": false,
+  "scoring_started": false
+}

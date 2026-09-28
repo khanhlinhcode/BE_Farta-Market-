@@ -1,0 +1,72 @@
+{
+  "report_version": "farta-v11-toolchain-v2-preflight-report.1.0",
+  "recorded_at_utc": "2026-09-28T05:07:08Z",
+  "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+  "toolchain_v2": "9fcf7f1de8f42156074a65ac71255098c1945144bcbb940cfc222a02ecbdbd9b",
+  "evaluator_v2": "df40ceb8336814629eeb5ae93a0dce5e623a2c3d8e2f964f24e5789f3a1ba2de",
+  "scorer_v2": "6dd5ebece571b35eb89b4c9d244300e64b9a2c9491294f1b13277f6d6a406f09",
+  "runtime_adapter": "4567cd4db35fbd34bac3f82a536b24bb20032227aa8dc6808964fd2399ec899e",
+  "evaluation_contract": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20",
+  "fact_verification_contract": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604",
+  "adapter_contract": "53b1ae811888f62d09a379c6e8905f2604528ac6c1bb9e22ffd7b1420aaa20cb",
+  "fixture_set": "4effa7741d2f2d1bdc0eb0c855aeee05ddc793c4a9eae73973ebe614418ec054",
+  "focused_test_suite": "bba763bd79805ec31bec9d6476e2dbf38ec5a6a61e5b74ae94b2a5d3148e5386",
+  "tests": {
+    "passed": 16,
+    "total": 16
+  },
+  "assertions": {
+    "passed": 68,
+    "total": 68
+  },
+  "gates": {
+    "1_candidate_identity": "PASS",
+    "2_v11_dataset_identity": "PASS",
+    "3_v11_audit_identity": "PASS",
+    "4_v11_manifest_identity": "PASS",
+    "5_runtime_adapter": "PASS",
+    "6_mutation_target": "PASS",
+    "7_business_outcome": "PASS",
+    "8_claim_evidence": "PASS",
+    "9_source_versions": "PASS",
+    "10_multi_intent": "PASS",
+    "11_follow_up": "PASS",
+    "12_schema": "PASS",
+    "13_determinism": "PASS",
+    "14_negative_tests": "PASS",
+    "15_offline": "PASS",
+    "16_v11_execution_guard": "PASS",
+    "17_v11_immutability": "PASS",
+    "18_no_candidate_modification": "PASS"
+  },
+  "frozen_v11": {
+    "dataset": {
+      "expected": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+      "observed": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+      "status": "UNCHANGED"
+    },
+    "audit": {
+      "expected": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+      "observed": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+      "status": "UNCHANGED"
+    },
+    "manifest": {
+      "expected": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+      "observed": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+      "status": "UNCHANGED"
+    }
+  },
+  "candidate_status": "UNCHANGED",
+  "v11_requests": 0,
+  "v11_executed": false,
+  "raw_capture_created": false,
+  "business_outcome_results_created": false,
+  "claim_support_results_created": false,
+  "preflight": "PASS",
+  "v11_status": "FROZEN / NOT EXECUTED",
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

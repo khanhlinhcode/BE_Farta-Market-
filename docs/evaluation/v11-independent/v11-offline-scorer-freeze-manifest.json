@@ -1,0 +1,49 @@
+{
+  "manifest_version": "farta-v11-offline-scorer-freeze-manifest.1.0",
+  "revision": "V11 Offline Scorer V1",
+  "executable_version": "farta-final-v11-offline-scorer.1.0.0",
+  "freeze_status": "FROZEN",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL. No newline, text, or JSON normalization.",
+  "semantic_identity": "adb279e855ee8efd09b56af9994204c9f72eb19368b4b807005f3ad95b7ef06a",
+  "ordered_semantic_files": [
+    "tests/Support/FinalV11ContractException.php",
+    "tests/Support/FinalV11Evaluation.php",
+    "tests/Support/FinalV11FactVerifier.php",
+    "tests/Support/FinalV11IdentityValidator.php",
+    "tests/Support/FinalV11Metrics.php",
+    "tests/Support/FinalV11OfflineScorer.php",
+    "tests/Support/FinalV11RawCapture.php"
+  ],
+  "semantic_scope": [
+    "raw JSONL deserialization",
+    "strict field and entity comparison",
+    "symbolic business-outcome comparison",
+    "record-specific offline claim verification",
+    "metric aggregation and denominator inventory",
+    "security adjudication",
+    "manifest-supplied identity validation"
+  ],
+  "excluded_from_identity": [
+    "tests and fixtures that validate but do not control scoring semantics",
+    "documentation and reports",
+    "generated manifests",
+    "timestamps",
+    "candidate/runtime files"
+  ],
+  "frozen_contracts": {
+    "evaluation_contract_sha256": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20",
+    "fact_verification_contract_sha256": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604"
+  },
+  "validation": {
+    "perfect_mirror": "PASS",
+    "business_outcome": "160/160",
+    "claim_support": "115/115",
+    "scenario_claim_support": "15/15",
+    "negative_mutations": "PASS",
+    "claim_support_negative_classes_a_through_f": "PASS",
+    "deterministic_scoring": "PASS",
+    "zero_network": "PASS",
+    "candidate_executed": false
+  }
+}

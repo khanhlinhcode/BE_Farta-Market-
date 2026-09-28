@@ -1,0 +1,183 @@
+{
+    "manifest_version": "farta-v11-author-r3-freeze-manifest.1.0",
+    "revision": "V11-author-r3-final-entity-cleanup",
+    "parent_revision": "V11-author-r2",
+    "lineage": [
+        "V11-author-r1",
+        "V11-author-r2",
+        "V11-author-r3-final-entity-cleanup"
+    ],
+    "dataset_schema_version": "farta-v10.3.0",
+    "schema_contract_version": "farta-v11-sanitized-schema-contract.1.0",
+    "frozen_at_utc": "2026-09-27T10:37:40Z",
+    "hash_algorithm": "SHA-256",
+    "parent_artifacts": {
+        "dataset": {
+            "path": "docs/evaluation/v11-independent/v11-author-r2-candidate-dataset.json",
+            "sha256": "b89b78105caad702ebefe1a301f6a1b91a64cf13b5af7659a091e562de9320aa"
+        },
+        "report": {
+            "path": "docs/evaluation/v11-independent/v11-author-r2-report.md",
+            "sha256": "dc6283e475ed688d6dce5bef364557eaa39585c0b00dff6960eb7a40ae1f4de7"
+        },
+        "freeze_manifest": {
+            "path": "docs/evaluation/v11-independent/v11-author-r2-freeze-manifest.json",
+            "sha256": "a1cbcaf6cee1e7640fbb65e234cd03618a70db63b40bc6830399265a5471caaa"
+        }
+    },
+    "sanitized_inputs": [
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-schema-contract.json",
+            "sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-business-capability-contract.json",
+            "sha256": "ddaf57dcb1fd0db48b7466370c498d52db729cf8a4714f99c0098548fc1e4b7b"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-product-authority.json",
+            "sha256": "809923e43f8919446b8123ea3ab0cac2f39cc3b50d89bad89f584d3768799f0a"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-sitesetting-authority.json",
+            "sha256": "92e69a3c93bfef417fce7ab76a12e191558cbbe50ec9e645c6422e69bb69f2cb"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-knowledge-registry.json",
+            "sha256": "dc8b013d3235a8fb04cedda63575354ab25fd6482316798952ff7161e6d599e7"
+        },
+        {
+            "path": "docs/evaluation/v11-independent/v11-sanitized-authorization-contract.json",
+            "sha256": "de05e7d4ebd0429b20c73fd9bb0927a9012a9e358b80a195c878549e56639dc4"
+        }
+    ],
+    "artifacts": {
+        "dataset": {
+            "path": "docs/evaluation/v11-independent/v11-author-r3-candidate-dataset.json",
+            "sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb"
+        },
+        "report": {
+            "path": "docs/evaluation/v11-independent/v11-author-r3-report.md",
+            "sha256": "9129c9c873b0a190fe08c02de9202df2f9f948f48a727b1f32f3d93358aec320"
+        }
+    },
+    "counts": {
+        "primary_cases": 160,
+        "multi_turn_scenarios": 20,
+        "scenario_turns": 40,
+        "multi_intent_primary_cases": 20,
+        "multi_intent_branches": 40,
+        "entity_objects_audited": 240,
+        "unit_validations": 240,
+        "account_target_validations": 240
+    },
+    "change_scope": {
+        "affected_entity_objects": 17,
+        "entity_field_changes": 17,
+        "unit_changes": 13,
+        "account_target_changes": 4,
+        "additional_same_class_defects_fixed": 0,
+        "remediation_reason_counts": {
+            "MISSING_EXPLICIT_UNIT": 3,
+            "SPURIOUS_UNIT": 6,
+            "UNAUTHORIZED_UNIT_NORMALIZATION": 3,
+            "INVALID_CONTEXT_UNIT_INHERITANCE": 1,
+            "SPURIOUS_REQUESTER_ACCOUNT_TARGET": 4
+        },
+        "utterance_changes": 0,
+        "schema_changes": 0,
+        "quantity_changes": 0,
+        "other_entity_slot_changes": 0,
+        "behavior_gold_changes": 0
+    },
+    "entity_counts": {
+        "r2_combined": {
+            "product_raw_mention": 112,
+            "canonical_product": 122,
+            "quantity": 33,
+            "unit": 31,
+            "order_reference": 24,
+            "ordinal_reference": 6,
+            "context_reference": 26,
+            "account_target": 23,
+            "requested_mutation_value": 6
+        },
+        "r3_combined": {
+            "product_raw_mention": 112,
+            "canonical_product": 122,
+            "quantity": 33,
+            "unit": 26,
+            "order_reference": 24,
+            "ordinal_reference": 6,
+            "context_reference": 26,
+            "account_target": 19,
+            "requested_mutation_value": 6
+        }
+    },
+    "unit_provenance": {
+        "non_null_total": 26,
+        "surface": 26,
+        "context": 0,
+        "normalization": 0,
+        "missing": 0,
+        "incorrect": 0,
+        "spurious": 0,
+        "unauthorized_normalization": 0,
+        "status": "PASS"
+    },
+    "account_target_provenance": {
+        "non_null_total": 19,
+        "explicit_self": 2,
+        "explicit_other": 0,
+        "explicit_identifier": 8,
+        "valid_private_resource_possession": 9,
+        "missing": 0,
+        "incorrect": 0,
+        "spurious": 0,
+        "status": "PASS"
+    },
+    "validation": {
+        "status": "PASS",
+        "input_hashes": "PASS",
+        "input_freeze_status": "PASS",
+        "json_parse": "PASS",
+        "schema_validation": "PASS",
+        "unique_ids": "PASS",
+        "structural_counts": "PASS",
+        "unit_240_object_audit": "PASS",
+        "account_target_240_object_audit": "PASS",
+        "unit_forward_invariant": "PASS",
+        "unit_reverse_invariant": "PASS",
+        "account_target_forward_invariant": "PASS",
+        "account_target_reverse_invariant": "PASS",
+        "known_r2_defects_closed": "PASS",
+        "parent_branch_entity_scope": "PASS",
+        "follow_up_entity_scope": "PASS",
+        "r2_to_r3_change_scope": "PASS",
+        "zero_utterance_changes": "PASS",
+        "zero_schema_changes": "PASS",
+        "quantity_unchanged": "PASS",
+        "other_entity_slots_unchanged": "PASS",
+        "zero_behavior_gold_changes": "PASS",
+        "claim_authority_regression": "PASS",
+        "security_regression": "PASS",
+        "multi_intent_structure": "PASS",
+        "follow_up_structure": "PASS",
+        "distribution_regression": "PASS",
+        "double_pass_fresh_reload": "PASS",
+        "manual_review": "PASS"
+    },
+    "isolation": {
+        "candidate_executed": false,
+        "candidate_output_accessed": false,
+        "historical_v0_v10_accessed": false,
+        "runtime_implementation_accessed": false,
+        "phase_14_accessed": false
+    },
+    "unit_invariant_status": "PASS",
+    "account_target_invariant_status": "PASS",
+    "change_scope_status": "PASS",
+    "validation_status": "PASS",
+    "freeze_status": "FROZEN",
+    "post_freeze_edit_policy": "Any content change invalidates the recorded hashes and requires a new authoring revision and manifest."
+}

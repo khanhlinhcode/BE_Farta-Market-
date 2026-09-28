@@ -1,0 +1,137 @@
+{
+  "manifest_schema_version": "farta-v10-r3-freeze-manifest.1.0",
+  "dataset_schema_version": "farta-v10.2.0",
+  "dataset_version": "V10-blind-independent-2026-09-26-r3",
+  "revision": 3,
+  "parent_revision": 2,
+  "frozen_at_utc": "2026-09-26T14:51:49Z",
+  "freeze_status": "FROZEN",
+  "parent_r2_dataset": {
+    "path": "v10-r2-candidate-dataset.json",
+    "sha256": "a6fe8e9dcf9b2f69dd600274cea264cb80d182a0b5e80c0b583f883acd10fd21"
+  },
+  "artifacts": [
+    {
+      "path": "v10-r3-candidate-dataset.json",
+      "role": "candidate_dataset_revision_3",
+      "bytes": 631708,
+      "sha256": "f87149909d3bbd0bbad9ecbc4283863efcd0e8a565f06f2079c65c0bdca04ef5"
+    },
+    {
+      "path": "v10-r3-authoring-report.md",
+      "role": "authoring_report_revision_3",
+      "bytes": 5537,
+      "sha256": "ee0c5c4b20988f325d951c05e7ddacefb7e8eeecf9c3be7382063b5bbd03e897"
+    }
+  ],
+  "counts": {
+    "primary_single_turn_cases": 292,
+    "explicit_multi_turn_scenarios": 39,
+    "multi_turn_turns": 78,
+    "replacement_primary_cases": 2,
+    "entity_gold_corrections": 13,
+    "entity_bearing_primary_cases_before": 160,
+    "entity_bearing_primary_cases_after": 171,
+    "multi_intent_primary_cases": 27,
+    "multi_intent_annotated_branches": 56,
+    "privileged_mutation_primary_cases": 16,
+    "true_ood_primary_cases": 23
+  },
+  "replacement_parent_mapping": {
+    "V10-R2-ST-c4e8b619": "V10-R3-ST-1f6748ba",
+    "V10-ST-0210": "V10-R3-ST-579dee27"
+  },
+  "entity_gold_correction_ids": [
+    "V10-ST-0240",
+    "V10-ST-0241",
+    "V10-ST-0243",
+    "V10-ST-0244",
+    "V10-ST-0245",
+    "V10-ST-0246",
+    "V10-ST-0248",
+    "V10-ST-0249",
+    "V10-ST-0251",
+    "V10-ST-0254",
+    "V10-ST-0255",
+    "V10-ST-0256",
+    "V10-ST-0263"
+  ],
+  "distributions": {
+    "language": {
+      "en": 68,
+      "mixed": 48,
+      "vi_conversational": 58,
+      "vi_formal": 67,
+      "vi_no_diacritics": 51
+    },
+    "capability": {
+      "product_search": 24,
+      "product_detail": 18,
+      "price": 18,
+      "stock_availability": 18,
+      "catalog_listing": 12,
+      "shipping_current_value": 12,
+      "shipping_calculation": 16,
+      "cart_informational": 10,
+      "cart_action_request": 18,
+      "order_read": 14,
+      "payment_status_read": 10,
+      "knowledge_query": 20,
+      "missing_evidence_query": 18,
+      "general_chat": 8,
+      "unsupported_ood": 23,
+      "clarification": 10,
+      "privileged_mutation": 16,
+      "multi_intent": 27
+    },
+    "follow_up_subtype": {
+      "singular_reference": 5,
+      "plural_reference": 4,
+      "ordinal_first": 4,
+      "ordinal_second": 4,
+      "ordinal_last": 4,
+      "deictic_that": 5,
+      "ellipsis": 5,
+      "expired_context": 4,
+      "ambiguous_reference": 4
+    }
+  },
+  "validation": {
+    "status": "PASS",
+    "checks_passed": 42,
+    "json_parse": true,
+    "r2_parent_hash": true,
+    "primary_count_292": true,
+    "scenario_count_39": true,
+    "turn_count_78": true,
+    "unique_primary_ids": true,
+    "unique_scenario_ids": true,
+    "unique_primary_utterances_nfkc": true,
+    "unique_scenario_conversations_nfkc": true,
+    "required_primary_fields": true,
+    "entity_schema": true,
+    "terminal_vocabulary": true,
+    "canonical_products_active": true,
+    "quantity_and_unit_consistency": true,
+    "auth_state_consistency": true,
+    "evidence_source_references_valid": true,
+    "scenarios_unchanged": true,
+    "scenarios_two_turn_and_self_contained": true,
+    "multi_intent_count_27": true,
+    "multi_intent_branch_count_56": true,
+    "multi_intent_branch_fields": true,
+    "clean_primary_records_unchanged": true,
+    "entity_corrections_only_changed_entity_gold": true,
+    "replacement_positions_and_ids": true,
+    "exact_replacement_count_2": true,
+    "exact_entity_correction_count_13": true,
+    "entity_semantic_checks_13": true,
+    "replacement_price_semantics": true,
+    "replacement_general_chat_semantics": true,
+    "schema_and_authorities_unchanged": true,
+    "candidate_executed": false,
+    "historical_leakage_audit_run_by_author": false
+  },
+  "independence_status": "DISCLOSED_AMBIENT_CONTEXT_LIMITATION",
+  "freeze_note": "The initiating IDE context exposed the R2 audit report before remediation began. No audit file, V0-V9 fixture, historical wording, candidate output, or runtime implementation was subsequently opened or used. Dataset and report hashes were computed after all R3 internal validation passed; all R3 artifacts are frozen and must not be modified in place."
+}

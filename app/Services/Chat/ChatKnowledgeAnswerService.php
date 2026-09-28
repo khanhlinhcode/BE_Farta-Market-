@@ -6,14 +6,36 @@ use Throwable;
 
 final class ChatKnowledgeAnswerService
 {
-    public function __construct(private readonly ChatProvider $provider) {}
+    public function __construct(
+        private readonly ChatProvider $provider,
+        private readonly ChatEvidencePolicy $evidencePolicy,
+    ) {}
 
-    /** @param array{chunks: array<int, array<string, mixed>>, queries: array<int, string>, mode: string, vector_fallback: bool} $retrieval @return array<string, mixed> */
+    /** @param array{chunks: array<int, array<string, mixed>>, queries: array<int, string>, mode: string, vector_fallback: bool, timings: array<string, int>} $retrieval @return array<string, mixed> */
     public function answer(string $question, array $retrieval, bool $english): array
     {
-        $chunks = $retrieval['chunks'];
+        $domain = $retrieval['required_evidence_domain'] ?? $this->evidencePolicy->domain('unknown');
+        $chunks = collect($retrieval['chunks'])
+            ->filter(fn (array $chunk): bool => $this->evidencePolicy->eligible($chunk, $domain))
+            ->values()
+            ->all();
         if ($chunks === []) {
             return $this->withTelemetry($this->refused($english, 'no_evidence'));
+        }
+
+        if (($chunks[0]['authority'] ?? null) === 'structured') {
+            $structuredSource = $domain instanceof ChatEvidenceDomain
+                ? $domain->structuredSource
+                : ($domain['structured_source'] ?? null);
+
+            return $this->withTelemetry([
+                'reply' => $chunks[0]['content'],
+                'source' => $structuredSource ?? 'site-settings',
+                'answer_status' => 'verified',
+                // The structured source is recorded by `source`; a knowledge
+                // citation alias must not masquerade as a separate authority.
+                'citations' => [],
+            ]);
         }
 
         if (! config('services.ai_chat.knowledge_generation_enabled', false) || ! $this->provider->supportsStructuredOutput()) {

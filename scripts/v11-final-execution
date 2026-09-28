@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${V11_FINAL_EXECUTION_AUTHORIZATION:-}" != "RUN_FROZEN_V11_ONCE" ]]; then
+  echo "Refusing to run: set V11_FINAL_EXECUTION_AUTHORIZATION=RUN_FROZEN_V11_ONCE only under a separate final-execution authorization." >&2
+  exit 64
+fi
+
+export AI_CHAT_KNOWLEDGE_GENERATION_ENABLED=false
+export AI_CHAT_QUERY_EXPANSION_ENABLED=false
+export AI_CHAT_VECTOR_SEARCH_ENABLED=false
+export AI_CHAT_QDRANT_INFERENCE_ENABLED=false
+
+php artisan test tests/Feature/FinalV11FinalExecutionTest.php --compact

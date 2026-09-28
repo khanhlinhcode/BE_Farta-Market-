@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+required_authorization="RUN_FROZEN_V11_R3_REPLACEMENT_ONCE"
+if [[ "${V11_FINAL_R3_EXECUTION_AUTHORIZATION:-}" != "${required_authorization}" ]]; then
+  echo "Refusing R3 execution: exact authorization is required." >&2
+  exit 64
+fi
+
+if [[ "${V11_FINAL_R2_EXECUTION_AUTHORIZATION:-}" != "" \
+  || "${V11_FINAL_R1_EXECUTION_AUTHORIZATION:-}" != "" \
+  || "${V11_FINAL_EXECUTION_AUTHORIZATION:-}" != "" \
+  || "${V11_EXECUTE:-0}" != "0" \
+  || "${V11_ALLOW_REQUESTS:-0}" != "0" ]]; then
+  echo "Refusing R3 execution: historical, R1, R2, and legacy execution flags are not accepted." >&2
+  exit 64
+fi
+
+export AI_CHAT_KNOWLEDGE_GENERATION_ENABLED=false
+export AI_CHAT_QUERY_EXPANSION_ENABLED=false
+export AI_CHAT_VECTOR_SEARCH_ENABLED=false
+export AI_CHAT_QDRANT_INFERENCE_ENABLED=false
+
+php artisan test tests/Feature/FinalV11ReplacementExecutionR3Test.php --compact

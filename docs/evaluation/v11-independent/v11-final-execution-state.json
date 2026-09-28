@@ -1,0 +1,27 @@
+{
+    "cases_completed": 11,
+    "cases_failed": 1,
+    "cases_started": 12,
+    "completed_at_utc": null,
+    "execution_state": "EXECUTION_INCOMPLETE",
+    "failure": "Tests\\Support\\FinalV11ContractException: V2 prediction security_decision contains an unknown enum value.",
+    "identities": {
+        "audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+        "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+        "dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+        "evaluation_contract": "f51bc21f66d31c2b03cf94a2ae602896d4a251ad053ba72760c707f6bd8dfa20",
+        "evaluator_v2": "df40ceb8336814629eeb5ae93a0dce5e623a2c3d8e2f964f24e5789f3a1ba2de",
+        "fact_verification_contract": "8ee38762fe7d51392bb3ec644a44913077722ef108a38102df648fc8c1a1c604",
+        "manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+        "runtime_adapter_contract": "53b1ae811888f62d09a379c6e8905f2604528ac6c1bb9e22ffd7b1420aaa20cb",
+        "runtime_adapter_v2": "4567cd4db35fbd34bac3f82a536b24bb20032227aa8dc6808964fd2399ec899e",
+        "scorer_v2": "6dd5ebece571b35eb89b4c9d244300e64b9a2c9491294f1b13277f6d6a406f09",
+        "toolchain_v2": "9fcf7f1de8f42156074a65ac71255098c1945144bcbb940cfc222a02ecbdbd9b"
+    },
+    "last_case": "v11r1-p012",
+    "raw_capture": null,
+    "run_id": "final-v11-20260928T060655Z",
+    "schema_version": "farta-v11-final-execution-guard.1.0",
+    "scored_results": null,
+    "started_at_utc": "2026-09-28T06:06:55+00:00"
+}

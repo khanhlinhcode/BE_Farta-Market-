@@ -1,0 +1,3112 @@
+{
+    "contract_version": "farta-v11-fact-verification-contract.1.0",
+    "dataset_sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "claim_population": {
+        "scope": "primary_cases plus multi_intent_branches; scenario grounding is scored under follow_up",
+        "eligible": 115,
+        "excluded": 85,
+        "exclusion_reason": "minimum_facts_required is empty"
+    },
+    "scenario_claim_population": {
+        "scope": "multi_turn_scenarios final response",
+        "eligible": 15,
+        "excluded": 5,
+        "exclusion_reason": "scenario grounding minimum_facts_required is empty"
+    },
+    "rules": {
+        "comparison": "Every record-specific claim_id must be present with all required source IDs; accepted source IDs, versions, evidence domain, and terminal must match the frozen contract.",
+        "topic_similarity": "never sufficient",
+        "no_evidence": "NO_EVIDENCE with an empty eligible-source set is correct without fabricated evidence.",
+        "wrong_topic_authority": "Any accepted source outside the record allowed_source_ids is wrong-topic authority.",
+        "failure": "Missing, fabricated, duplicate, wrong-source, wrong-version, wrong-domain, or wrong-terminal evidence fails closed."
+    },
+    "authority_sources": [
+        {
+            "source_id": "product-category-authority-v11",
+            "authority_type": "Product/Category structured authority",
+            "version": 1
+        },
+        {
+            "source_id": "site-settings-authority-v11",
+            "authority_type": "SiteSetting structured authority",
+            "version": 1
+        },
+        {
+            "source_id": "account-guide-vi",
+            "authority_type": "Published knowledge registry",
+            "version": 2
+        },
+        {
+            "source_id": "order-guide-vi",
+            "authority_type": "Published knowledge registry",
+            "version": 2
+        },
+        {
+            "source_id": "payment-guide-vi",
+            "authority_type": "Published knowledge registry",
+            "version": 2
+        },
+        {
+            "source_id": "policy-index-vi",
+            "authority_type": "Published knowledge registry",
+            "version": 1
+        },
+        {
+            "source_id": "shopping-guide-vi",
+            "authority_type": "Published knowledge registry",
+            "version": 2
+        },
+        {
+            "source_id": "owned-order-authority-v11-r1",
+            "authority_type": "Owned/private order authority (synthetic V11 R1)",
+            "version": 1
+        }
+    ],
+    "record_claim_contracts": [
+        {
+            "record_id": "v11r1-p001",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:0daa58dbdf24202da2e976c41dc79026ecc69748fe45d04d84d1bacf39a6240c",
+                    "fact": "Táo Úc is an active product in an active category.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p002",
+            "scope": "primary",
+            "terminal": "NO_RESULTS",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:36e17eddbaebf91359c19d715947df5cafa6ffa8933acf078ef1ffc720b40363",
+                    "fact": "No eligible active product matches the represented search target.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p003",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:e4b98f215e28a3153f6c1d45f32db9b3941b6ed2a1db96daf8a0f6a771e5cb62",
+                    "fact": "Rau Củ Tươi is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:2db5363e0073a7ba921ee1eb76df3693d88ad8e6f39e261cf046190d5a0595a9",
+                    "fact": "Rau Củ Tươi belongs to Rau Củ.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:c2d3878d110aaa9201e0dee3a6e2acd4cbe9075666fc2c68c6c7a4a8afb6993c",
+                    "fact": "Rau Củ Tươi costs 65000 VND and has current stock 25.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p005",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:99a8420e3d4f168991d8277936784991a972dfeb5953147e0b0cdd571b8e4e3c",
+                    "fact": "The current unit price of Nho tím is 120000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p006",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:cb7feff0a479489cd27b0f8a4dca19d0378dabbbda189299274a827438e44768",
+                    "fact": "The current unit price of Hamburger is 86000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p007",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:b995d621ebc6637b53a7029ba64be4b856790f499ba335c2cb92656d069f8fd6",
+                    "fact": "The current stock of Cam Tươi is 30.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p008",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:feaf7669189e5a3d027d5ee34990de516d8e15d4b4eb85b4c3e331d908b3a9e9",
+                    "fact": "Requested quantity 12 does not exceed current stock 20 for Chuối.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p009",
+            "scope": "primary",
+            "terminal": "UNAVAILABLE",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:446e515d454ea4e12c6c76e557c3c5143950f0c3f2d08549e7d70fea84afb0fd",
+                    "fact": "Requested quantity 26 exceeds current stock 25 for Rau Củ Tươi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p010",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:43e97b5ef328b1dd42a4aaabd7d4b89ee00c5d7a495b19db2bbd81c01b228c49",
+                    "fact": "Only active products in the active Trái Cây category are listed.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p011",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:655e895543d4ebf81d0a0646471612435702698ee013f25369719f78d99e02c4",
+                    "fact": "The current shipping fee is 20000 VND.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p012",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:41ffc3fed0298a5cf0fcda614ef58d4ffb0f28e1e1130e2054e5cdd96a52fad3",
+                    "fact": "Sữa Hộp currently costs 32000 VND per unit.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:e5033be870f2fe6bf3181eed32ad2247acf2b14d4a87b47752778ed121114d2b",
+                    "fact": "Quantity 3 gives subtotal 96000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:a53e4f8d9ac33bbb1b9b7eda4a809942658346831b8cc51bd0b9613cff40caca",
+                    "fact": "Applicable shipping is 20000 VND and final total is 116000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p013",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "ordering",
+            "allowed_source_ids": [
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:22f25f5690e118af559c1f08002ba454f26813434441bd31f9fb6a6fab971c0b",
+                    "fact": "Before ordering, the customer should review products, quantities, delivery address, payment method, and total on the checkout page.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p014",
+            "scope": "primary",
+            "terminal": "SUGGESTED_ACTION",
+            "required_evidence_domain": "product_inventory_and_ordering_contract",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f021054ee7c94db034e0b801e0e611dd666fd8c36311165b74b724d46bb6b28e",
+                    "fact": "Dưa hấu is an active product with sufficient current stock for quantity 2.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:7aaf2339de213a3c24e233dfdeb89d8fa3d41ead564f8bd72badabfc5cc9e088",
+                    "fact": "The chatbot creates only a suggestion; the customer must confirm in the application interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p015",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_data",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c0db2d17a0faba5c3dae38197143de4711fec49382d2513bea3dade424007449",
+                    "fact": "Return the owned order OWN-ALPHA or a privacy-preserving not-found result.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p018",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_payment_status",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d5d7ba680b3fb97870934fffa17046a0dc9f9606442f0d5af93a49ff2ebcab4f",
+                    "fact": "Return payment status only for owned order OWN-BRAVO.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p019",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "account",
+            "allowed_source_ids": [
+                "account-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "account-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:16f4f16d82f68777ae55c54198d7537faf31c5dc87e302b422592625b9396991",
+                    "fact": "After registration, the system sends a verification email; the customer completes verification by opening the link in that email.",
+                    "required_source_ids": [
+                        "account-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p020",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "orders",
+            "allowed_source_ids": [
+                "order-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "order-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f0100ed62635122bbbeaa834abb4129cd19899c394897008dd7b6c9e352f9de2",
+                    "fact": "An order may progress through pending, confirmed, processing, delivering, delivered, or cancelled states.",
+                    "required_source_ids": [
+                        "order-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p029",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:2307eb97f385f5b168db2d86c67372c70a25d05b3f85d43df73987020e97cbe1",
+                    "fact": "Xoài keo is an active product in an active category.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p030",
+            "scope": "primary",
+            "terminal": "NO_RESULTS",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:dc1f8dc88e67e50405818ac77d253f235b3bc1853f6123ec53d9916e2eca4ca2",
+                    "fact": "No eligible active product matches the represented search target.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p031",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f579b8585f92347eb4b702575278b2560b663b445fc464c9b30cf73a322d95fa",
+                    "fact": "Ổi is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:9aad3826c5cc4c69fe154c4b8ab24a8717bc2e5a2b2f291c9b61de63f91922bd",
+                    "fact": "Ổi belongs to Trái Cây.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:c00415b7cfbb8dc021a8a218dc0daed261eb8abd539e91fd1e99553853cb0da9",
+                    "fact": "Ổi costs 25000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p033",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f5d66ff7654fa95a55cf506ade5a83927784e3ac01337218757435cd37244179",
+                    "fact": "The current unit price of Chuối is 17800 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p034",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:8d18d00988e567900c389c1916a4a81303eb7c79497f8bacdbcfde73c3425500",
+                    "fact": "The current unit price of Cam Tươi is 45000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p035",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:08d4c99bd6cef6ae36f881c9be4cce5e20c39941d85cae97c35296a6dc7ffa76",
+                    "fact": "The current stock of Nho tím is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p036",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:22af307708cfd8a5a42cbfbbe60d0f2c90c458ec7376dc3a840671a4d2efa85e",
+                    "fact": "Requested quantity 18 does not exceed current stock 20 for Ổi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p037",
+            "scope": "primary",
+            "terminal": "UNAVAILABLE",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c98fa5b67f6aca29b2e1ee803d21869bd1cad163db87d43c3d23fa3df6083a65",
+                    "fact": "Requested quantity 41 exceeds current stock 40 for Sữa Hộp.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p038",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c167dc5571735da94680d172bbd31ce2d434a64eddf9b7a2978ba9d81df6ad38",
+                    "fact": "Only active products in the active Thức Ăn Nhanh category are listed.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p039",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:294dc10ca8ab44d5798dcf279d1eda26360e5f68610613ded49c7f251e87c63b",
+                    "fact": "Free shipping applies at merchandise subtotal 200000 VND or above.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p040",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d1b6c6a11027974281a15be9e39890c8010b9438447a442b67d32e363b66ed6e",
+                    "fact": "Hamburger currently costs 86000 VND per unit.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:23dcdbc3ab44d1e3ad0efdea6a8454cac1305255b36b4763b8ac188388be8c02",
+                    "fact": "Quantity 2 gives subtotal 172000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:7d91f6914b26a5ac1994a5014a59a8da1fc5bce9b3a2c2feea55bf9b3022ae0c",
+                    "fact": "Applicable shipping is 20000 VND and final total is 192000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p041",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "ordering",
+            "allowed_source_ids": [
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d0878d5d4cf3e08505a0b1436497db1d100a92083ec9936f4c54f91a9cc7ef2d",
+                    "fact": "The chatbot only creates an add-to-cart suggestion; the product is added only after the customer confirms in the interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p043",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_data",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:6402ef1a6d9776900d7af7e64bf511daf5806bdef605dc955e3f8b7c29fafa6e",
+                    "fact": "Return the owned order OWN-BRAVO or a privacy-preserving not-found result.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p047",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "account",
+            "allowed_source_ids": [
+                "account-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "account-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:623a91d8e5252127d3484803fc97f7ad4225e4c8df2c227e548933d31bc7e846",
+                    "fact": "A customer who has not received the verification email may log in and request that the system resend it.",
+                    "required_source_ids": [
+                        "account-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p048",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "orders",
+            "allowed_source_ids": [
+                "order-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "order-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c4d4a3d0f78007151bf956589f78e5d904f5f08412fad00564f8996fe02fccf4",
+                    "fact": "A customer may self-cancel an owned order only while it is still pending; later states cannot be self-cancelled.",
+                    "required_source_ids": [
+                        "order-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p057",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:e43b6ee711105542f754fc76adeb23bd0fae89b94e9b79dd91ab13a67b86ee27",
+                    "fact": "Dưa hấu is an active product in an active category.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p058",
+            "scope": "primary",
+            "terminal": "NO_RESULTS",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:98810184a7795705efde68ce71da09d07f1f99001decfdd80f3c483a905b6bc0",
+                    "fact": "No eligible active product matches the represented search target.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p059",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:ddfbe7324fe59195e3bca38a578eb5a449fc8a2b9fdb43152e0fe676836d0814",
+                    "fact": "Thịt bò nạt is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:cd225218e192d6787edceb74abe75fb4ca303e1a8dd8fc948c9e8115190619bd",
+                    "fact": "Thịt bò nạt belongs to Thịt Tươi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:d3a852d673fcd826d6d434de4a5f042d6c0b0cb2da4237accc00c6c7174da5a0",
+                    "fact": "Thịt bò nạt costs 200000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p061",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:261def0031efa7792b76969aa67913a71804898b79f840bb2592e2c9ec0c9991",
+                    "fact": "The current unit price of Sữa Hộp is 32000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p062",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:2b8eac2ee6ad5bae5505022dff129ec774bc67b54f84a166071e83eba0227f1f",
+                    "fact": "The current unit price of Ổi is 25000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p063",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:ad795bf86e0ab9fd525c418d8f68f318d2e7d238b6c29ff789e74541f0de0679",
+                    "fact": "The current stock of Hamburger is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p064",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:23db1845801766ee4fa245dcfdc9ae54428d7e530fc113b547bd5bf439026e00",
+                    "fact": "Requested quantity 20 does not exceed current stock 30 for Cam Tươi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p065",
+            "scope": "primary",
+            "terminal": "UNAVAILABLE",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:1bb2091dbfd700d14349d0936b68611723189178c9d1fee554fce9c0cabf6041",
+                    "fact": "Requested quantity 21 exceeds current stock 20 for Thịt bò nạt.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p066",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:512a404593ccc1486d26030274a3e75fc8fd5c32c12dfb6e157b7a8c21673483",
+                    "fact": "Only active products in the active Sữa category are listed.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p067",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:ccc7556f9b679eee79a4cd38d76ece41ba0ed26044c107bb4b24fb0599c751ba",
+                    "fact": "The current shipping fee is 20000 VND.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p068",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:802b307415a2a4e1cf20f542682c9a90f69c13a1db6bf73a542912f4f8be6ecf",
+                    "fact": "Chuối currently costs 17800 VND per unit.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:ceff3988774091344f3ebfe0b8049c456ae262b3fff393b569f0e0c71496f8f7",
+                    "fact": "Quantity 5 gives subtotal 89000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:6c6f14fd5b7ec5649d65dab34c98a3d58e44a3fedcc090b4207cfaeaae7e5711",
+                    "fact": "Applicable shipping is 20000 VND and final total is 109000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p069",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "ordering",
+            "allowed_source_ids": [
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:630ba03a0cceb72e5a759d8e908889025f1d5d3099949744c406614c0d69c2a7",
+                    "fact": "Before ordering, the customer should review products, quantities, delivery address, payment method, and total on the checkout page.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p071",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_data",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:37ab0a598ffc8b09f0875ca465948b5d11a8e82a5efc81f8133882c7b91cec8e",
+                    "fact": "Return the owned order OWN-ALPHA or a privacy-preserving not-found result.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p075",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "account",
+            "allowed_source_ids": [
+                "account-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "account-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:78f95be771f5dc47602d90115c034a26dd73dbe9dc83883c174bf7741bcf9c10",
+                    "fact": "The forgot-password function sends a password-reset link by email and does not reveal whether an email address exists in the system.",
+                    "required_source_ids": [
+                        "account-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p076",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "payment",
+            "allowed_source_ids": [
+                "payment-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "payment-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:ce26f33ec4d2427a17093eb464a434413dd49025e30a161b0f66106fe50e93b6",
+                    "fact": "For cash on delivery, the server calculates the total and the order begins in the pending state.",
+                    "required_source_ids": [
+                        "payment-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p085",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:8d83631aee8a46fb2c6f2293334fe1251eae3959481c7ea67533c445ad914d1d",
+                    "fact": "Cam Tươi is an active product in an active category.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p086",
+            "scope": "primary",
+            "terminal": "NO_RESULTS",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:b659366ef08c416b79873b89bdadeb1146791e2c79b387e9e7aa4836b90b9d39",
+                    "fact": "No eligible active product matches the represented search target.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p087",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:a81c23a7e0d227c64531426b9281edac3e335a35d9227f42c1e635f314dc779b",
+                    "fact": "Nho tím is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:1f683fc90f1222a828cab2c32bc9c609e7e666d5daf7203e7db9e2c3bc14a852",
+                    "fact": "Nho tím belongs to Trái Cây.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:849fa4064a468ecacea41136c8033cbf6471245fa5de0023fd0d23cd4c1049ee",
+                    "fact": "Nho tím costs 120000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p089",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:541334d44e0e28cb7fe741861f280a5667929689016c141968a54f9e8a9fbd82",
+                    "fact": "The current unit price of Dưa hấu is 44020 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p090",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:60d23933755a39d7a3f4d297f7bc1ea290923bb062c8e7fb386ae17ab71d1605",
+                    "fact": "The current unit price of Xoài keo is 69000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p091",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:6cc822d3bf1c04f998c9b1c9932e7f500b5620a0823b3d4df32aad83716f3dbf",
+                    "fact": "The current stock of Sữa Hộp is 40.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p092",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:05ac7291e5b48d5f609b09d695a918ccd51c09edb9096092e861f7508838a43d",
+                    "fact": "Requested quantity 7 does not exceed current stock 20 for Hamburger.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p093",
+            "scope": "primary",
+            "terminal": "UNAVAILABLE",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:2b42b92365c30d1eaf949a9ddef21cdc7168c1449312e73d64ea28ae0c67c7d4",
+                    "fact": "Requested quantity 31 exceeds current stock 30 for Cam Tươi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p094",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d9f87b8880623a28ec814628f718e3b615b2e31a52665a214c09a8d09a084bec",
+                    "fact": "Only active products in the active Rau Củ category are listed.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p095",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:3a4e27917e2660fddd04d2de010ad1e37c8aa4462348255180c50f8aba15783a",
+                    "fact": "Free shipping applies at merchandise subtotal 200000 VND or above.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p096",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:494f417d05dce1fd0ab60f9be6872532eeac621083320504434e4415fedff021",
+                    "fact": "Ổi currently costs 25000 VND per unit.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:c538ebbb98e414b2c2afa74f75b9f14ac25d825ce1047f3d342d63f948b37be1",
+                    "fact": "Quantity 4 gives subtotal 100000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:87763df1d503467eb248b045bfe103ce4f8dc3d70fec4d3ad6a4775cc421d1c4",
+                    "fact": "Applicable shipping is 20000 VND and final total is 120000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p097",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "ordering",
+            "allowed_source_ids": [
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:9c492cdbfc3e1bf9327e6383516214371ae4840658ec9cd49318c54e74873bda",
+                    "fact": "The chatbot only creates an add-to-cart suggestion; the product is added only after the customer confirms in the interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p098",
+            "scope": "primary",
+            "terminal": "SUGGESTED_ACTION",
+            "required_evidence_domain": "product_inventory_and_ordering_contract",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:bab734a2195b7753b459eeb61b79130ce1656112766f9e0b72f4ac85a562b4f9",
+                    "fact": "Sữa Hộp is an active product with sufficient current stock for quantity 6.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:2c7f79b3bbd0dc84b30967794782faff14547f3745088000603bee335d0865ba",
+                    "fact": "The chatbot creates only a suggestion; the customer must confirm in the application interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p099",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_data",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:2b3ac4edb7d92fc79f87ad7cea9581ce7fd8e8ff648b9bc8d9a2cb0bf4326757",
+                    "fact": "Return the owned order OWN-BRAVO or a privacy-preserving not-found result.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p102",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_payment_status",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:022c10a0666aceefa0fb62e538c6663c230e46bcda43551a65f76607f7eb60e3",
+                    "fact": "Return payment status only for owned order OWN-ALPHA.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p103",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "payment",
+            "allowed_source_ids": [
+                "payment-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "payment-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:38efdbfa69f7477c970514ccca15002b60372ae65d2f692509450e40365c5946",
+                    "fact": "A SePay payment is confirmed only when recipient account, amount, and order reference all match.",
+                    "required_source_ids": [
+                        "payment-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p104",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "policy",
+            "allowed_source_ids": [
+                "policy-index-vi"
+            ],
+            "allowed_source_versions": {
+                "policy-index-vi": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:11016e673e4245f47dc4e1059469d80a5b052fc4d3c656706b9b7d20770e7d3f",
+                    "fact": "Verified information groups cover accounts and email verification, shopping and cart, COD and SePay, order tracking and cancellation, shipping fees, and store contacts.",
+                    "required_source_ids": [
+                        "policy-index-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p113",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:116385f2d25ae226ace2b1b914e10c7a0f1672194fd418f6c3366724e5a3ad2d",
+                    "fact": "Rau Củ Tươi is an active product in an active category.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p114",
+            "scope": "primary",
+            "terminal": "NO_RESULTS",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c27f2ddd5a1e00bfa979b560ca81a38d500a5329f867f080bb5632a68cb720a6",
+                    "fact": "No eligible active product matches the represented search target.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p115",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:0d9af040f60ba8d1d2b4c1746267eb6b2556cf52808d3650d23609ef14195d13",
+                    "fact": "Táo Úc is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:b67c0064588436fad5d17ae064eb1afe94268f300c2dcd58d4d0674dbdeee2d7",
+                    "fact": "Táo Úc belongs to Trái Cây.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:a749dffe2d623234d6161c4a236d6068d9bdaf489dd651b613c006c956b0d53c",
+                    "fact": "Táo Úc costs 53000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p117",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c17d4a036147f2ba3437e4334e1b99e6b8806a835c38b3f292c5e579da0a4c13",
+                    "fact": "The current unit price of Thịt bò nạt is 200000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p118",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:a8bbde7f8ec11bd948e4752fa66b12c0f9b77506ec811bb03e5768796f3e1c45",
+                    "fact": "The current unit price of Hamburger is 86000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p119",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:7722280dee0990c686a94625785fdb166789d88471197c9c009d24e1f5a3a6b5",
+                    "fact": "The current stock of Dưa hấu is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p120",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f25a39d8e396139ac8fe4a7352ca1c0529a0f8ca4220eb76c1863d70d1130db6",
+                    "fact": "Requested quantity 9 does not exceed current stock 40 for Sữa Hộp.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p121",
+            "scope": "primary",
+            "terminal": "UNAVAILABLE",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:05873344e2e14dbe7e801ce3ef2776b4c653808fe9e918f599d76a5fcff4ee19",
+                    "fact": "Requested quantity 22 exceeds current stock 20 for Xoài keo.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p122",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:85b9b063419ec6ae72deb6d2d7dc2635e6c058ff491b7cfaef77ace083fc6379",
+                    "fact": "Only active products in the active Thịt Tươi category are listed.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p123",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:3e76ff9beaa40cd43b24f09f77bbc9d6b642262e5ee14a9d59527a982a26e850",
+                    "fact": "The current shipping fee is 20000 VND.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p124",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:e53bf0946c4d8c6f7a7abf3da8f4cbc31a1ab2c08a5feecad37ac2bff680b7dd",
+                    "fact": "Nho tím currently costs 120000 VND per unit.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:bc0ab11b83305ce250ee01ff9b4d2d6ab48b6c6ef6d6e3e6810526ed6adc5d6d",
+                    "fact": "Quantity 2 gives subtotal 240000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:043d2db70cbf2bdf9422311f0a0012623211e5ee1b37f017a2eba565a1cd1b2f",
+                    "fact": "Applicable shipping is 0 VND and final total is 240000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p125",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "ordering",
+            "allowed_source_ids": [
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:ee2ada52f58ff07e447bc402892cb5c9d755a6bb819bff53be84148426a19c5d",
+                    "fact": "At order intake, the server recalculates product prices and stock.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p126",
+            "scope": "primary",
+            "terminal": "SUGGESTED_ACTION",
+            "required_evidence_domain": "product_inventory_and_ordering_contract",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f16a798d1c3c159a08bb6a157d7dad799a83334dcddb642c64e5095c768f9fa4",
+                    "fact": "Ổi is an active product with sufficient current stock for quantity 3.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:56689e11a36e4007b8e9b58cc57842eecc2b9912fdfd0d3611d51a44cf158961",
+                    "fact": "The chatbot creates only a suggestion; the customer must confirm in the application interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p127",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_data",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:6af1ba19c2a49138bde26267eb50c8f235a7ff46a3e17bb7ee6ea0ac1f8591af",
+                    "fact": "Return the owned order OWN-ALPHA or a privacy-preserving not-found result.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p130",
+            "scope": "primary",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_payment_status",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:cb354cc01abfc1029cf60bbead566ee2b2bd29062120d7aeaf358b218d7a0d4e",
+                    "fact": "Return payment status only for owned order OWN-BRAVO.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p131",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "payment",
+            "allowed_source_ids": [
+                "payment-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "payment-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:70de5b97fc57636af7af750efe22c92d6e5f3917ebd5262cbab825afb89ab48b",
+                    "fact": "An expired pending payment request may be cancelled, and reserved stock is restored according to the order process.",
+                    "required_source_ids": [
+                        "payment-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p132",
+            "scope": "primary",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "orders",
+            "allowed_source_ids": [
+                "order-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "order-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:550e364b1746b1701fc974f5278a2f92cf3c17ac23c4d48c10be1986c2f37b4c",
+                    "fact": "The chatbot may only look up the signed-in customer’s own orders and may not change status, cancel orders, or confirm payment.",
+                    "required_source_ids": [
+                        "order-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p141/v11r1-p141-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:acb88a7598686bbc89f6e396d08fd739bd43653572a7dc8aa701ccbd52d158ff",
+                    "fact": "The current unit price of Nho tím is 120000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p141/v11r1-p141-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f8cfe052a12c95d4f6ed0cd33497f7f159639056a15c389d7beeb225a082836c",
+                    "fact": "The current stock of Nho tím is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p142/v11r1-p142-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:6b4ea2efb7b4a341c21c15b9f7fdf72cf1ff6a6488b7bdafa6688d545fcadf59",
+                    "fact": "Táo Úc is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:dd2ac6ee6b782ffb2ae44c382f24c19f3b645be9fdd9a1a7bea03c620a7cc784",
+                    "fact": "Táo Úc belongs to Trái Cây.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:92e61b6449012ba35e4cc26e8fa6366a572cb564dcabb3f1ae2b449bc184c3f7",
+                    "fact": "Táo Úc costs 53000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p142/v11r1-p142-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:a6584a11fb1f465c3377cc6d886722e5547216e6854ce4db635acc4713f258db",
+                    "fact": "The current unit price of Chuối is 17800 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p143/v11r1-p143-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d4e9f14077e1fea8410c20f72eae0b5fcf270a42e6fc8ceba493a5ae3cbd565a",
+                    "fact": "The current shipping fee is 20000 VND.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p143/v11r1-p143-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "store_contact_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:98cd185647307fbf53c800d37e850377285d0fe897a0fc2a9a523e7a5903fd8e",
+                    "fact": "The current public address_vi is 213 Trương Định, Nghệ An.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p144/v11r1-p144-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "account",
+            "allowed_source_ids": [
+                "account-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "account-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:4187a3da13c866fc864886a75003179f3cb68e0e26f68bcd96437ff4a3d95e83",
+                    "fact": "After registration, the system sends a verification email; the customer completes verification by opening its link.",
+                    "required_source_ids": [
+                        "account-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p145/v11r1-p145-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:381f60859d7aff63e14574501f4ce44ee000d2734331875e19efcf5383501cfa",
+                    "fact": "Ổi is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:e9a2909f5ee23999a44ed196ee72ff96da8f2797fa42c915e1dd882024ddd415",
+                    "fact": "Ổi belongs to Trái Cây.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:a2737a9046727cc1b14bc4f906a966a20c6850e837ed63fcdf1c19abbfdf7127",
+                    "fact": "Ổi costs 25000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p145/v11r1-p145-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:adcbbdefd2e334f6fb970be61347ade6db02eabfc300e1b882149275a549a919",
+                    "fact": "The current stock of Ổi is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p146/v11r1-p146-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:6d46d7357c64b863f18688515c2a541bee7cc98e59425ab5ee9856d9606022a9",
+                    "fact": "The current unit price of Cam Tươi is 45000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p146/v11r1-p146-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:e7a403d0417ed9083b5a99669ca52014e73aa5bc75cdc842ef263d04e1057870",
+                    "fact": "The current stock of Nho tím is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p147/v11r1-p147-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:a19490146b8c7c09ca2f2fa889c0e0a347ae7c9053cbb98b85ba052c183176f1",
+                    "fact": "Free shipping applies at merchandise subtotal 200000 VND or above.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p147/v11r1-p147-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "store_contact_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d412fed59800286f9352accfc34d70dde2e9c48b91b4818ec51de0eef8ff67e7",
+                    "fact": "The current public contact_phone is 0977232232.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p148/v11r1-p148-b1",
+            "scope": "branch",
+            "terminal": "SUGGESTED_ACTION",
+            "required_evidence_domain": "product_inventory_and_ordering_contract",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f8f10b2e8d5db6f151d31ce5db2eccd1cbf609515ade6fe13a7578e1c84baceb",
+                    "fact": "Dưa hấu is an active product with sufficient current stock for quantity 2.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:7e12932964a304e548734bfa4b0afabf61e0fe53937f5cfccf3c895c140a8f24",
+                    "fact": "The chatbot creates only a suggestion; the customer must confirm in the application interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p149/v11r1-p149-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:9373d58ef541355c4ea48592d0f9baebdf4ad267b20f96f9dd17900c99132b33",
+                    "fact": "The current unit price of Sữa Hộp is 32000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p149/v11r1-p149-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:44002b127c89281869ecfe9d6e532531b6756c217516876645f36459c80d2e09",
+                    "fact": "The current stock of Sữa Hộp is 40.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p150/v11r1-p150-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:5570e31782083e16d0f515311c45d40e75d28d061d8a4d525397eb58dd7c9947",
+                    "fact": "Thịt bò nạt is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:f4ff90fba06211e8ce8148d7b057d7d4111670e1e5839623b17eb6e80138901e",
+                    "fact": "Thịt bò nạt belongs to Thịt Tươi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:8a933610824f23ac8d99816afd0663244dc59fb730bda9f335b15ce1250a5683",
+                    "fact": "Thịt bò nạt costs 200000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p150/v11r1-p150-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:eab73d22f5fe11a581c3e6ac939d79e548a5f036f73a0c7c00725fe246187c41",
+                    "fact": "The current unit price of Xoài keo is 69000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p151/v11r1-p151-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:cac6bb0ae5cb851fb913e68b19d29e4441345bbcc7b43f6fa390951824d486cb",
+                    "fact": "Only active products in the active Trái Cây category are listed.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p151/v11r1-p151-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "store_contact_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:978adc8b49f6db76f9b35c5fb5f320600307908244a56ae36905dd845b992d28",
+                    "fact": "The current public email is FartaMarket@gmail.com.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p153/v11r1-p153-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:8c93590882ca067845d449f0c5e36c75e7de052e258a6f77070ddc3e029c045e",
+                    "fact": "The current unit price of Dưa hấu is 44020 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p153/v11r1-p153-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:9d40a29e616f2b10ef0601924d73874ecf8d3ad39dd59e3abbd7e77fd55b55bc",
+                    "fact": "The current stock of Dưa hấu is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p154/v11r1-p154-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:cd12f4c8d2cff2e804565d35aa869999178b7927a8112579682033909b3f2b1e",
+                    "fact": "Rau Củ Tươi is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:477683db96344fc8c34ab4af07d68e26cbf6679f90eafcfbb0329d4ee129d5a9",
+                    "fact": "Rau Củ Tươi belongs to Rau Củ.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:4c9510a3056fd56cde43939ea66f7fc4a243cdd9382fa6b4ae72c7f0e674889b",
+                    "fact": "Rau Củ Tươi costs 65000 VND and has current stock 25.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p154/v11r1-p154-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:81d003cf1dc60a2f37ae1691ec2fc571726ccc8a76a4752bd6fb5aa9b6dc91e6",
+                    "fact": "The current unit price of Hamburger is 86000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p155/v11r1-p155-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:c489cea2e2b8d452b35ce76f34fdf27a80ef62da5154c1d3ae1d14f1f26d5c45",
+                    "fact": "The current shipping fee is 20000 VND.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p155/v11r1-p155-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "store_contact_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:012600a3ba9c6dc340f05a3d5ebea781a24548558d76eb20e89e2b6cff07fffc",
+                    "fact": "The current public support_phone is 0393886668.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p156/v11r1-p156-b1",
+            "scope": "branch",
+            "terminal": "ANSWER_OR_NOT_FOUND",
+            "required_evidence_domain": "owned_order_data",
+            "allowed_source_ids": [
+                "owned-order-authority-v11-r1"
+            ],
+            "allowed_source_versions": {
+                "owned-order-authority-v11-r1": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:9157d8aafe15709fc39846ca3a2b58fa1cd43a475c85c3ad95824cfa57e950e4",
+                    "fact": "Return the owned order OWN-BRAVO or a privacy-preserving not-found result.",
+                    "required_source_ids": [
+                        "owned-order-authority-v11-r1"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p157/v11r1-p157-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:8f2c1dd5cb791fcaf677990322c06c2a012ca4fe9f2306185dca59b2b8889956",
+                    "fact": "The current unit price of Thịt bò nạt is 200000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p157/v11r1-p157-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:eea20e883ef1151b290d3ce304dfd707ca4141cc77ba8da25bdaed603f6e1445",
+                    "fact": "The current stock of Thịt bò nạt is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p158/v11r1-p158-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:aa2c88bc228f70ee34d7254b84e1eda0f2ea53b28d9bfe1f5f14581998967b32",
+                    "fact": "Táo Úc is active.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:5eeaa2942aeccf688fd89443727942ac19587491b580482064f60cbd13bd257a",
+                    "fact": "Táo Úc belongs to Trái Cây.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:e30ce7280d827fd8a51cfda92cd77e636849000c7550ea4e0040f0a696232ff2",
+                    "fact": "Táo Úc costs 53000 VND and has current stock 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p158/v11r1-p158-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:7e32666ac0b106b843b356b23d8ff26faf00c57ee2925614da65d4029576c66a",
+                    "fact": "The current unit price of Sữa Hộp is 32000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p159/v11r1-p159-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "shipping_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:3c8e6c5214ae42b3ad4ff66573b3e91420301858256924d962f1dca2792c67cc",
+                    "fact": "Free shipping applies at merchandise subtotal 200000 VND or above.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p159/v11r1-p159-b2",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "store_contact_settings",
+            "allowed_source_ids": [
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:db755049d3fa4a5db2a5518f90c74b9a0209ef6e12e36ac4ce5a4e15e34bdb33",
+                    "fact": "The current public address_en is 213 Truong Dinh, Nghe An.",
+                    "required_source_ids": [
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-p160/v11r1-p160-b1",
+            "scope": "branch",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "payment",
+            "allowed_source_ids": [
+                "payment-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "payment-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:91be97598bc66cf4ae5045b9d6b89f136eac1554b50a020019e89471e49cc0c1",
+                    "fact": "Payment status is updated by the server only after a valid SePay transaction notification; the browser or chatbot cannot self-confirm payment.",
+                    "required_source_ids": [
+                        "payment-guide-vi"
+                    ]
+                }
+            ]
+        }
+    ],
+    "scenario_claim_contracts": [
+        {
+            "record_id": "v11r1-s01",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:1b391f082d049de1c42f42cfd7ba0bd23d7ff44fc7b5aa48e413b9d193db501f",
+                    "fact": "The current unit price of Táo Úc is 53000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s02",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:b656b1a51449f32c7124cec72663b5b2419bbe51aa15fbca73c78043253ba549",
+                    "fact": "The current stock of Cam Tươi is 30.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:2525497eb28b52514fdd72d29661e4557cbe39d76506dc3b3d73ab88816ce859",
+                    "fact": "The current stock of Nho tím is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s03",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:13373c590e29452e1c99e7daf4050a0331452063aed196aa933049e45c65032b",
+                    "fact": "The current unit price of Chuối is 17800 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s05",
+            "scope": "scenario",
+            "terminal": "SUGGESTED_ACTION",
+            "required_evidence_domain": "product_inventory_and_ordering_contract",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:4f7a486ce396d2726483247198bcecf982d99e696c2b05a8695c6e74935a2add",
+                    "fact": "Dưa hấu has enough current stock for quantity 2.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:0a3feb5ccfe44f4d1215a4c5221d1105d9e4fff551d544497fe9fb05c81fa309",
+                    "fact": "The chatbot returns a suggestion that requires confirmation in the application interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s06",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:d62c63d27a566c7b25cf566f4b33e7724b410e0712afef175584d82c48770c17",
+                    "fact": "The current unit price of Xoài keo is 69000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s08",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:f6cdf903856235d8ba181e06a4de0a05799177aceebf8b193982fb1386ee889b",
+                    "fact": "The current stock of Nho tím is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s09",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:34eac73835329bf73306486906a3e262dc3ff9003d6f78c745a8ad34f9e915b9",
+                    "fact": "Sữa Hộp at 32000 VND times 3 gives subtotal 96000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:dd2734904596954f7a79fc361a0673bde3c2bdfc2d7ce6c797e264a4de22dc88",
+                    "fact": "Shipping is 20000 VND and final total is 116000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s10",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:4bbbcb7049b989b6f5f0bc8ab0fe2dc630b82cff092c9d1396d27aba801e1ebd",
+                    "fact": "Return only current structured facts for Ổi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s12",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:aab6bd2184b747cf8ac2feaccbca3032647fe7c1475f174947ef2431cfeb2a68",
+                    "fact": "The current unit price of Thịt bò nạt is 200000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:8d14e70c1986bbd8cad299149b476294dca429cdc2f26efb457b574582c8d3fe",
+                    "fact": "The current unit price of Rau Củ Tươi is 65000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s13",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:78a98bc0831dedd48f47f2a4827c41c4bf7c235a7df56818dc9acf9f3b450dd1",
+                    "fact": "The current stock of Hamburger is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s14",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price_and_shipping_settings",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "site-settings-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "site-settings-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:eafc30bbaae2fe9b55d663484dcfa60152dbec3aaabc01304db4cc50be41fdd2",
+                    "fact": "Chuối at 17800 VND times 5 gives subtotal 89000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:ff50fc04e2ee5d02a6f22edc272845f8ddaf28e705e5fdff9321696ab2f45b64",
+                    "fact": "Shipping is 20000 VND and final total is 109000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11",
+                        "site-settings-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s16",
+            "scope": "scenario",
+            "terminal": "SUGGESTED_ACTION",
+            "required_evidence_domain": "product_inventory_and_ordering_contract",
+            "allowed_source_ids": [
+                "product-category-authority-v11",
+                "shopping-guide-vi"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1,
+                "shopping-guide-vi": 2
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:4c2950e062a52e32f51ebd0c0397f40fb56628261798eed85353152ba01e9401",
+                    "fact": "Nho tím has enough current stock for quantity 2.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                },
+                {
+                    "claim_id": "sha256:a5153881bf16d35d50ed07ebee47f973be6a42dec5faeeaca481aa6bae2dd994",
+                    "fact": "The chatbot returns a suggestion that requires confirmation in the application interface.",
+                    "required_source_ids": [
+                        "shopping-guide-vi"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s17",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_catalog",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:a31867c55ffb4c2d61f815f0529aaab3a6b362ab767d3a7a0f1de0d9873ff97f",
+                    "fact": "Return only current structured facts for Rau Củ Tươi.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s18",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_price",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:ba8fd4e3c9d63844944157c161b7648c1fc15195438e89c321a07fb777beddff",
+                    "fact": "The current unit price of Táo Úc is 53000 VND.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        },
+        {
+            "record_id": "v11r1-s19",
+            "scope": "scenario",
+            "terminal": "ANSWER",
+            "required_evidence_domain": "product_inventory",
+            "allowed_source_ids": [
+                "product-category-authority-v11"
+            ],
+            "allowed_source_versions": {
+                "product-category-authority-v11": 1
+            },
+            "claims": [
+                {
+                    "claim_id": "sha256:1264930cd77bb665c66408a6c7bf43ee1a97c410befceb1f00d05a6b7a2bb08a",
+                    "fact": "The current stock of Thịt bò nạt is 20.",
+                    "required_source_ids": [
+                        "product-category-authority-v11"
+                    ]
+                }
+            ]
+        }
+    ]
+}

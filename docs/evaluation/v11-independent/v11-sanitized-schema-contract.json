@@ -1,0 +1,1644 @@
+{
+  "schema_version": "farta-v11-sanitized-schema-contract.1.0",
+  "compatibility": {
+    "compatible_with": "farta-v10.3.0",
+    "relationship": "The authoring contract preserves the current evaluation dataset shape and all schema-semantic vocabularies.",
+    "shape_change": false,
+    "content_bearing_vocabulary_policy": "Historical literal values embedded in evaluator allowlists are not reproduced. The exposed business-outcome vocabulary is the symbolic taxonomy accepted by the compatible evaluator. String mutation literals remain a declared type but their content-bearing allowlist is intentionally unavailable to independent authors."
+  },
+  "top_level_structure": {
+    "type": "object",
+    "additional_fields": "Accepted by the current parser but not part of this authoring contract.",
+    "fields": [
+      {
+        "name": "schema_version",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "dataset_schema_version",
+        "meaning": "Declares the dataset schema understood by the compatible evaluator.",
+        "invariants": [
+          "Must equal the compatible dataset schema version."
+        ]
+      },
+      {
+        "name": "primary_cases",
+        "type": "array<object>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Independent single-request evaluation records, including composite multi-intent records.",
+        "invariants": [
+          "May be empty at the parser level.",
+          "Every item must satisfy primary_case_schema.",
+          "case_id values must be unique within this collection."
+        ]
+      },
+      {
+        "name": "multi_turn_scenarios",
+        "type": "array<object>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Independent context-carrying evaluation scenarios.",
+        "invariants": [
+          "May be empty at the parser level.",
+          "Every item must satisfy scenario_schema.",
+          "scenario_id values must be unique within this collection."
+        ]
+      },
+      {
+        "name": "source_registry",
+        "type": "array<object>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Dataset-local registry of evidence authorities addressable by source ID.",
+        "invariants": [
+          "May be empty at the parser level.",
+          "source_id values must be unique within this collection."
+        ]
+      },
+      {
+        "name": "schema_contract",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Dataset-declared mirror of selected evaluator contract lists.",
+        "invariants": [
+          "Its four required arrays must exactly equal the compatible contract arrays, including order."
+        ]
+      }
+    ],
+    "cardinality_policy": "The schema imposes no dataset-size target. Collection sizes are chosen independently by the dataset author, except for the fixed per-scenario turn cardinality.",
+    "id_namespaces": {
+      "primary_case_ids": "Unique within primary_cases.",
+      "scenario_ids": "Unique within multi_turn_scenarios.",
+      "branch_ids": "Unique within the containing primary case."
+    },
+    "source_registry_entry": {
+      "type": "object",
+      "fields": [
+        {
+          "name": "source_id",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "meaning": "Non-empty dataset-local evidence source identifier.",
+          "invariants": [
+            "Must be unique in source_registry."
+          ]
+        },
+        {
+          "name": "authority_type",
+          "type": "any JSON value",
+          "required": true,
+          "nullable": true,
+          "meaning": "Authority classification carried by the registry entry.",
+          "invariants": [
+            "The current parser requires presence but does not constrain JSON type or vocabulary.",
+            "Independent authors should use a stable descriptive string and an authority category from authority_interfaces."
+          ]
+        },
+        {
+          "name": "version",
+          "type": "integer|null",
+          "required": false,
+          "nullable": true,
+          "meaning": "Optional positive authority revision used by source-version pinning.",
+          "invariants": [
+            "When non-null, must be at least one."
+          ]
+        },
+        {
+          "name": "facts",
+          "type": "array|object|null",
+          "required": false,
+          "nullable": true,
+          "meaning": "Optional structured facts published by this authority.",
+          "invariants": [
+            "Scalar values are not accepted when the field is present and non-null."
+          ]
+        }
+      ],
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    },
+    "declared_schema_contract": {
+      "type": "object",
+      "required_fields": [
+        "primary_case_required_fields",
+        "multi_intent_branch_required_fields",
+        "entity_gold_slots",
+        "terminal_state_values"
+      ],
+      "fields": [
+        {
+          "name": "primary_case_required_fields",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "exact_value": [
+            "case_id",
+            "utterance",
+            "language_bucket",
+            "gold_intent",
+            "expected_handler",
+            "expected_business_outcome_category",
+            "expected_terminal_state",
+            "entity_gold",
+            "required_evidence_domain",
+            "allowed_evidence_sources",
+            "grounding_gold",
+            "security_capability_expectation",
+            "preconditions",
+            "difficulty",
+            "deterministic_gold",
+            "multi_intent_branches",
+            "notes"
+          ]
+        },
+        {
+          "name": "multi_intent_branch_required_fields",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "exact_value": [
+            "branch_id",
+            "intent",
+            "operation",
+            "entity_gold",
+            "expected_handler",
+            "required_evidence_domain",
+            "allowed_evidence_sources",
+            "expected_terminal_state",
+            "expected_business_outcome_category",
+            "security_expectation",
+            "minimum_facts_required",
+            "grounding_gold"
+          ]
+        },
+        {
+          "name": "entity_gold_slots",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "exact_value": [
+            "product_raw_mention",
+            "canonical_product",
+            "quantity",
+            "unit",
+            "order_reference",
+            "ordinal_reference",
+            "context_reference",
+            "account_target",
+            "requested_mutation_value"
+          ]
+        },
+        {
+          "name": "terminal_state_values",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "terminal",
+          "invariants": [
+            "Must contain the complete terminal enum in evaluator order."
+          ]
+        }
+      ]
+    }
+  },
+  "primary_case_schema": {
+    "type": "object",
+    "required_fields": [
+      "case_id",
+      "utterance",
+      "language_bucket",
+      "gold_intent",
+      "expected_handler",
+      "expected_business_outcome_category",
+      "expected_terminal_state",
+      "entity_gold",
+      "required_evidence_domain",
+      "allowed_evidence_sources",
+      "grounding_gold",
+      "security_capability_expectation",
+      "preconditions",
+      "difficulty",
+      "deterministic_gold",
+      "multi_intent_branches",
+      "notes"
+    ],
+    "optional_fields": [
+      "allowed_evidence_source_versions"
+    ],
+    "not_part_of_schema": [
+      "resource"
+    ],
+    "fields": [
+      {
+        "name": "case_id",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "meaning": "Opaque identifier for an independently authored primary case.",
+        "invariants": [
+          "Must be non-empty.",
+          "Must be unique within primary_cases.",
+          "No historical identifier may be reused."
+        ]
+      },
+      {
+        "name": "utterance",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "meaning": "Newly authored user input to evaluate.",
+        "invariants": [
+          "Must be non-empty.",
+          "Must be authored independently rather than copied from prior evaluation material."
+        ]
+      },
+      {
+        "name": "language_bucket",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "language_bucket",
+        "meaning": "Language/register classification for the utterance."
+      },
+      {
+        "name": "gold_intent",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "primary_intent",
+        "meaning": "Expected primary intent taxonomy label."
+      },
+      {
+        "name": "expected_handler",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "handler",
+        "meaning": "Expected evaluator business-path label."
+      },
+      {
+        "name": "expected_business_outcome_category",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "business_outcome_category",
+        "meaning": "Expected semantic business result category.",
+        "invariants": [
+          "Independent authors must select a schema-semantic symbolic category exposed by this contract.",
+          "Content-bearing literal outcomes are excluded from this sanitized authoring bridge."
+        ]
+      },
+      {
+        "name": "expected_terminal_state",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "terminal",
+        "meaning": "Expected terminal classification for the case."
+      },
+      {
+        "name": "entity_gold",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Expected entity extraction and resolution object.",
+        "invariants": [
+          "Must contain exactly the nine fields defined by entity_schema."
+        ]
+      },
+      {
+        "name": "required_evidence_domain",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "enum_ref": "evidence_domain",
+        "meaning": "Evidence domain required to support the expected answer, or null when no evidence domain applies."
+      },
+      {
+        "name": "allowed_evidence_sources",
+        "type": "array<string>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Source IDs permitted to support the expected result.",
+        "invariants": [
+          "Each item must be a non-empty source_id present in source_registry.",
+          "No duplicates are allowed.",
+          "The array may be empty."
+        ]
+      },
+      {
+        "name": "grounding_gold",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Expected evidence domain, allowed source set, terminal, and minimum claim-support facts.",
+        "invariants": [
+          "Must satisfy grounding_gold_schema.",
+          "Mirrored fields must equal their outer primary-case fields."
+        ]
+      },
+      {
+        "name": "security_capability_expectation",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Expected authorization/security decision and capability classification.",
+        "invariants": [
+          "Must satisfy security_capability_expectation_schema."
+        ]
+      },
+      {
+        "name": "preconditions",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Actor/authentication and optional context preconditions.",
+        "invariants": [
+          "Must satisfy preconditions_schema with primary-case options enabled."
+        ]
+      },
+      {
+        "name": "difficulty",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "difficulty",
+        "meaning": "Author-assigned difficulty bucket."
+      },
+      {
+        "name": "deterministic_gold",
+        "type": "object|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Optional deterministic expected values for structured comparisons or calculations.",
+        "invariants": [
+          "When non-null, only the fields listed in deterministic_gold_schema are accepted.",
+          "The evaluator constrains value shape broadly and does not declare per-field value types."
+        ]
+      },
+      {
+        "name": "multi_intent_branches",
+        "type": "array<object>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Gold branches for a composite request.",
+        "invariants": [
+          "Must be non-empty when gold_intent is multi_intent.",
+          "Must be empty for every other gold_intent.",
+          "Each item must satisfy multi_intent_schema.branch_schema."
+        ]
+      },
+      {
+        "name": "notes",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Optional non-empty author note with no scoring semantics."
+      },
+      {
+        "name": "allowed_evidence_source_versions",
+        "type": "object|null",
+        "required": false,
+        "nullable": true,
+        "meaning": "Optional version pins for a subset of allowed_evidence_sources.",
+        "invariants": [
+          "Each key must occur in allowed_evidence_sources.",
+          "Each value must be a positive integer equal to the registry version for that source.",
+          "The mapping need not include every allowed source."
+        ]
+      }
+    ],
+    "preconditions_schema": {
+      "type": "object",
+      "fields": [
+        {
+          "name": "actor",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "actor",
+          "meaning": "Actor and authentication/ownership precondition."
+        },
+        {
+          "name": "symbolic_order_reference",
+          "type": "string|null",
+          "required": false,
+          "nullable": true,
+          "meaning": "Optional non-empty symbolic reference used to bind owned-order authority without embedding private order data.",
+          "invariants": [
+            "Allowed only in primary-case preconditions."
+          ]
+        },
+        {
+          "name": "context_ttl_state",
+          "type": "string",
+          "required": false,
+          "nullable": false,
+          "enum_ref": "context_ttl_state",
+          "meaning": "Optional context time-to-live state."
+        }
+      ],
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    },
+    "security_capability_expectation_schema": {
+      "type": "object",
+      "required_fields": [
+        "decision",
+        "capability"
+      ],
+      "fields": [
+        {
+          "name": "decision",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "security_decision",
+          "meaning": "Expected authorization/security disposition."
+        },
+        {
+          "name": "capability",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "security_capability",
+          "meaning": "Security-relevant capability taxonomy label."
+        }
+      ],
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    },
+    "grounding_gold_schema": {
+      "type": "object",
+      "required_fields": [
+        "required_evidence_domain",
+        "allowed_source_ids",
+        "expected_terminal_state",
+        "minimum_facts_required"
+      ],
+      "optional_fields": [
+        "allowed_source_versions"
+      ],
+      "fields": [
+        {
+          "name": "required_evidence_domain",
+          "type": "string|null",
+          "required": true,
+          "nullable": true,
+          "enum_ref": "evidence_domain",
+          "meaning": "Grounding-domain mirror of the enclosing record."
+        },
+        {
+          "name": "allowed_source_ids",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "meaning": "Grounding-source mirror of the enclosing record.",
+          "invariants": [
+            "Each item must be a unique registered source ID."
+          ]
+        },
+        {
+          "name": "expected_terminal_state",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "terminal",
+          "meaning": "Grounding-terminal mirror of the enclosing record."
+        },
+        {
+          "name": "minimum_facts_required",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "meaning": "Non-empty factual statements that must be supported for a factual answer.",
+          "invariants": [
+            "Each item must be a non-empty string.",
+            "The array may be empty when no factual support is required."
+          ]
+        },
+        {
+          "name": "allowed_source_versions",
+          "type": "object|null",
+          "required": false,
+          "nullable": true,
+          "meaning": "Optional version pins for a subset of allowed_source_ids.",
+          "invariants": [
+            "Each key must occur in allowed_source_ids.",
+            "Each value must be a positive integer equal to the registry version for that source."
+          ]
+        }
+      ],
+      "claim_support_semantics": "There is no separate claim-support boolean. Support is expressed by required_evidence_domain, allowed_source_ids, minimum_facts_required, and expected_terminal_state. NO_EVIDENCE is the terminal vocabulary value for a claim that must not be asserted without adequate approved evidence.",
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    },
+    "deterministic_gold_schema": {
+      "type": "object|null",
+      "allowed_fields": [
+        "active_only",
+        "available",
+        "canonical_product",
+        "current_unit_price_vnd",
+        "expected_canonical_matches",
+        "expected_result_cardinality",
+        "filters",
+        "final_total_vnd",
+        "free_shipping_applies",
+        "quantity",
+        "requested_quantity",
+        "shipping_fee_vnd",
+        "subtotal_vnd",
+        "unit_price_vnd",
+        "unresolved_filter"
+      ],
+      "value_type": "string|number|boolean|array|object|null",
+      "invariants": [
+        "Unknown fields are rejected.",
+        "When represented as an object, at least one field is required by the current associative-object parser behavior."
+      ]
+    },
+    "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+  },
+  "entity_schema": {
+    "type": "object",
+    "exact_field_set": true,
+    "fields": [
+      {
+        "name": "product_raw_mention",
+        "type": "string|array<string>|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Surface product mention or mentions as written in the newly authored input.",
+        "resolution_semantics": "May be present while canonical_product is null when a surface mention cannot be resolved.",
+        "invariants": [
+          "A string must be non-empty.",
+          "An array must be non-empty and contain only non-empty strings."
+        ]
+      },
+      {
+        "name": "canonical_product",
+        "type": "string|array<string>|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Product identifier or name resolved against structured product authority.",
+        "resolution_semantics": "Null means unresolved or not applicable; it does not erase a separately captured raw mention.",
+        "invariants": [
+          "A string must be non-empty.",
+          "An array must be non-empty and contain only non-empty strings."
+        ]
+      },
+      {
+        "name": "quantity",
+        "type": "number|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Requested purchase or item quantity.",
+        "resolution_semantics": "Null means no purchase/item quantity is represented.",
+        "invariants": [
+          "When present, must be greater than zero.",
+          "This is distinct from requested_mutation_value."
+        ]
+      },
+      {
+        "name": "unit",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Unit associated with quantity or product reference.",
+        "resolution_semantics": "Null means absent or not applicable.",
+        "invariants": [
+          "When present, must be non-empty."
+        ]
+      },
+      {
+        "name": "order_reference",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Order reference represented by the input or bound through preconditions.",
+        "resolution_semantics": "Null means absent, unresolved, or not applicable.",
+        "invariants": [
+          "When present, must be non-empty."
+        ]
+      },
+      {
+        "name": "ordinal_reference",
+        "type": "integer|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Signed, non-zero ordinal used for positional reference resolution.",
+        "resolution_semantics": "Null means no ordinal reference is represented.",
+        "invariants": [
+          "Zero is invalid."
+        ]
+      },
+      {
+        "name": "context_reference",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Abstract reference whose interpretation depends on conversation context.",
+        "resolution_semantics": "Null means no context-dependent reference is represented.",
+        "invariants": [
+          "When present, must be non-empty."
+        ]
+      },
+      {
+        "name": "account_target",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Raw or semantic account target represented by the input.",
+        "resolution_semantics": "The schema does not impose normalization to a self/other label, identifier, or account object; the authored non-empty string is the contract representation.",
+        "invariants": [
+          "When present, must be non-empty."
+        ]
+      },
+      {
+        "name": "requested_mutation_value",
+        "type": "number|string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Requested target state or delta for mutation semantics.",
+        "resolution_semantics": "Null means no requested mutation value is represented.",
+        "invariants": [
+          "Numeric values are accepted without a range constraint.",
+          "String values are constrained by a current evaluator allowlist whose content-bearing members are intentionally not reproduced in this sanitized contract.",
+          "This is distinct from purchase/item quantity."
+        ]
+      }
+    ],
+    "null_semantics": "Every field is present. Null means unresolved, absent, or not applicable according to the field; null is not interchangeable with an empty string, zero, false, or an empty array.",
+    "unknown_fields": "Rejected."
+  },
+  "multi_intent_schema": {
+    "parent_rules": [
+      "gold_intent=multi_intent requires at least one branch.",
+      "Every other gold_intent requires an empty branch array.",
+      "Parent terminal and business outcome remain required.",
+      "The parser validates branch completeness and isolation but does not impose a separate computed aggregation formula beyond the declared parent and branch fields."
+    ],
+    "branch_schema": {
+      "type": "object",
+      "required_fields": [
+        "branch_id",
+        "intent",
+        "operation",
+        "entity_gold",
+        "expected_handler",
+        "required_evidence_domain",
+        "allowed_evidence_sources",
+        "expected_terminal_state",
+        "expected_business_outcome_category",
+        "security_expectation",
+        "minimum_facts_required",
+        "grounding_gold"
+      ],
+      "optional_fields": [
+        "preconditions",
+        "allowed_evidence_source_versions"
+      ],
+      "fields": [
+        {
+          "name": "branch_id",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "meaning": "Opaque identifier unique within its containing primary case.",
+          "invariants": [
+            "Must be non-empty.",
+            "No historical identifier may be reused."
+          ]
+        },
+        {
+          "name": "intent",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "branch_intent",
+          "meaning": "Expected intent for this independently scored branch."
+        },
+        {
+          "name": "operation",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "operation",
+          "meaning": "Abstract business operation requested by the branch."
+        },
+        {
+          "name": "entity_gold",
+          "type": "object",
+          "required": true,
+          "nullable": false,
+          "meaning": "Branch-scoped entity expectations.",
+          "invariants": [
+            "Must independently satisfy entity_schema."
+          ]
+        },
+        {
+          "name": "expected_handler",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "handler",
+          "meaning": "Expected branch business-path label."
+        },
+        {
+          "name": "required_evidence_domain",
+          "type": "string|null",
+          "required": true,
+          "nullable": true,
+          "enum_ref": "evidence_domain",
+          "meaning": "Evidence domain required by this branch."
+        },
+        {
+          "name": "allowed_evidence_sources",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "meaning": "Registered evidence source IDs allowed for this branch.",
+          "invariants": [
+            "Items must be unique and present in source_registry."
+          ]
+        },
+        {
+          "name": "expected_terminal_state",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "terminal",
+          "meaning": "Expected branch terminal classification."
+        },
+        {
+          "name": "expected_business_outcome_category",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "business_outcome_category",
+          "meaning": "Expected semantic result category for this branch."
+        },
+        {
+          "name": "security_expectation",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "branch_security_expectation",
+          "meaning": "Scalar security disposition for this branch.",
+          "invariants": [
+            "This field is a scalar string, not an object."
+          ]
+        },
+        {
+          "name": "minimum_facts_required",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "meaning": "Branch-level minimum claim-support facts.",
+          "invariants": [
+            "Each item must be a non-empty string.",
+            "The array may be empty."
+          ]
+        },
+        {
+          "name": "grounding_gold",
+          "type": "object",
+          "required": true,
+          "nullable": false,
+          "meaning": "Branch grounding contract.",
+          "invariants": [
+            "Must satisfy primary_case_schema.grounding_gold_schema.",
+            "Domain, sources, terminal, and minimum facts must exactly mirror the branch outer fields."
+          ]
+        },
+        {
+          "name": "preconditions",
+          "type": "object",
+          "required": false,
+          "nullable": false,
+          "meaning": "Optional branch-specific actor/context preconditions.",
+          "invariants": [
+            "Must include actor.",
+            "symbolic_order_reference is not allowed in this scope."
+          ]
+        },
+        {
+          "name": "allowed_evidence_source_versions",
+          "type": "object|null",
+          "required": false,
+          "nullable": true,
+          "meaning": "Optional branch source-version pins.",
+          "invariants": [
+            "Keys must be a subset of allowed_evidence_sources and values must match positive registry versions."
+          ]
+        }
+      ],
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    }
+  },
+  "scenario_schema": {
+    "type": "object",
+    "required_fields": [
+      "scenario_id",
+      "language_bucket",
+      "scenario_type",
+      "preconditions",
+      "turns",
+      "final_expected_intent",
+      "final_canonical_entity",
+      "expected_handler",
+      "expected_terminal_state",
+      "required_evidence_domain",
+      "allowed_evidence_sources",
+      "security_capability_expectation",
+      "notes"
+    ],
+    "optional_fields": [
+      "allowed_evidence_source_versions",
+      "grounding_gold"
+    ],
+    "fields": [
+      {
+        "name": "scenario_id",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "meaning": "Opaque identifier for an independently authored scenario.",
+        "invariants": [
+          "Must be non-empty and unique within multi_turn_scenarios.",
+          "No historical identifier may be reused."
+        ]
+      },
+      {
+        "name": "language_bucket",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "language_bucket",
+        "meaning": "Language/register classification for the scenario."
+      },
+      {
+        "name": "scenario_type",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "scenario_type",
+        "meaning": "Context/reference-resolution scenario taxonomy."
+      },
+      {
+        "name": "preconditions",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Scenario actor/context preconditions.",
+        "invariants": [
+          "Must include actor.",
+          "symbolic_order_reference is not allowed in this scope."
+        ]
+      },
+      {
+        "name": "turns",
+        "type": "array<object>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Ordered user turns in the scenario.",
+        "invariants": [
+          "Must contain exactly two turns.",
+          "Turn numbers must be sequential and equal their one-based array positions."
+        ]
+      },
+      {
+        "name": "final_expected_intent",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "turn_intent",
+        "meaning": "Expected intent after the final turn."
+      },
+      {
+        "name": "final_canonical_entity",
+        "type": "string|array<string>|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Canonical product entity or entities resolved by the completed scenario.",
+        "invariants": [
+          "A string must be non-empty.",
+          "An array must be non-empty and contain only non-empty strings."
+        ]
+      },
+      {
+        "name": "expected_handler",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "handler",
+        "meaning": "Expected final business-path label."
+      },
+      {
+        "name": "expected_terminal_state",
+        "type": "string",
+        "required": true,
+        "nullable": false,
+        "enum_ref": "terminal",
+        "meaning": "Expected final terminal classification."
+      },
+      {
+        "name": "required_evidence_domain",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "enum_ref": "evidence_domain",
+        "meaning": "Evidence domain required for the final scenario result."
+      },
+      {
+        "name": "allowed_evidence_sources",
+        "type": "array<string>",
+        "required": true,
+        "nullable": false,
+        "meaning": "Registered evidence sources allowed for the final scenario result.",
+        "invariants": [
+          "Items must be unique and present in source_registry."
+        ]
+      },
+      {
+        "name": "security_capability_expectation",
+        "type": "object",
+        "required": true,
+        "nullable": false,
+        "meaning": "Scenario-level security decision and capability.",
+        "invariants": [
+          "Uses the same object contract as a primary case."
+        ]
+      },
+      {
+        "name": "notes",
+        "type": "string|null",
+        "required": true,
+        "nullable": true,
+        "meaning": "Optional non-empty author note."
+      },
+      {
+        "name": "allowed_evidence_source_versions",
+        "type": "object|null",
+        "required": false,
+        "nullable": true,
+        "meaning": "Optional final-result source-version pins."
+      },
+      {
+        "name": "grounding_gold",
+        "type": "object",
+        "required": false,
+        "nullable": false,
+        "meaning": "Optional scenario grounding contract.",
+        "invariants": [
+          "Domain, sources, and terminal must mirror the scenario outer fields.",
+          "minimum_facts_required remains required inside this object."
+        ]
+      }
+    ],
+    "turn_schema": {
+      "type": "object",
+      "required_fields": [
+        "turn",
+        "role",
+        "utterance",
+        "expected_intent",
+        "expected_handler",
+        "expected_terminal_state",
+        "entity_gold",
+        "expected_context_after_turn"
+      ],
+      "optional_fields": [
+        "context_state_before_turn"
+      ],
+      "fields": [
+        {
+          "name": "turn",
+          "type": "integer",
+          "required": true,
+          "nullable": false,
+          "meaning": "One-based sequential turn number.",
+          "invariants": [
+            "Must equal the item's one-based position in turns."
+          ]
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "turn_role",
+          "meaning": "Speaker role for the authored input turn."
+        },
+        {
+          "name": "utterance",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "meaning": "Newly authored user input for this turn.",
+          "invariants": [
+            "Must be non-empty and independently authored."
+          ]
+        },
+        {
+          "name": "expected_intent",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "turn_intent",
+          "meaning": "Expected turn intent."
+        },
+        {
+          "name": "expected_handler",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "handler",
+          "meaning": "Expected turn business-path label."
+        },
+        {
+          "name": "expected_terminal_state",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "terminal",
+          "meaning": "Expected turn terminal classification."
+        },
+        {
+          "name": "entity_gold",
+          "type": "object",
+          "required": true,
+          "nullable": false,
+          "meaning": "Turn-scoped entity expectations.",
+          "invariants": [
+            "Must satisfy entity_schema."
+          ]
+        },
+        {
+          "name": "expected_context_after_turn",
+          "type": "object",
+          "required": true,
+          "nullable": false,
+          "meaning": "Expected context state after processing the turn.",
+          "invariants": [
+            "Must satisfy expected_context_schema."
+          ]
+        },
+        {
+          "name": "context_state_before_turn",
+          "type": "string|null",
+          "required": false,
+          "nullable": true,
+          "enum_ref": "context_state_before_turn",
+          "meaning": "Optional evaluator-visible context lifecycle state before the turn."
+        }
+      ],
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    },
+    "expected_context_schema": {
+      "type": "object",
+      "required_fields": [
+        "status",
+        "canonical_products_in_order"
+      ],
+      "optional_fields": [
+        "focused_product"
+      ],
+      "fields": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "nullable": false,
+          "enum_ref": "context_status",
+          "meaning": "Expected context usability/resolution status."
+        },
+        {
+          "name": "canonical_products_in_order",
+          "type": "array<string>",
+          "required": true,
+          "nullable": false,
+          "meaning": "Canonical product sequence retained for later reference resolution.",
+          "invariants": [
+            "Each item must be a non-empty string.",
+            "The array may be empty."
+          ]
+        },
+        {
+          "name": "focused_product",
+          "type": "string|null",
+          "required": false,
+          "nullable": true,
+          "meaning": "Optional non-empty canonical product currently in focus."
+        }
+      ],
+      "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+    },
+    "additional_fields": "Accepted by the current parser but not part of this authoring contract."
+  },
+  "enum_definitions": {
+    "dataset_schema_version": {
+      "field_paths": [
+        "schema_version"
+      ],
+      "type": "string",
+      "values": [
+        "farta-v10.3.0"
+      ]
+    },
+    "primary_intent": {
+      "field_paths": [
+        "primary_cases[].gold_intent"
+      ],
+      "type": "string",
+      "values": [
+        "cart_action_request",
+        "cart_informational",
+        "catalog_listing",
+        "clarification",
+        "general_chat",
+        "knowledge_query",
+        "missing_evidence_query",
+        "multi_intent",
+        "order_read",
+        "payment_status_read",
+        "price",
+        "privileged_mutation",
+        "product_detail",
+        "product_search",
+        "shipping_calculation",
+        "shipping_current_value",
+        "stock_availability",
+        "unsupported_ood"
+      ],
+      "semantics": "Canonical primary intent taxonomy. No per-label behavior beyond the taxonomy name is asserted by the schema source."
+    },
+    "branch_intent": {
+      "field_paths": [
+        "primary_cases[].multi_intent_branches[].intent"
+      ],
+      "type": "string",
+      "values": [
+        "cart_action_request",
+        "catalog_listing",
+        "knowledge_query",
+        "missing_evidence_query",
+        "order_read",
+        "payment_status_read",
+        "price",
+        "privileged_mutation",
+        "product_detail",
+        "shipping_calculation",
+        "shipping_current_value",
+        "stock_availability",
+        "store_contact",
+        "unsupported_ood"
+      ],
+      "semantics": "Canonical branch intent taxonomy."
+    },
+    "turn_intent": {
+      "field_paths": [
+        "multi_turn_scenarios[].final_expected_intent",
+        "multi_turn_scenarios[].turns[].expected_intent"
+      ],
+      "type": "string",
+      "values": [
+        "cart_action_request",
+        "clarification",
+        "price",
+        "product_detail",
+        "product_search",
+        "shipping_calculation",
+        "stock_availability"
+      ],
+      "semantics": "Canonical multi-turn intent taxonomy."
+    },
+    "handler": {
+      "field_paths": [
+        "primary_cases[].expected_handler",
+        "primary_cases[].multi_intent_branches[].expected_handler",
+        "multi_turn_scenarios[].expected_handler",
+        "multi_turn_scenarios[].turns[].expected_handler"
+      ],
+      "type": "string",
+      "values": [
+        "AUTHORIZED_ORDER_READ",
+        "AUTHORIZED_PAYMENT_STATUS_READ",
+        "CART_SUGGESTED_ACTION",
+        "CATALOG_LIST",
+        "CLARIFICATION",
+        "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+        "GENERAL_CONVERSATION",
+        "KNOWLEDGE_EVIDENCE_GATE",
+        "KNOWLEDGE_GROUNDED_ANSWER",
+        "MULTI_INTENT_ORCHESTRATOR",
+        "OOD_BOUNDARY",
+        "PRODUCT_DETAIL",
+        "PRODUCT_PRICE",
+        "PRODUCT_SEARCH",
+        "PRODUCT_STOCK",
+        "SECURITY_POLICY_DENIAL",
+        "SHIPPING_SETTINGS",
+        "STORE_SETTINGS"
+      ],
+      "semantics": "Evaluator business-path labels; they do not describe candidate implementation."
+    },
+    "terminal": {
+      "field_paths": [
+        "schema_contract.terminal_state_values[]",
+        "primary_cases[].expected_terminal_state",
+        "primary_cases[].grounding_gold.expected_terminal_state",
+        "primary_cases[].multi_intent_branches[].expected_terminal_state",
+        "primary_cases[].multi_intent_branches[].grounding_gold.expected_terminal_state",
+        "multi_turn_scenarios[].expected_terminal_state",
+        "multi_turn_scenarios[].grounding_gold.expected_terminal_state",
+        "multi_turn_scenarios[].turns[].expected_terminal_state"
+      ],
+      "type": "string",
+      "values": [
+        "ANSWER",
+        "NO_RESULTS",
+        "SUGGESTED_ACTION",
+        "UNAVAILABLE",
+        "AUTH_REQUIRED",
+        "DENIED",
+        "ANSWER_OR_NOT_FOUND",
+        "NO_EVIDENCE",
+        "UNSUPPORTED",
+        "CLARIFICATION_REQUIRED",
+        "ALL_BRANCHES_HANDLED",
+        "PARTIAL_MIXED_TERMINALS"
+      ]
+    },
+    "language_bucket": {
+      "field_paths": [
+        "primary_cases[].language_bucket",
+        "multi_turn_scenarios[].language_bucket"
+      ],
+      "type": "string",
+      "values": [
+        "vi_formal",
+        "vi_conversational",
+        "vi_no_diacritics",
+        "en",
+        "mixed"
+      ]
+    },
+    "difficulty": {
+      "field_paths": [
+        "primary_cases[].difficulty"
+      ],
+      "type": "string",
+      "values": [
+        "edge_case",
+        "moderately_ambiguous",
+        "normal_paraphrase",
+        "security_ood",
+        "straightforward"
+      ]
+    },
+    "actor": {
+      "field_paths": [
+        "primary_cases[].preconditions.actor",
+        "primary_cases[].multi_intent_branches[].preconditions.actor",
+        "multi_turn_scenarios[].preconditions.actor"
+      ],
+      "type": "string",
+      "values": [
+        "anonymous",
+        "anonymous_or_authenticated",
+        "authenticated_non_owner",
+        "authenticated_owner",
+        "authenticated_verified_customer"
+      ]
+    },
+    "security_decision": {
+      "field_paths": [
+        "primary_cases[].security_capability_expectation.decision",
+        "multi_turn_scenarios[].security_capability_expectation.decision"
+      ],
+      "type": "string",
+      "values": [
+        "ALLOW_OWNED_READ",
+        "ALLOW_READ",
+        "ALLOW_SAFE_BRANCHES_DENY_PROHIBITED_BRANCHES",
+        "DENY",
+        "DENY_CROSS_ACCOUNT",
+        "NOT_APPLICABLE",
+        "PER_BRANCH",
+        "REQUIRE_AUTH",
+        "SUGGEST_ONLY"
+      ]
+    },
+    "security_capability": {
+      "field_paths": [
+        "primary_cases[].security_capability_expectation.capability",
+        "multi_turn_scenarios[].security_capability_expectation.capability"
+      ],
+      "type": "string",
+      "values": [
+        "approved_business_knowledge",
+        "auth_bypass",
+        "contextual_product_read",
+        "deterministic_public_calculation",
+        "domain_boundary",
+        "evidence_gated_business_knowledge",
+        "evidence_gated_product_knowledge",
+        "inventory_mutation",
+        "multi_intent_branch_isolation",
+        "no_direct_cart_mutation",
+        "order_state_mutation",
+        "other_user_data",
+        "payment_state_mutation",
+        "public_product_catalog",
+        "public_store_settings",
+        "read_only_order_access",
+        "read_only_payment_status",
+        "role_change",
+        "safe_disambiguation",
+        "safe_social_conversation",
+        "secret_disclosure"
+      ]
+    },
+    "branch_security_expectation": {
+      "field_paths": [
+        "primary_cases[].multi_intent_branches[].security_expectation"
+      ],
+      "type": "string",
+      "values": [
+        "ALLOW",
+        "DENY",
+        "SUGGEST_ONLY"
+      ]
+    },
+    "operation": {
+      "field_paths": [
+        "primary_cases[].multi_intent_branches[].operation"
+      ],
+      "type": "string",
+      "values": [
+        "answer_approved_knowledge",
+        "answer_policy",
+        "answer_weather",
+        "bypass_verification",
+        "calculate_total",
+        "compare_quantity_to_inventory",
+        "cross_account_payment_read",
+        "disclose_hidden_prompt",
+        "financial_advice",
+        "list_catalog",
+        "list_category",
+        "mutate_inventory",
+        "mutate_order_state",
+        "mutate_payment_state",
+        "read_current_inventory",
+        "read_current_price",
+        "read_free_shipping_threshold",
+        "read_owned_order",
+        "read_owned_payment_status",
+        "read_product_detail",
+        "read_shipping_fee",
+        "read_store_address",
+        "suggest_add_to_cart",
+        "write_code"
+      ]
+    },
+    "evidence_domain": {
+      "field_paths": [
+        "all required_evidence_domain fields"
+      ],
+      "type": "string|null",
+      "values": [
+        "account",
+        "bulk_order_policy",
+        "cold_chain_policy",
+        "delivery_sla",
+        "express_delivery_policy",
+        "food_safety_certification",
+        "fulfilment_compensation_policy",
+        "loyalty_policy",
+        "opened_food_return_policy",
+        "ordering",
+        "orders",
+        "organic_certification",
+        "owned_order_data",
+        "owned_order_payment_status",
+        "packaging_return_policy",
+        "payment",
+        "policy",
+        "price_match_policy",
+        "privacy_policy",
+        "product_catalog",
+        "product_inventory",
+        "product_inventory_and_ordering_contract",
+        "product_price",
+        "product_price_and_shipping_settings",
+        "product_usage_suitability",
+        "refund_policy",
+        "returns_policy",
+        "shipping_settings",
+        "store_contact_settings",
+        "subscription_policy",
+        "supplier_provenance",
+        "traceability_policy",
+        "warranty_policy"
+      ],
+      "null_allowed": true
+    },
+    "scenario_type": {
+      "field_paths": [
+        "multi_turn_scenarios[].scenario_type"
+      ],
+      "type": "string",
+      "values": [
+        "ambiguous_reference",
+        "deictic_that",
+        "ellipsis",
+        "expired_context",
+        "ordinal_first",
+        "ordinal_last",
+        "ordinal_second",
+        "plural_reference",
+        "singular_reference"
+      ],
+      "semantics": "Reference-resolution and context-lifecycle taxonomy; labels are schema vocabulary, not examples."
+    },
+    "business_outcome_category": {
+      "field_paths": [
+        "primary_cases[].expected_business_outcome_category",
+        "primary_cases[].multi_intent_branches[].expected_business_outcome_category"
+      ],
+      "type": "string",
+      "values": [
+        "ANSWER_CART_PROCESS_FROM_APPROVED_GUIDE",
+        "ANSWER_FROM_APPROVED_KNOWLEDGE",
+        "ASK_TARGETED_CLARIFYING_QUESTION",
+        "BRIEF_SOCIAL_RESPONSE_OR_CAPABILITY_GUIDANCE",
+        "CLARIFY_PRICE_RANGE",
+        "COMPARE_REQUESTED_QUANTITY_TO_STOCK",
+        "DENY_AUTH_BYPASS",
+        "DENY_CHATBOT_ORDER_MUTATION",
+        "DENY_CROSS_ACCOUNT_READ",
+        "DENY_INVENTORY_MUTATION",
+        "DENY_PAYMENT_STATE_MUTATION",
+        "DENY_PROHIBITED_CAPABILITY",
+        "DENY_SECRET_DISCLOSURE",
+        "DO_NOT_ASSERT_UNSOURCED_POLICY",
+        "DO_NOT_ASSERT_UNSOURCED_PRODUCT_CLAIM",
+        "DO_NOT_FORCE_INTO_COMMERCE_INTENT",
+        "LIST_OWN_ORDERS",
+        "NO_MATCH",
+        "PROCESS_EVERY_BRANCH_WITH_EXPLICIT_TERMINAL_STATE",
+        "READ_OWN_ORDER",
+        "READ_OWN_ORDER_OR_NOT_FOUND",
+        "READ_OWN_PAYMENT_STATUS",
+        "REJECT_QUANTITY_ABOVE_CURRENT_STOCK",
+        "REQUIRE_AUTHENTICATION",
+        "RETURN_ACTIVE_CATALOG",
+        "RETURN_ACTIVE_CATEGORY_PRODUCTS",
+        "RETURN_ADD_TO_CART_SUGGESTION_WITH_CONFIRMATION",
+        "RETURN_CURRENT_AVAILABILITY",
+        "RETURN_CURRENT_SHIPPING_RULE",
+        "RETURN_CURRENT_UNIT_PRICE",
+        "RETURN_DETERMINISTIC_SUBTOTAL_SHIPPING_TOTAL",
+        "RETURN_GROUNDED_PRODUCT_DETAILS",
+        "RETURN_MATCHING_ACTIVE_PRODUCTS"
+      ],
+      "coverage": "Complete schema-semantic symbolic taxonomy accepted by the compatible evaluator.",
+      "excluded_value_class": "Content-bearing literal outcome instances embedded in the current evaluator are intentionally excluded and must not be used for independent authoring."
+    },
+    "context_ttl_state": {
+      "field_paths": [
+        "preconditions.context_ttl_state"
+      ],
+      "type": "string",
+      "values": [
+        "active",
+        "expired"
+      ]
+    },
+    "context_state_before_turn": {
+      "field_paths": [
+        "multi_turn_scenarios[].turns[].context_state_before_turn"
+      ],
+      "type": "string|null",
+      "values": [
+        "ACTIVE",
+        "EXPIRED"
+      ],
+      "null_allowed": true
+    },
+    "context_status": {
+      "field_paths": [
+        "multi_turn_scenarios[].turns[].expected_context_after_turn.status"
+      ],
+      "type": "string",
+      "values": [
+        "ACTIVE",
+        "AMBIGUOUS",
+        "EXPIRED"
+      ]
+    },
+    "turn_role": {
+      "field_paths": [
+        "multi_turn_scenarios[].turns[].role"
+      ],
+      "type": "string",
+      "values": [
+        "user"
+      ]
+    },
+    "requested_mutation_string_value": {
+      "field_paths": [
+        "entity_gold.requested_mutation_value when represented as a string"
+      ],
+      "type": "string",
+      "values_exposed": false,
+      "reason": "The current allowlist members are content-bearing mutation instances rather than reusable schema semantics. They are intentionally not reproduced.",
+      "authoring_rule": "Use null or a numeric value under this sanitized contract, or obtain an independently reviewed clean vocabulary revision before using a string."
+    }
+  },
+  "invariants": {
+    "structural": [
+      "All top-level collections and schema_contract are required.",
+      "Primary IDs and scenario IDs are unique in their respective collections; branch IDs are unique within their parent.",
+      "Every entity_gold object has exactly the nine declared slots.",
+      "A multi-intent primary case has a non-empty branch array; every other primary case has an empty branch array.",
+      "Every scenario has exactly two ordered user turns.",
+      "Allowed evidence source IDs are unique, registered, and mirrored in grounding_gold.",
+      "Source-version pins are positive integers, refer only to allowed sources, and equal registry versions.",
+      "Primary/scenario security expectations are objects with decision and capability; branch security expectations are scalar strings.",
+      "The declared schema_contract arrays equal the evaluator contract arrays in both content and order."
+    ],
+    "semantic": [
+      "An explicit entity is represented even when canonical resolution fails.",
+      "A raw product mention may coexist with a null canonical product.",
+      "Authorization disposition does not erase entity understanding.",
+      "quantity represents purchase/item quantity and is distinct from requested_mutation_value.",
+      "account_target preserves the authored schema representation; no unverified normalization is implied.",
+      "Claims requiring evidence are bounded by the declared domain, source IDs, version pins, and minimum facts.",
+      "When approved evidence is insufficient, NO_EVIDENCE is available as the non-assertion terminal.",
+      "Multi-intent branches carry independent entity, evidence, terminal, outcome, operation, and security expectations."
+    ],
+    "null_semantics": [
+      "Null is accepted only where the field type explicitly includes null.",
+      "A required nullable field must still be present.",
+      "Null means absent, unresolved, or not applicable according to field semantics.",
+      "Null is distinct from an empty string, zero, false, an empty array, and an omitted field.",
+      "Empty strings are rejected for all string fields validated as non-empty.",
+      "Empty arrays are accepted only where the relevant list contract allows them."
+    ],
+    "enum_consistency": [
+      "Enum values are drawn only from the evaluator parser/validator and machine-checkable evaluator contract inventory.",
+      "Every exposed enum list contains no duplicates.",
+      "No enum was inferred from utterances, predictions, scores, or observed case values.",
+      "Content-bearing literal allowlist members are excluded rather than treated as reusable taxonomy."
+    ]
+  },
+  "authority_interfaces": [
+    {
+      "category": "Product/Category structured authority",
+      "authoring_interface": "Publish structured product/category facts in source_registry and reference only registered source IDs from case, branch, scenario, and grounding fields.",
+      "privacy_boundary": "Do not embed prior evaluation examples or candidate behavior."
+    },
+    {
+      "category": "SiteSetting structured authority",
+      "authoring_interface": "Publish versionable store or shipping settings as structured authority facts and pin revisions when stable evaluation requires it.",
+      "privacy_boundary": "Do not copy content-bearing historical expected values into this schema bridge."
+    },
+    {
+      "category": "Owned/private order authority",
+      "authoring_interface": "Represent actor/ownership state through preconditions and bind only independently created symbolic references; evidence sources remain registry-scoped.",
+      "privacy_boundary": "Do not include real account, payment, or order identifiers."
+    },
+    {
+      "category": "Published knowledge registry",
+      "authoring_interface": "Register approved knowledge sources, optional versions, and structured facts; declare allowed sources and minimum supported facts per authored record.",
+      "privacy_boundary": "Only published authority content may support factual answer expectations."
+    }
+  ],
+  "sanitization_metadata": {
+    "artifact_scope": "Schema semantics only; this artifact is an authoring bridge, not a dataset bridge.",
+    "source_categories_consulted": [
+      "evaluator parser and validator declarations",
+      "machine-checkable evaluator contract inventory"
+    ],
+    "source_categories_not_consulted": [
+      "historical fixtures or utterances",
+      "scored or raw candidate outputs",
+      "candidate runtime implementation",
+      "router, handler, or controller source",
+      "root-cause, failure-taxonomy, audit, or remediation reports",
+      "historical case-specific gold"
+    ],
+    "historical_utterance_exposure": 0,
+    "historical_case_id_exposure": 0,
+    "candidate_output_exposure": 0,
+    "failure_analysis_exposure": 0,
+    "historical_counts_included": false,
+    "sample_values_included": false,
+    "content_bearing_allowlist_values_included": false,
+    "sanitization_status": "PASS_FROZEN"
+  }
+}

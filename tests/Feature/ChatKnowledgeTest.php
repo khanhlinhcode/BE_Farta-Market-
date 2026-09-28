@@ -3,6 +3,7 @@
 use App\Models\ChatKnowledgeDocument;
 use App\Models\SiteSetting;
 use App\Services\Chat\ChatKnowledgeAnswerService;
+use App\Services\Chat\ChatKnowledgeRetriever;
 use App\Services\Chat\ChatKnowledgeSyncService;
 use App\Services\Chat\ChatVectorSearch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,20 +18,23 @@ beforeEach(function () {
     config()->set('services.ai_chat.qdrant_inference_enabled', false);
 });
 
-it('answers shipping paraphrases from live site settings with verified citations', function (string $question) {
+it('answers shipping paraphrases from live site settings without manufacturing a citation', function (string $question) {
     SiteSetting::current()->update(['shipping_fee' => 18000, 'free_shipping_threshold' => 250000]);
     Http::preventStrayRequests();
 
     $response = $this->postJson('/api/chat', ['message' => $question])->assertOk();
 
-    expect($response->json('intent'))->toBe('knowledge_query')
-        ->and($response->json('source'))->toBe('knowledge')
+    expect($response->json('intent'))->toBe('shipping_info')
+        ->and($response->json('source'))->toBe('site-settings')
         ->and($response->json('answer_status'))->toBe('verified')
         ->and($response->json('reply'))->toContain('18.000đ')->toContain('250.000đ')
-        ->and($response->json('citations.0.source_id'))->toBe('site-settings');
+        ->and($response->json('citations'))->toBe([]);
     Http::assertNothingSent();
 })->with([
     'Phí ship là mấy?',
+    'Phí giao hàng như nào?',
+    'Ship bao nhiêu vậy?',
+    'Bao nhiêu thì freeship?',
     'Đơn từ bao nhiêu thì miễn phí giao hàng?',
     'Có hỗ trợ free ship không?',
 ]);
@@ -91,9 +95,8 @@ it('falls back to sparse retrieval when vector configuration is unavailable', fu
     config()->set('services.ai_chat.qdrant_url', null);
     Http::preventStrayRequests();
 
-    $this->postJson('/api/chat', ['message' => 'Phí giao hàng là bao nhiêu?'])
+    $this->postJson('/api/chat', ['message' => 'Hướng dẫn bảo quản thực phẩm như nào?'])
         ->assertOk()
-        ->assertJsonPath('answer_status', 'verified')
         ->assertJsonPath('retrieval.mode', 'sparse')
         ->assertJsonPath('retrieval.vector_fallback', true);
     Http::assertNothingSent();
@@ -185,20 +188,246 @@ it('answers broad policy questions from the published policy index', function (s
     'giai thich chinh sach cua shop',
 ]);
 
+it('grounds natural-language guidance in the approved section that supports the claim', function (string $question, string $expectedContent) {
+    config()->set('services.ai_chat.semantic_router_enabled', false);
+    app(ChatKnowledgeSyncService::class)->sync(resource_path('chat/knowledge'));
+    Http::preventStrayRequests();
+
+    $response = $this->postJson('/api/chat', ['message' => $question])
+        ->assertOk()
+        ->assertJsonPath('intent', 'knowledge_query')
+        ->assertJsonPath('source', 'knowledge')
+        ->assertJsonPath('answer_status', 'verified');
+
+    expect($response->json('reply'))->toContain($expectedContent);
+    Http::assertNothingSent();
+})->with([
+    ['can I pay cash when the courier arrives', 'thanh toán khi nhận hàng'],
+    ['what is the registration process for a first-time shopper', 'Khách hàng đăng ký bằng tên'],
+    ['what should I review before submitting an order', 'kiểm tra lại sản phẩm'],
+]);
+
 it('falls back to sparse retrieval when Qdrant Cloud Inference is unavailable', function () {
     config()->set('services.ai_chat.vector_search_enabled', true);
-    config()->set('services.ai_chat.qdrant_inference_enabled', true);
+    config()->set('services.ai_chat.qdrant_inference_enabled', false);
     config()->set('services.ai_chat.qdrant_url', 'https://qdrant.test');
     config()->set('services.ai_chat.qdrant_key', 'test-qdrant-key');
     config()->set('services.ai_chat.qdrant_collection', 'farta_chat_knowledge');
+    app(ChatKnowledgeSyncService::class)->sync(resource_path('chat/knowledge'));
+    config()->set('services.ai_chat.qdrant_inference_enabled', true);
     Http::fake(['https://qdrant.test/*' => Http::response(['status' => 'unavailable'], 503)]);
 
-    $this->postJson('/api/chat', ['message' => 'Phí giao hàng là bao nhiêu?'])
+    $this->postJson('/api/chat', ['message' => 'Chính sách đã kiểm chứng gồm những gì?'])
         ->assertOk()
         ->assertJsonPath('answer_status', 'verified')
         ->assertJsonPath('retrieval.mode', 'sparse')
         ->assertJsonPath('retrieval.vector_fallback', true);
     Http::assertSentCount(1);
+});
+
+it('requires published Farta ownership in addition to an approved source id', function () {
+    $domain = app(\App\Services\Chat\ChatEvidencePolicy::class)->domain('payment');
+    $base = [
+        'source_id' => 'payment-guide-vi',
+        'topic' => 'payment',
+        'evidence_eligible' => true,
+        'authority' => 'approved_knowledge',
+        'status' => 'published',
+        'owner' => 'Farta Market',
+    ];
+
+    expect(app(\App\Services\Chat\ChatEvidencePolicy::class)->eligible($base, $domain))->toBeTrue()
+        ->and(app(\App\Services\Chat\ChatEvidencePolicy::class)->eligible([...$base, 'status' => 'draft'], $domain))->toBeFalse()
+        ->and(app(\App\Services\Chat\ChatEvidencePolicy::class)->eligible([...$base, 'owner' => 'External'], $domain))->toBeFalse();
+});
+
+it('bypasses hybrid retrieval for authoritative shipping settings', function () {
+    config()->set('services.ai_chat.semantic_router_enabled', false);
+    config()->set('services.ai_chat.vector_search_enabled', true);
+    config()->set('services.ai_chat.qdrant_inference_enabled', true);
+    config()->set('services.ai_chat.qdrant_url', 'https://qdrant.test');
+    config()->set('services.ai_chat.qdrant_key', 'test-qdrant-key');
+    config()->set('services.ai_chat.qdrant_collection', 'farta_chat_knowledge');
+    SiteSetting::current()->update(['shipping_fee' => 19000, 'free_shipping_threshold' => 300000]);
+    Http::preventStrayRequests();
+
+    $this->postJson('/api/chat', ['message' => 'Phí giao hàng như nào?'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'shipping_info')
+        ->assertJsonPath('source', 'site-settings')
+        ->assertJsonPath('answer_status', 'verified')
+        ->assertJsonPath('citations', [])
+        ->assertJsonMissingPath('retrieval');
+
+    Http::assertNothingSent();
+});
+
+it('keeps dense results inside the routed knowledge topic before fusion', function () {
+    config()->set('services.ai_chat.vector_search_enabled', true);
+    config()->set('services.ai_chat.qdrant_inference_enabled', true);
+    config()->set('services.ai_chat.qdrant_url', 'https://qdrant.test');
+    config()->set('services.ai_chat.qdrant_key', 'test-qdrant-key');
+    config()->set('services.ai_chat.qdrant_collection', 'farta_chat_knowledge');
+
+    $payment = ChatKnowledgeDocument::create([
+        'source_id' => 'payment-guide-vi', 'title' => 'Thanh toán', 'locale' => 'vi',
+        'topic' => 'payment', 'version' => 1, 'status' => 'published', 'owner' => 'Farta Market',
+        'checksum' => str_repeat('a', 64),
+    ])->chunks()->create([
+        'section' => 'COD', 'content' => 'Khách hàng có thể thanh toán COD khi nhận hàng.',
+        'normalized_content' => 'khach hang co the thanh toan cod khi nhan hang',
+        'retrieval_text' => 'Thanh toán COD khi nhận hàng', 'position' => 0,
+        'checksum' => str_repeat('b', 64),
+    ]);
+    $ordering = ChatKnowledgeDocument::create([
+        'source_id' => 'ordering-test-vi', 'title' => 'Đặt hàng', 'locale' => 'vi',
+        'topic' => 'ordering', 'version' => 1, 'status' => 'published', 'owner' => 'Farta Market',
+        'checksum' => str_repeat('c', 64),
+    ])->chunks()->create([
+        'section' => 'Kiểm tra đơn', 'content' => 'Kiểm tra giỏ hàng trước khi đặt đơn.',
+        'normalized_content' => 'kiem tra gio hang truoc khi dat don',
+        'retrieval_text' => 'Kiểm tra giỏ hàng trước khi đặt đơn', 'position' => 0,
+        'checksum' => str_repeat('d', 64),
+    ]);
+    Http::fake(['https://qdrant.test/*' => Http::response(['result' => ['points' => [
+        ['payload' => ['chunk_id' => $ordering->id]],
+        ['payload' => ['chunk_id' => $payment->id]],
+    ]]])]);
+
+    $result = app(ChatKnowledgeRetriever::class)->retrieve('Shop có thanh toán COD không?', 'vi', 'payment');
+
+    expect($result['mode'])->toBe('hybrid')
+        ->and($result['chunks'])->not->toBeEmpty()
+        ->and(collect($result['chunks'])->pluck('topic')->unique()->all())->toBe(['payment'])
+        ->and(collect($result['chunks'])->pluck('source_id')->all())->not->toContain('ordering-test-vi')
+        ->and(array_keys($result['timings']))->toBe([
+            'database_ms', 'sparse_ms', 'qdrant_dense_ms', 'fusion_ms',
+        ]);
+    Http::assertSentCount(1);
+    Http::assertSent(fn ($request): bool => ($request->data()['filter']['must'][0]['key'] ?? null) === 'source_id'
+        && ($request->data()['filter']['must'][0]['match']['any'] ?? null) === ['payment-guide-vi']
+        && ($request->data()['filter']['must'][1]['key'] ?? null) === 'topic'
+        && ($request->data()['filter']['must'][1]['match']['value'] ?? null) === 'payment');
+});
+
+it('fails closed when a downstream caller attempts to broaden a routed evidence domain', function () {
+    $policy = app(\App\Services\Chat\ChatEvidencePolicy::class);
+    $returns = $policy->domain('returns');
+    $tampered = [...$returns, 'allowed_source_ids' => ['policy-index-vi'], 'allowed_authority' => 'approved_knowledge'];
+
+    expect($policy->canonical($returns))->toBe($returns)
+        ->and($policy->canonical($tampered)['topic'])->toBe('unknown')
+        ->and($policy->canonical($tampered)['allowed_source_ids'])->toBe([]);
+});
+
+it('preserves the routed topic from query through retrieval and refuses a topic mismatch', function () {
+    $policy = app(\App\Services\Chat\ChatEvidencePolicy::class);
+    $payment = $policy->domain('payment');
+    $mismatched = [...$payment, 'topic' => 'returns'];
+
+    $retrieval = app(ChatKnowledgeRetriever::class)->retrieve(
+        'Thanh toán COD thế nào?',
+        'vi',
+        'payment',
+        $mismatched,
+    );
+
+    expect($retrieval['required_evidence_domain']['topic'])->toBe('unknown')
+        ->and($retrieval['chunks'])->toBe([]);
+});
+
+it('uses dynamic contact settings without querying vectors', function () {
+    config()->set('services.ai_chat.vector_search_enabled', true);
+    config()->set('services.ai_chat.qdrant_inference_enabled', true);
+    config()->set('services.ai_chat.qdrant_url', 'https://qdrant.test');
+    config()->set('services.ai_chat.qdrant_key', 'test-qdrant-key');
+    config()->set('services.ai_chat.qdrant_collection', 'farta_chat_knowledge');
+    SiteSetting::current()->update([
+        'contact_email' => 'support@example.test',
+        'contact_phone' => '0900000000',
+        'support_phone' => '0911111111',
+        'address_vi' => 'Địa chỉ kiểm thử',
+    ]);
+    Http::preventStrayRequests();
+
+    $result = app(ChatKnowledgeRetriever::class)->retrieve('Liên hệ shop ở đâu?', 'vi', 'contact');
+
+    expect($result['mode'])->toBe('sparse')
+        ->and($result['vector_fallback'])->toBeFalse()
+        ->and($result['chunks'])->toHaveCount(1)
+        ->and($result['chunks'][0]['source_id'])->toBe('site-settings')
+        ->and($result['chunks'][0]['topic'])->toBe('contact')
+        ->and($result['chunks'][0]['content'])->toContain('support@example.test');
+    Http::assertNothingSent();
+});
+
+it('refuses an unsupported policy topic instead of citing a different policy', function () {
+    config()->set('services.ai_chat.semantic_router_enabled', false);
+    config()->set('services.ai_chat.vector_search_enabled', true);
+    config()->set('services.ai_chat.qdrant_inference_enabled', true);
+    config()->set('services.ai_chat.qdrant_url', 'https://qdrant.test');
+    config()->set('services.ai_chat.qdrant_key', 'test-qdrant-key');
+    config()->set('services.ai_chat.qdrant_collection', 'farta_chat_knowledge');
+    config()->set('services.ai_chat.qdrant_inference_enabled', false);
+    app(ChatKnowledgeSyncService::class)->sync(resource_path('chat/knowledge'));
+    config()->set('services.ai_chat.qdrant_inference_enabled', true);
+    Http::preventStrayRequests();
+
+    $this->postJson('/api/chat', ['message' => 'Chính sách đổi trả hàng lỗi thế nào?'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'knowledge_query')
+        ->assertJsonPath('answer_status', 'refused_unverified')
+        ->assertJsonPath('code', 'NO_EVIDENCE')
+        ->assertJsonPath('citations', []);
+    Http::assertNothingSent();
+});
+
+it('rejects published but unregistered evidence for a missing policy domain', function () {
+    $document = ChatKnowledgeDocument::create([
+        'source_id' => 'returns-not-approved-vi',
+        'title' => 'Ghi chú đổi trả chưa được phê duyệt',
+        'locale' => 'vi',
+        'topic' => 'returns',
+        'version' => 1,
+        'status' => 'published',
+        'owner' => 'Farta Market',
+        'checksum' => str_repeat('e', 64),
+    ]);
+    $document->chunks()->create([
+        'section' => 'Hoàn tiền',
+        'content' => 'Ghi chú thử nghiệm không phải chính sách chính thức.',
+        'normalized_content' => 'ghi chu thu nghiem khong phai chinh sach chinh thuc',
+        'retrieval_text' => 'hoàn tiền thực phẩm hỏng đổi trả',
+        'position' => 0,
+        'checksum' => str_repeat('f', 64),
+    ]);
+
+    $retrieval = app(ChatKnowledgeRetriever::class)->retrieve(
+        'Thực phẩm hỏng có được hoàn tiền không?',
+        'vi',
+        'returns',
+    );
+
+    expect($retrieval['chunks'])->toBe([]);
+});
+
+it('refuses chunks that bypass the retriever without eligibility metadata', function () {
+    $result = app(ChatKnowledgeAnswerService::class)->answer('Có được hoàn tiền không?', [
+        'chunks' => [[
+            'source_id' => 'policy-index-vi',
+            'title' => 'Tổng quan',
+            'section' => 'Nhóm chính sách',
+            'content' => 'Nội dung chung.',
+        ]],
+        'queries' => ['hoan tien'],
+        'mode' => 'sparse',
+        'vector_fallback' => false,
+        'timings' => [],
+    ], false);
+
+    expect($result['answer_status'])->toBe('refused_unverified')
+        ->and($result['code'])->toBe('NO_EVIDENCE')
+        ->and($result['citations'])->toBe([]);
 });
 
 it('refuses to write vectors outside a dedicated Farta collection', function () {
@@ -228,12 +457,15 @@ it('fails closed after one repair when evidence quotes are fabricated', function
             'claims' => [['claim' => 'Sai', 'citation_index' => 0, 'evidence' => 'Không tồn tại']],
         ])]]]]);
 
-    $result = app(ChatKnowledgeAnswerService::class)->answer('Phí ship?', [
+    $result = app(ChatKnowledgeAnswerService::class)->answer('SePay hoạt động thế nào?', [
         'chunks' => [[
-            'source_id' => 'site-settings', 'title' => 'Shipping', 'section' => 'Fee',
-            'content' => 'Phí giao hàng là 20.000đ.',
+            'source_id' => 'payment-guide-vi', 'title' => 'Thanh toán', 'section' => 'Thanh toán bằng SePay',
+            'topic' => 'payment', 'authority' => 'approved_knowledge', 'evidence_eligible' => true,
+            'owner' => 'Farta Market', 'status' => 'published',
+            'content' => 'Khách hàng đã xác minh có thể tạo yêu cầu thanh toán SePay.',
         ]],
-        'queries' => ['phi ship'], 'mode' => 'sparse', 'vector_fallback' => false,
+        'queries' => ['thanh toan sepay'], 'mode' => 'sparse', 'vector_fallback' => false,
+        'required_evidence_domain' => app(\App\Services\Chat\ChatEvidencePolicy::class)->domain('payment'),
     ], false);
 
     expect($result['answer_status'])->toBe('refused_unverified')

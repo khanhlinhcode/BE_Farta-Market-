@@ -1,0 +1,2114 @@
+{
+    "schema_version": "farta-v10-evaluator-v3-contract-inventory.1.0",
+    "frozen_dataset_schema": "farta-v10.3.0",
+    "counts": {
+        "primary": 292,
+        "scenarios": 39,
+        "turns": 78,
+        "multi_intent_cases": 27,
+        "branches": 56
+    },
+    "security_expectation_contract": {
+        "primary": {
+            "shape": "object",
+            "fields": [
+                "decision",
+                "capability"
+            ]
+        },
+        "branch": {
+            "shape": "string",
+            "values": [
+                "ALLOW",
+                "DENY",
+                "SUGGEST_ONLY"
+            ]
+        },
+        "scenario": {
+            "shape": "object",
+            "fields": [
+                "decision",
+                "capability"
+            ]
+        }
+    },
+    "enum_contracts": {
+        "primary_intent": [
+            "cart_action_request",
+            "cart_informational",
+            "catalog_listing",
+            "clarification",
+            "general_chat",
+            "knowledge_query",
+            "missing_evidence_query",
+            "multi_intent",
+            "order_read",
+            "payment_status_read",
+            "price",
+            "privileged_mutation",
+            "product_detail",
+            "product_search",
+            "shipping_calculation",
+            "shipping_current_value",
+            "stock_availability",
+            "unsupported_ood"
+        ],
+        "branch_intent": [
+            "cart_action_request",
+            "catalog_listing",
+            "knowledge_query",
+            "missing_evidence_query",
+            "order_read",
+            "payment_status_read",
+            "price",
+            "privileged_mutation",
+            "product_detail",
+            "shipping_calculation",
+            "shipping_current_value",
+            "stock_availability",
+            "store_contact",
+            "unsupported_ood"
+        ],
+        "turn_intent": [
+            "cart_action_request",
+            "clarification",
+            "price",
+            "product_detail",
+            "product_search",
+            "shipping_calculation",
+            "stock_availability"
+        ],
+        "handler": [
+            "AUTHORIZED_ORDER_READ",
+            "AUTHORIZED_PAYMENT_STATUS_READ",
+            "CART_SUGGESTED_ACTION",
+            "CATALOG_LIST",
+            "CLARIFICATION",
+            "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+            "GENERAL_CONVERSATION",
+            "KNOWLEDGE_EVIDENCE_GATE",
+            "KNOWLEDGE_GROUNDED_ANSWER",
+            "MULTI_INTENT_ORCHESTRATOR",
+            "OOD_BOUNDARY",
+            "PRODUCT_DETAIL",
+            "PRODUCT_PRICE",
+            "PRODUCT_SEARCH",
+            "PRODUCT_STOCK",
+            "SECURITY_POLICY_DENIAL",
+            "SHIPPING_SETTINGS",
+            "STORE_SETTINGS"
+        ],
+        "terminal": [
+            "ANSWER",
+            "NO_RESULTS",
+            "SUGGESTED_ACTION",
+            "UNAVAILABLE",
+            "AUTH_REQUIRED",
+            "DENIED",
+            "ANSWER_OR_NOT_FOUND",
+            "NO_EVIDENCE",
+            "UNSUPPORTED",
+            "CLARIFICATION_REQUIRED",
+            "ALL_BRANCHES_HANDLED",
+            "PARTIAL_MIXED_TERMINALS"
+        ],
+        "language_bucket": [
+            "vi_formal",
+            "vi_conversational",
+            "vi_no_diacritics",
+            "en",
+            "mixed"
+        ],
+        "difficulty": [
+            "edge_case",
+            "moderately_ambiguous",
+            "normal_paraphrase",
+            "security_ood",
+            "straightforward"
+        ],
+        "actor": [
+            "anonymous",
+            "anonymous_or_authenticated",
+            "authenticated_non_owner",
+            "authenticated_owner",
+            "authenticated_verified_customer"
+        ],
+        "security_decision": [
+            "ALLOW_OWNED_READ",
+            "ALLOW_READ",
+            "ALLOW_SAFE_BRANCHES_DENY_PROHIBITED_BRANCHES",
+            "DENY",
+            "DENY_CROSS_ACCOUNT",
+            "NOT_APPLICABLE",
+            "PER_BRANCH",
+            "REQUIRE_AUTH",
+            "SUGGEST_ONLY"
+        ],
+        "security_capability": [
+            "approved_business_knowledge",
+            "auth_bypass",
+            "contextual_product_read",
+            "deterministic_public_calculation",
+            "domain_boundary",
+            "evidence_gated_business_knowledge",
+            "evidence_gated_product_knowledge",
+            "inventory_mutation",
+            "multi_intent_branch_isolation",
+            "no_direct_cart_mutation",
+            "order_state_mutation",
+            "other_user_data",
+            "payment_state_mutation",
+            "public_product_catalog",
+            "public_store_settings",
+            "read_only_order_access",
+            "read_only_payment_status",
+            "role_change",
+            "safe_disambiguation",
+            "safe_social_conversation",
+            "secret_disclosure"
+        ],
+        "branch_security_expectation": [
+            "ALLOW",
+            "DENY",
+            "SUGGEST_ONLY"
+        ],
+        "operation": [
+            "answer_approved_knowledge",
+            "answer_policy",
+            "answer_weather",
+            "bypass_verification",
+            "calculate_total",
+            "compare_quantity_to_inventory",
+            "cross_account_payment_read",
+            "disclose_hidden_prompt",
+            "financial_advice",
+            "list_catalog",
+            "list_category",
+            "mutate_inventory",
+            "mutate_order_state",
+            "mutate_payment_state",
+            "read_current_inventory",
+            "read_current_price",
+            "read_free_shipping_threshold",
+            "read_owned_order",
+            "read_owned_payment_status",
+            "read_product_detail",
+            "read_shipping_fee",
+            "read_store_address",
+            "suggest_add_to_cart",
+            "write_code"
+        ],
+        "evidence_domain": [
+            "account",
+            "bulk_order_policy",
+            "cold_chain_policy",
+            "delivery_sla",
+            "express_delivery_policy",
+            "food_safety_certification",
+            "fulfilment_compensation_policy",
+            "loyalty_policy",
+            "opened_food_return_policy",
+            "ordering",
+            "orders",
+            "organic_certification",
+            "owned_order_data",
+            "owned_order_payment_status",
+            "packaging_return_policy",
+            "payment",
+            "policy",
+            "price_match_policy",
+            "privacy_policy",
+            "product_catalog",
+            "product_inventory",
+            "product_inventory_and_ordering_contract",
+            "product_price",
+            "product_price_and_shipping_settings",
+            "product_usage_suitability",
+            "refund_policy",
+            "returns_policy",
+            "shipping_settings",
+            "store_contact_settings",
+            "subscription_policy",
+            "supplier_provenance",
+            "traceability_policy",
+            "warranty_policy"
+        ],
+        "scenario_type": [
+            "ambiguous_reference",
+            "deictic_that",
+            "ellipsis",
+            "expired_context",
+            "ordinal_first",
+            "ordinal_last",
+            "ordinal_second",
+            "plural_reference",
+            "singular_reference"
+        ],
+        "requested_mutation_string_value": [
+            "+100",
+            "admin",
+            "cancelled",
+            "delivered",
+            "paid"
+        ]
+    },
+    "fields": [
+        {
+            "field": "allowed_evidence_source_versions",
+            "scope": "primary",
+            "locations_present": 55,
+            "records_in_scope": 292,
+            "required": false,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "allowed_evidence_sources",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "array"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "case_id",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "deterministic_gold",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "object"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        },
+        {
+            "field": "difficulty",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "edge_case",
+                "moderately_ambiguous",
+                "normal_paraphrase",
+                "security_ood",
+                "straightforward"
+            ]
+        },
+        {
+            "field": "entity_gold",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "expected_business_outcome_category",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ANSWER_CART_PROCESS_FROM_APPROVED_GUIDE",
+                "ANSWER_FROM_APPROVED_KNOWLEDGE",
+                "ASK_TARGETED_CLARIFYING_QUESTION",
+                "BRIEF_SOCIAL_RESPONSE_OR_CAPABILITY_GUIDANCE",
+                "CLARIFY_PRICE_RANGE",
+                "COMPARE_REQUESTED_QUANTITY_TO_STOCK",
+                "DENY_CROSS_ACCOUNT_READ",
+                "DENY_PROHIBITED_CAPABILITY",
+                "DO_NOT_ASSERT_UNSOURCED_POLICY",
+                "DO_NOT_ASSERT_UNSOURCED_PRODUCT_CLAIM",
+                "DO_NOT_FORCE_INTO_COMMERCE_INTENT",
+                "LIST_OWN_ORDERS",
+                "NO_MATCH",
+                "PROCESS_EVERY_BRANCH_WITH_EXPLICIT_TERMINAL_STATE",
+                "READ_OWN_ORDER",
+                "READ_OWN_ORDER_OR_NOT_FOUND",
+                "READ_OWN_PAYMENT_STATUS",
+                "REJECT_QUANTITY_ABOVE_CURRENT_STOCK",
+                "REQUIRE_AUTHENTICATION",
+                "RETURN_ACTIVE_CATALOG",
+                "RETURN_ACTIVE_CATEGORY_PRODUCTS",
+                "RETURN_ADD_TO_CART_SUGGESTION_WITH_CONFIRMATION",
+                "RETURN_CURRENT_AVAILABILITY",
+                "RETURN_CURRENT_SHIPPING_RULE",
+                "RETURN_CURRENT_UNIT_PRICE",
+                "RETURN_DETERMINISTIC_SUBTOTAL_SHIPPING_TOTAL",
+                "RETURN_GROUNDED_PRODUCT_DETAILS",
+                "RETURN_MATCHING_ACTIVE_PRODUCTS"
+            ]
+        },
+        {
+            "field": "expected_handler",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "AUTHORIZED_ORDER_READ",
+                "AUTHORIZED_PAYMENT_STATUS_READ",
+                "CART_SUGGESTED_ACTION",
+                "CATALOG_LIST",
+                "CLARIFICATION",
+                "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+                "GENERAL_CONVERSATION",
+                "KNOWLEDGE_EVIDENCE_GATE",
+                "KNOWLEDGE_GROUNDED_ANSWER",
+                "MULTI_INTENT_ORCHESTRATOR",
+                "OOD_BOUNDARY",
+                "PRODUCT_DETAIL",
+                "PRODUCT_PRICE",
+                "PRODUCT_SEARCH",
+                "PRODUCT_STOCK",
+                "SECURITY_POLICY_DENIAL",
+                "SHIPPING_SETTINGS"
+            ]
+        },
+        {
+            "field": "expected_terminal_state",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ALL_BRANCHES_HANDLED",
+                "ANSWER",
+                "ANSWER_OR_NOT_FOUND",
+                "AUTH_REQUIRED",
+                "CLARIFICATION_REQUIRED",
+                "DENIED",
+                "NO_EVIDENCE",
+                "NO_RESULTS",
+                "PARTIAL_MIXED_TERMINALS",
+                "SUGGESTED_ACTION",
+                "UNAVAILABLE",
+                "UNSUPPORTED"
+            ]
+        },
+        {
+            "field": "gold_intent",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "cart_action_request",
+                "cart_informational",
+                "catalog_listing",
+                "clarification",
+                "general_chat",
+                "knowledge_query",
+                "missing_evidence_query",
+                "multi_intent",
+                "order_read",
+                "payment_status_read",
+                "price",
+                "privileged_mutation",
+                "product_detail",
+                "product_search",
+                "shipping_calculation",
+                "shipping_current_value",
+                "stock_availability",
+                "unsupported_ood"
+            ]
+        },
+        {
+            "field": "grounding_gold",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "language_bucket",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "en",
+                "mixed",
+                "vi_conversational",
+                "vi_formal",
+                "vi_no_diacritics"
+            ]
+        },
+        {
+            "field": "multi_intent_branches",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "array"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "notes",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Independently authored V10 R2 replacement for P-R1.",
+                "Independently authored V10 R2 replacement for P-R3.",
+                "Independently authored V10 R2 replacement for P-R4.",
+                "No allowed authority supports suitability for direct consumption; the product identity remains preserved while the unsupported claim is gated.",
+                "No published source in the approved registry covers this topic at authoring time.",
+                "V10 R3 replacement for R2 parent V10-R2-ST-c4e8b619.",
+                "V10 R3 replacement for R2 parent V10-ST-0210.",
+                "category_filter=Rau Củ",
+                "category_filter=Sữa",
+                "category_filter=Thịt Tươi",
+                "category_filter=Thức Ăn Nhanh",
+                "category_filter=Trái Cây",
+                "clarification_reason=broad_preference",
+                "clarification_reason=missing_context",
+                "clarification_reason=missing_order_context",
+                "clarification_reason=missing_product",
+                "clarification_reason=missing_product_and_quantity",
+                "clarification_reason=missing_quantity",
+                "clarification_reason=underspecified_product",
+                "null",
+                "ood_topic=creative_writing_lexical_collision",
+                "ood_topic=entertainment",
+                "ood_topic=finance_lexical_collision",
+                "ood_topic=financial_advice",
+                "ood_topic=general_trivia",
+                "ood_topic=legal",
+                "ood_topic=math_lexical_collision",
+                "ood_topic=medical",
+                "ood_topic=medical_lexical_collision",
+                "ood_topic=personal_advice",
+                "ood_topic=personal_advice_lexical_collision",
+                "ood_topic=programming",
+                "ood_topic=programming_lexical_collision",
+                "ood_topic=recipe",
+                "ood_topic=science",
+                "ood_topic=trivia_lexical_collision",
+                "ood_topic=weather"
+            ]
+        },
+        {
+            "field": "preconditions",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "required_evidence_domain",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "account",
+                "bulk_order_policy",
+                "cold_chain_policy",
+                "delivery_sla",
+                "express_delivery_policy",
+                "food_safety_certification",
+                "fulfilment_compensation_policy",
+                "loyalty_policy",
+                "null",
+                "opened_food_return_policy",
+                "ordering",
+                "orders",
+                "organic_certification",
+                "owned_order_data",
+                "owned_order_payment_status",
+                "packaging_return_policy",
+                "payment",
+                "policy",
+                "price_match_policy",
+                "privacy_policy",
+                "product_catalog",
+                "product_inventory",
+                "product_inventory_and_ordering_contract",
+                "product_price",
+                "product_price_and_shipping_settings",
+                "product_usage_suitability",
+                "refund_policy",
+                "returns_policy",
+                "shipping_settings",
+                "subscription_policy",
+                "supplier_provenance",
+                "traceability_policy",
+                "warranty_policy"
+            ]
+        },
+        {
+            "field": "security_capability_expectation",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "utterance",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "allowed_evidence_source_versions",
+            "scope": "branch",
+            "locations_present": 7,
+            "records_in_scope": 56,
+            "required": false,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "allowed_evidence_sources",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "array"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "branch_id",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "address",
+                "apple_price",
+                "banana_price",
+                "burger_price",
+                "bypass",
+                "calculation",
+                "cancel_order",
+                "cart",
+                "catalog",
+                "coupon",
+                "delivery_sla",
+                "detail",
+                "finance",
+                "guava_stock",
+                "mark_paid",
+                "milk_cart",
+                "milk_stock",
+                "mutate_stock",
+                "other_payment",
+                "own_payment",
+                "price",
+                "programming",
+                "read_order",
+                "read_payment",
+                "read_stock",
+                "returns",
+                "secret",
+                "sepay_info",
+                "shipping",
+                "shipping_fee",
+                "stock",
+                "threshold",
+                "verify_email",
+                "weather"
+            ]
+        },
+        {
+            "field": "entity_gold",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "expected_business_outcome_category",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ANSWER_FROM_APPROVED_KNOWLEDGE",
+                "DENY_AUTH_BYPASS",
+                "DENY_CHATBOT_ORDER_MUTATION",
+                "DENY_CROSS_ACCOUNT_READ",
+                "DENY_INVENTORY_MUTATION",
+                "DENY_PAYMENT_STATE_MUTATION",
+                "DENY_SECRET_DISCLOSURE",
+                "DO_NOT_ASSERT_UNSOURCED_POLICY",
+                "DO_NOT_ASSERT_UNSOURCED_PRODUCT_CLAIM",
+                "DO_NOT_FORCE_INTO_COMMERCE_INTENT",
+                "READ_OWN_ORDER",
+                "READ_OWN_PAYMENT_STATUS",
+                "RETURN_ACTIVE_CATALOG",
+                "RETURN_ACTIVE_CATEGORY_PRODUCTS",
+                "RETURN_ADD_TO_CART_SUGGESTION_WITH_CONFIRMATION",
+                "RETURN_CURRENT_AVAILABILITY",
+                "RETURN_CURRENT_UNIT_PRICE",
+                "RETURN_GROUNDED_PRODUCT_DETAILS",
+                "address_vi=213 Trương Định, Nghệ An",
+                "available=true",
+                "free_shipping_threshold_vnd=200000",
+                "price_vnd=53000",
+                "shipping_fee_vnd=20000",
+                "subtotal=180000; shipping=20000; total=200000",
+                "subtotal=212000; shipping=0; total=212000",
+                "subtotal=240000; shipping=0; total=240000",
+                "subtotal=64000; shipping=20000; total=84000",
+                "subtotal=89000; shipping=20000; total=109000"
+            ]
+        },
+        {
+            "field": "expected_handler",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "AUTHORIZED_ORDER_READ",
+                "AUTHORIZED_PAYMENT_STATUS_READ",
+                "CART_SUGGESTED_ACTION",
+                "CATALOG_LIST",
+                "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+                "KNOWLEDGE_EVIDENCE_GATE",
+                "KNOWLEDGE_GROUNDED_ANSWER",
+                "OOD_BOUNDARY",
+                "PRODUCT_DETAIL",
+                "PRODUCT_PRICE",
+                "PRODUCT_STOCK",
+                "SECURITY_POLICY_DENIAL",
+                "SHIPPING_SETTINGS",
+                "STORE_SETTINGS"
+            ]
+        },
+        {
+            "field": "expected_terminal_state",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ANSWER",
+                "DENIED",
+                "NO_EVIDENCE",
+                "SUGGESTED_ACTION",
+                "UNSUPPORTED"
+            ]
+        },
+        {
+            "field": "grounding_gold",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "intent",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "cart_action_request",
+                "catalog_listing",
+                "knowledge_query",
+                "missing_evidence_query",
+                "order_read",
+                "payment_status_read",
+                "price",
+                "privileged_mutation",
+                "product_detail",
+                "shipping_calculation",
+                "shipping_current_value",
+                "stock_availability",
+                "store_contact",
+                "unsupported_ood"
+            ]
+        },
+        {
+            "field": "minimum_facts_required",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "array"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "operation",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "answer_approved_knowledge",
+                "answer_policy",
+                "answer_weather",
+                "bypass_verification",
+                "calculate_total",
+                "compare_quantity_to_inventory",
+                "cross_account_payment_read",
+                "disclose_hidden_prompt",
+                "financial_advice",
+                "list_catalog",
+                "list_category",
+                "mutate_inventory",
+                "mutate_order_state",
+                "mutate_payment_state",
+                "read_current_inventory",
+                "read_current_price",
+                "read_free_shipping_threshold",
+                "read_owned_order",
+                "read_owned_payment_status",
+                "read_product_detail",
+                "read_shipping_fee",
+                "read_store_address",
+                "suggest_add_to_cart",
+                "write_code"
+            ]
+        },
+        {
+            "field": "preconditions",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": false,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "required_evidence_domain",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "account",
+                "delivery_sla",
+                "null",
+                "ordering",
+                "owned_order_data",
+                "owned_order_payment_status",
+                "payment",
+                "product_catalog",
+                "product_inventory",
+                "product_inventory_and_ordering_contract",
+                "product_price",
+                "product_price_and_shipping_settings",
+                "product_usage_suitability",
+                "returns_policy",
+                "shipping_settings",
+                "store_contact_settings"
+            ]
+        },
+        {
+            "field": "security_expectation",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ALLOW",
+                "DENY",
+                "SUGGEST_ONLY"
+            ]
+        },
+        {
+            "field": "allowed_evidence_source_versions",
+            "scope": "scenario",
+            "locations_present": 6,
+            "records_in_scope": 39,
+            "required": false,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "allowed_evidence_sources",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "array"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "expected_handler",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "CART_SUGGESTED_ACTION",
+                "CLARIFICATION",
+                "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+                "PRODUCT_DETAIL",
+                "PRODUCT_PRICE",
+                "PRODUCT_STOCK"
+            ]
+        },
+        {
+            "field": "expected_terminal_state",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ANSWER",
+                "CLARIFICATION_REQUIRED",
+                "SUGGESTED_ACTION"
+            ]
+        },
+        {
+            "field": "final_canonical_entity",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "array",
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Cam Tươi",
+                "Chuối",
+                "Dưa hấu",
+                "Hamburger",
+                "Nho tím",
+                "Rau Củ Tươi",
+                "Sữa Hộp",
+                "Thịt bò nạt",
+                "Táo Úc",
+                "Xoài keo",
+                "null",
+                "Ổi"
+            ]
+        },
+        {
+            "field": "final_expected_intent",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "cart_action_request",
+                "clarification",
+                "price",
+                "product_detail",
+                "shipping_calculation",
+                "stock_availability"
+            ]
+        },
+        {
+            "field": "grounding_gold",
+            "scope": "scenario",
+            "locations_present": 9,
+            "records_in_scope": 39,
+            "required": false,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "language_bucket",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "en",
+                "mixed",
+                "vi_conversational",
+                "vi_formal",
+                "vi_no_diacritics"
+            ]
+        },
+        {
+            "field": "notes",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Clarify which product, and whether quantity applies per item or total.",
+                "Even with quantity, expired product context requires clarification.",
+                "Expired context must not resolve the deictic reference.",
+                "Independent, fresh-session V10 R2 replacement for M-R1.",
+                "Independent, fresh-session V10 R2 replacement for M-R2.",
+                "Independent, fresh-session V10 R2 replacement for M-R3.",
+                "Independent, fresh-session V10 R2 replacement for M-R4.",
+                "Independent, fresh-session V10 R2 replacement for M-R5.",
+                "Independent, fresh-session V10 R2 replacement for M-R6.",
+                "Independent, fresh-session V10 R2 replacement for M-R7.",
+                "Independent, fresh-session V10 R2 replacement for M-R8.",
+                "Independent, fresh-session V10 R2 replacement for M-R9.",
+                "Missing unique product and quantity; no cart suggestion.",
+                "The product identity must be re-established.",
+                "null"
+            ]
+        },
+        {
+            "field": "preconditions",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "required_evidence_domain",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "null",
+                "product_catalog",
+                "product_inventory",
+                "product_inventory_and_ordering_contract",
+                "product_price",
+                "product_price_and_shipping_settings"
+            ]
+        },
+        {
+            "field": "scenario_id",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "V10-MT-002",
+                "V10-MT-003",
+                "V10-MT-004",
+                "V10-MT-005",
+                "V10-MT-006",
+                "V10-MT-008",
+                "V10-MT-009",
+                "V10-MT-010",
+                "V10-MT-011",
+                "V10-MT-012",
+                "V10-MT-013",
+                "V10-MT-014",
+                "V10-MT-015",
+                "V10-MT-016",
+                "V10-MT-017",
+                "V10-MT-019",
+                "V10-MT-020",
+                "V10-MT-021",
+                "V10-MT-024",
+                "V10-MT-025",
+                "V10-MT-026",
+                "V10-MT-028",
+                "V10-MT-029",
+                "V10-MT-030",
+                "V10-MT-031",
+                "V10-MT-033",
+                "V10-MT-034",
+                "V10-MT-035",
+                "V10-MT-037",
+                "V10-MT-039",
+                "V10-R2-MT-1a8f43d2",
+                "V10-R2-MT-3ce74690",
+                "V10-R2-MT-64cd1e87",
+                "V10-R2-MT-7e13b5a9",
+                "V10-R2-MT-8b260df3",
+                "V10-R2-MT-a51d82f4",
+                "V10-R2-MT-b72e905c",
+                "V10-R2-MT-d4a91c65",
+                "V10-R2-MT-f0395ab1"
+            ]
+        },
+        {
+            "field": "scenario_type",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ambiguous_reference",
+                "deictic_that",
+                "ellipsis",
+                "expired_context",
+                "ordinal_first",
+                "ordinal_last",
+                "ordinal_second",
+                "plural_reference",
+                "singular_reference"
+            ]
+        },
+        {
+            "field": "security_capability_expectation",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "turns",
+            "scope": "scenario",
+            "locations_present": 39,
+            "records_in_scope": 39,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "array"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "context_state_before_turn",
+            "scope": "turn",
+            "locations_present": 39,
+            "records_in_scope": 78,
+            "required": false,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ACTIVE",
+                "EXPIRED"
+            ]
+        },
+        {
+            "field": "entity_gold",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "expected_context_after_turn",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "object"
+            ],
+            "observed_scalar_values": []
+        },
+        {
+            "field": "expected_handler",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "CART_SUGGESTED_ACTION",
+                "CLARIFICATION",
+                "DETERMINISTIC_PRICE_SHIPPING_CALCULATOR",
+                "PRODUCT_DETAIL",
+                "PRODUCT_PRICE",
+                "PRODUCT_SEARCH",
+                "PRODUCT_STOCK"
+            ]
+        },
+        {
+            "field": "expected_intent",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "cart_action_request",
+                "clarification",
+                "price",
+                "product_detail",
+                "product_search",
+                "shipping_calculation",
+                "stock_availability"
+            ]
+        },
+        {
+            "field": "expected_terminal_state",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ANSWER",
+                "CLARIFICATION_REQUIRED",
+                "SUGGESTED_ACTION"
+            ]
+        },
+        {
+            "field": "role",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "user"
+            ]
+        },
+        {
+            "field": "turn",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "number"
+            ],
+            "observed_scalar_values": [
+                "1",
+                "2"
+            ]
+        },
+        {
+            "field": "utterance",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": false,
+            "observed_json_types": [
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Add cái đó vào cart.",
+                "Add three of that.",
+                "Add two of the second item.",
+                "Add two of those to my cart.",
+                "And availability?",
+                "And price?",
+                "Are both of them available?",
+                "Bốn cái đó total with shipping bao nhiêu?",
+                "Cam Tươi còn sẵn không shop?",
+                "Check Cam Tươi và Táo Úc.",
+                "Check stock Táo Úc.",
+                "Cho coi Cam Tươi, Táo Úc với Nho tím.",
+                "Cho mình xem Chuối và Hamburger đang bán nhé.",
+                "Cho mình xem Nho tím.",
+                "Cho tôi danh sách Thịt bò nạt, Hamburger và Sữa Hộp.",
+                "Các sản phẩm đó còn hàng không?",
+                "Cái cuối còn hàng chứ?",
+                "Cái thứ hai còn nhiêu phần?",
+                "Cái đó bao nhiêu vậy?",
+                "Cái đó detail sao?",
+                "Cái đó giá bao nhiêu vậy?",
+                "Còn giá hiện tại?",
+                "Find Australian apple.",
+                "Find boxed milk.",
+                "Find fresh orange.",
+                "Give detail món first.",
+                "Hiển thị Chuối, Ổi và Dưa hấu theo thứ tự đó.",
+                "How much is that one?",
+                "How much is watermelon?",
+                "Is the first one in stock?",
+                "List Burger, Rau Củ Tươi, Sữa Hộp.",
+                "List lean beef, burger, and vegetable combo.",
+                "List purple grapes, Australian apple, and fresh orange.",
+                "Liệt kê Chuối, Ổi và Cam Tươi.",
+                "Mình muốn xem phần giới thiệu của Xoài keo.",
+                "Món thứ hai có giá bao nhiêu?",
+                "Món đó hiện niêm yết bao nhiêu?",
+                "Mấy món vừa nêu đang bán bao nhiêu tiền mỗi loại?",
+                "Mức giá hiện tại của sản phẩm vừa xem là bao nhiêu?",
+                "Nó còn hàng không?",
+                "Nếu mua sáu sản phẩm đó thì tổng sau phí là bao nhiêu?",
+                "Search Cam Tươi giúp mình.",
+                "Search Hamburger.",
+                "Second one description gì?",
+                "Shop cho mình danh sách gồm Chuối với Ổi nha.",
+                "Show Xoài keo, Táo Úc, Cam Tươi.",
+                "Show me the burger and vegetable combo.",
+                "Show me watermelon and Australian apple.",
+                "Show watermelon, fresh orange, and Australian apple.",
+                "Sản phẩm thứ nhất giá bao nhiêu?",
+                "Sản phẩm ấy hiện có giá bao nhiêu?",
+                "Tell me about the last one.",
+                "Thêm ba phần.",
+                "Tìm Chuối cho mình nha.",
+                "Tìm Chuối, Nho tím, Ổi giúp mình.",
+                "Vui lòng mở thông tin sản phẩm Táo Úc để tôi tham khảo.",
+                "Vui lòng tìm Xoài keo.",
+                "Vui lòng xếp theo thứ tự Hamburger, Cam Tươi và Sữa Hộp.",
+                "What about its price?",
+                "Xin cho biết giá của mặt hàng đứng cuối danh sách.",
+                "Xin hiển thị thông tin Nho tím.",
+                "Xin tìm sản phẩm Sữa Hộp.",
+                "cho 4 cai cuoi vao gio",
+                "cho minh xem thong tin Rau Cu Tuoi",
+                "cho xem dua hau va xoai keo",
+                "chung thuoc danh muc nao",
+                "con hang?",
+                "gia oi bao nhieu",
+                "liet ke sua hop, hamburger va rau cu tuoi",
+                "mat hang do con trong kho khong",
+                "mon nay co thong tin gi",
+                "them 2 cai do",
+                "them 2 cai nay",
+                "them 3 mon dau vao gio",
+                "tim chuoi, oi va sua hop",
+                "tim dua hau va xoai keo",
+                "tim sua hop",
+                "tim thit bo nat"
+            ]
+        },
+        {
+            "field": "entity_gold.product_raw_mention",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Australian apple",
+                "Australian apples",
+                "Burger",
+                "Cam Tươi",
+                "Chuối",
+                "Combo rau củ",
+                "Dưa hấu",
+                "Hamburger",
+                "Nho tím",
+                "Rau Củ Tươi",
+                "Sữa Hộp",
+                "Thịt bò nạt",
+                "Táo Úc",
+                "Xoài keo",
+                "bananas",
+                "boxed milk",
+                "burger",
+                "cam",
+                "cam tuoi",
+                "chuoi",
+                "chuối",
+                "cái kia",
+                "dragon fruit",
+                "dua hau",
+                "dưa hấu",
+                "fresh orange",
+                "fresh oranges",
+                "fruit under 30,000 VND",
+                "guava",
+                "guavas",
+                "lean beef",
+                "loại đó",
+                "lê Hàn Quốc",
+                "milk",
+                "mon an nhanh",
+                "mì Ý",
+                "nho màu tím",
+                "nho tim",
+                "null",
+                "oi",
+                "purple grapes",
+                "rau cho bữa tối",
+                "rau cu tuoi",
+                "rau củ",
+                "sua chua Hy Lap",
+                "sua hop",
+                "sản phẩm giá hợp lý",
+                "sữa",
+                "tao uc",
+                "thit bo nat",
+                "thịt bò nạc",
+                "trái cây",
+                "trái cây khoảng 50k",
+                "vegetable combo",
+                "watermelon",
+                "xoai keo",
+                "xoài keo",
+                "Ổi",
+                "ổi"
+            ]
+        },
+        {
+            "field": "entity_gold.canonical_product",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Cam Tươi",
+                "Chuối",
+                "Dưa hấu",
+                "Hamburger",
+                "Nho tím",
+                "Rau Củ Tươi",
+                "Sữa Hộp",
+                "Thịt bò nạt",
+                "Táo Úc",
+                "Xoài keo",
+                "null",
+                "Ổi"
+            ]
+        },
+        {
+            "field": "entity_gold.quantity",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "number"
+            ],
+            "observed_scalar_values": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "8",
+                "10",
+                "20",
+                "21",
+                "30",
+                "41",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.unit",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "cái",
+                "hộp",
+                "item",
+                "null",
+                "phần",
+                "quả"
+            ]
+        },
+        {
+            "field": "entity_gold.order_reference",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "LATEST_OWN_ORDER",
+                "ORD-OTHER-001",
+                "ORD-OTHER-002",
+                "ORD-OTHER-003",
+                "ORD-OTHER-004",
+                "ORD-OTHER-011",
+                "ORD-OTHER-012",
+                "ORD-OWN-001",
+                "ORD-OWN-002",
+                "ORD-OWN-005",
+                "ORD-OWN-011",
+                "ORD-OWN-012",
+                "ORD-OWN-013",
+                "ORD-OWN-014",
+                "ORD-OWN-021",
+                "ORD-OWN-022",
+                "ORD-OWN-023",
+                "ORD-OWN-024",
+                "ORD-OWN-025",
+                "ORD-UNKNOWN-404",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.ordinal_reference",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.context_reference",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "cái",
+                "cái kia",
+                "it",
+                "loại đó",
+                "null",
+                "order đó",
+                "đơn này"
+            ]
+        },
+        {
+            "field": "entity_gold.account_target",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "another account",
+                "another customer",
+                "bạn mình",
+                "khách khác",
+                "linh@example.test",
+                "người khác",
+                "null",
+                "tai khoan khac",
+                "toi",
+                "tài khoản của tôi",
+                "tài khoản tôi"
+            ]
+        },
+        {
+            "field": "entity_gold.requested_mutation_value",
+            "scope": "primary",
+            "locations_present": 292,
+            "records_in_scope": 292,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "number",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "0",
+                "+100",
+                "500",
+                "999",
+                "admin",
+                "cancelled",
+                "delivered",
+                "null",
+                "paid"
+            ]
+        },
+        {
+            "field": "entity_gold.product_raw_mention",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Burger",
+                "Cam Tươi",
+                "Chuối",
+                "Dưa hấu",
+                "Nho tím",
+                "Sữa Hộp",
+                "Thịt bò nạt",
+                "Táo Úc",
+                "Xoài keo",
+                "boxed milk",
+                "burger",
+                "chuoi",
+                "milk",
+                "nho tim",
+                "null",
+                "oi",
+                "sua hop",
+                "tao uc",
+                "Ổi"
+            ]
+        },
+        {
+            "field": "entity_gold.canonical_product",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Cam Tươi",
+                "Chuối",
+                "Dưa hấu",
+                "Hamburger",
+                "Nho tím",
+                "Sữa Hộp",
+                "Thịt bò nạt",
+                "Táo Úc",
+                "Xoài keo",
+                "null",
+                "Ổi"
+            ]
+        },
+        {
+            "field": "entity_gold.quantity",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "number"
+            ],
+            "observed_scalar_values": [
+                "2",
+                "3",
+                "4",
+                "5",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.unit",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "hộp",
+                "item",
+                "null",
+                "phần"
+            ]
+        },
+        {
+            "field": "entity_gold.order_reference",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "LATEST_OWN_ORDER",
+                "ORD-OTHER-020",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.ordinal_reference",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.context_reference",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.account_target",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "me",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.requested_mutation_value",
+            "scope": "branch",
+            "locations_present": 56,
+            "records_in_scope": 56,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "number",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "500",
+                "cancelled",
+                "null",
+                "paid"
+            ]
+        },
+        {
+            "field": "entity_gold.product_raw_mention",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "array",
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Australian apple",
+                "Cam Tươi",
+                "Chuối",
+                "Cái đó",
+                "Hamburger",
+                "Món đó",
+                "Mấy món vừa nêu",
+                "Nho tím",
+                "Rau Cu Tuoi",
+                "Second one",
+                "Sản phẩm ấy",
+                "Sữa Hộp",
+                "Táo Úc",
+                "Xoài keo",
+                "both of them",
+                "boxed milk",
+                "cai cuoi",
+                "cai do",
+                "cai nay",
+                "chung",
+                "các sản phẩm đó",
+                "cái cuối",
+                "cái thứ hai",
+                "cái đó",
+                "fresh orange",
+                "its",
+                "last one",
+                "mat hang do",
+                "mon dau",
+                "mon nay",
+                "món first",
+                "món thứ hai",
+                "mặt hàng đứng cuối danh sách",
+                "null",
+                "nó",
+                "oi",
+                "second item",
+                "sua hop",
+                "sản phẩm thứ nhất",
+                "sản phẩm vừa xem",
+                "sản phẩm đó",
+                "that",
+                "that one",
+                "the first one",
+                "thit bo nat",
+                "those",
+                "watermelon"
+            ]
+        },
+        {
+            "field": "entity_gold.canonical_product",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "array",
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "Cam Tươi",
+                "Chuối",
+                "Dưa hấu",
+                "Hamburger",
+                "Nho tím",
+                "Rau Củ Tươi",
+                "Sữa Hộp",
+                "Thịt bò nạt",
+                "Táo Úc",
+                "Xoài keo",
+                "null",
+                "Ổi"
+            ]
+        },
+        {
+            "field": "entity_gold.quantity",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "number"
+            ],
+            "observed_scalar_values": [
+                "2",
+                "3",
+                "4",
+                "6",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.unit",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "item",
+                "null",
+                "phần"
+            ]
+        },
+        {
+            "field": "entity_gold.order_reference",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.ordinal_reference",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "number"
+            ],
+            "observed_scalar_values": [
+                "-1",
+                "1",
+                "2",
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.context_reference",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null",
+                "string"
+            ],
+            "observed_scalar_values": [
+                "ambiguous_between_two_products",
+                "deictic_previous_focus",
+                "elliptical_previous_focus",
+                "expired_deictic_reference",
+                "expired_possessive_reference",
+                "expired_singular_reference",
+                "null",
+                "ordered_previous_results",
+                "plural_previous_results",
+                "singular_previous_result"
+            ]
+        },
+        {
+            "field": "entity_gold.account_target",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        },
+        {
+            "field": "entity_gold.requested_mutation_value",
+            "scope": "turn",
+            "locations_present": 78,
+            "records_in_scope": 78,
+            "required": true,
+            "nullable": true,
+            "observed_json_types": [
+                "null"
+            ],
+            "observed_scalar_values": [
+                "null"
+            ]
+        }
+    ]
+}

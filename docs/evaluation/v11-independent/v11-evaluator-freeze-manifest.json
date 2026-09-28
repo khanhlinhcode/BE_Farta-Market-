@@ -1,0 +1,45 @@
+{
+  "manifest_version": "farta-v11-evaluator-freeze-manifest.1.0",
+  "revision": "V11 Evaluator V1",
+  "executable_version": "farta-final-v11-evaluator.1.0.0",
+  "freeze_status": "FROZEN",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL. No newline, text, or JSON normalization.",
+  "semantic_identity": "66963e4fa9d21ac832b8d9c4654ad32909b6fb57239dafabed8aaf8ea4767eb2",
+  "ordered_semantic_files": [
+    "tests/Support/FinalV10ContractException.php",
+    "tests/Support/FinalV10DatasetContract.php",
+    "tests/Support/FinalV11ContractException.php",
+    "tests/Support/FinalV11DatasetContract.php",
+    "tests/Support/FinalV11Evaluation.php",
+    "tests/Support/FinalV11RawCapture.php"
+  ],
+  "semantic_scope": [
+    "farta-v10.3.0-compatible dataset structural parsing",
+    "V11 scenario-grounding frame",
+    "prediction schema and normalization primitives",
+    "entity type/equality contract",
+    "strict UTF-8/LF/CRLF JSONL capture serialization and deserialization",
+    "secret-field sanitization"
+  ],
+  "excluded_from_identity": [
+    "tests and fixtures that validate but do not control execution semantics",
+    "documentation and reports",
+    "generated manifests",
+    "timestamps",
+    "candidate/runtime files"
+  ],
+  "frozen_inputs": {
+    "dataset_sha256": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "schema_contract_sha256": "2d1e6cd805ed9914d6811f130f9c1cc0909eb2f6707e30f5f66b13c61f6bea5d"
+  },
+  "validation": {
+    "primary": "160/160 PASS",
+    "scenarios": "20/20 PASS",
+    "turns": "40/40 PASS",
+    "branches": "40/40 PASS",
+    "entity_objects": "240/240 PASS",
+    "jsonl_utf8": "PASS",
+    "candidate_executed": false
+  }
+}

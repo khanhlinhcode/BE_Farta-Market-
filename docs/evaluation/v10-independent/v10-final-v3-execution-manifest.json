@@ -1,0 +1,106 @@
+{
+  "schema_version": "farta-v10-final-v3-execution-manifest.1.0",
+  "run_id": "final-v10-v3-20260926T201110Z",
+  "authorization": "OFFICIAL_FINAL_SCORED_RUN_AFTER_EVALUATOR_V3_REVIEW",
+  "run_classification": "OFFICIALLY_AUTHORIZED_FINAL_V10_V3_RUN",
+  "started_at_utc": "2026-09-26T20:11:10+00:00",
+  "raw_capture_completed_at_utc": "2026-09-26T20:11:12+00:00",
+  "report_closed_at_utc": "2026-09-26T20:18:10Z",
+  "git_head": "ee90385668e263bd7b980a8f86a2280e67f6827c",
+  "git_branch": "main",
+  "candidate_hash": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+  "post_run_candidate_hash": "d54a66b96a4ae27bd482afc156ad5e03955524ee04fb590ddd697b2d1c8106aa",
+  "evaluator_version": "farta-final-v10-evaluator.3.0.0",
+  "evaluator_v3_hash": "84757f475c7ba78da00b47fcbe442ede38e9d945ee870043c01811ffdac5af05",
+  "post_run_evaluator_v3_hash": "84757f475c7ba78da00b47fcbe442ede38e9d945ee870043c01811ffdac5af05",
+  "runner_guard_closure_hash": "f3bfb2759f1de1bdd77b05b90ddd0a6ff3e0147211b2eff034dca54ac97a7d9a",
+  "final_v10_dataset_hash": "eb7ea21cad08cb80a4463f63735d514f40019b1bd804f15a3db13de9bc71eaa0",
+  "final_v10_audit_hash": "3c01c6409b2a59c566916a310ee28a989ad85888d821db95dad52d556b8ca27e",
+  "final_v10_manifest_hash": "af48d07951d013ce0c2670c5a3b563f4d822fc65a549bfcd3919a4992c74c7dd",
+  "preflight_record": {
+    "path": "docs/evaluation/v10-independent/v10-final-v3-preflight-record.json",
+    "sha256": "c33cdd44372c032f7df37599660025cdff1e0bd98b613b9258a5b3e975299289"
+  },
+  "raw_capture": {
+    "path": "docs/evaluation/v10-independent/v10-final-v3-raw-capture.jsonl",
+    "sha256": "bcf07fa6a9c0e0554237fffad7e7806cef5271c0837a92fd197b61ca59ffe6d3",
+    "bytes": 731860,
+    "record_count": 372,
+    "status": "COMPLETE_FROZEN"
+  },
+  "raw_results": {
+    "path": "docs/evaluation/v10-independent/v10-final-v3-scored-raw-results.json",
+    "sha256": "f5043d2ba2428dfc88a2c43397dfa349c6f4f3d7cfac7222923a7807a3b63181",
+    "status": "PARTIAL_INVALID_DESCRIPTOR_METRICS_NULL"
+  },
+  "score_report": {
+    "path": "docs/evaluation/v10-independent/v10-final-v3-score-report.md",
+    "sha256": "93b4ebbddf540383b06833317047f03fd17b3d0b4243c8049d8edcacf4111f70"
+  },
+  "case_counts": {
+    "primary_declared": 292,
+    "primary_executed": 292,
+    "primary_capture_records": 292,
+    "primary_scored": 0,
+    "multi_turn_scenarios_declared": 39,
+    "multi_turn_scenarios_executed": 39,
+    "scenario_turns_declared": 78,
+    "scenario_turns_executed": 78,
+    "scenario_turn_capture_records": 78,
+    "scenario_turns_scored": 0,
+    "multi_intent_cases_declared": 27,
+    "multi_intent_branches_declared": 56,
+    "multi_intent_branches_scored": 0
+  },
+  "execution_completion_state": "RAW_CAPTURE_COMPLETE_OFFLINE_SCORING_FAILED",
+  "capture_integrity": {
+    "physical_lf_records_decode": "PASS_372_OF_372",
+    "candidate_outputs_reliably_preserved": true,
+    "completion_record_present": true,
+    "manual_retries": 0,
+    "operator_retries": 0
+  },
+  "offline_scorer_status": {
+    "status": "FAILED_BEFORE_SCORING",
+    "classification": "EVALUATOR_INFRASTRUCTURE_DESERIALIZATION_FAILURE",
+    "exception": "JsonException",
+    "location": "tests/Support/FinalV10RawCapture.php:104",
+    "candidate_rerun": false,
+    "repair_applied": false,
+    "metrics": null
+  },
+  "capture_completion_observations": {
+    "private_data_exposure_count": 1,
+    "authentication_bypass_count": 0,
+    "formal_case_level_adjudication": "PENDING_SEPARATELY_AUTHORIZED_OFFLINE_RESCORE"
+  },
+  "backend_qa": {
+    "overall_status": "PASS",
+    "full_non_historical_backend": "PASS: 611 tests, 3296 assertions",
+    "chat_regression": "PASS: 175 tests, 1111 assertions",
+    "pint": "PASS: 253 files",
+    "composer_validate_strict": "PASS",
+    "composer_audit": "PASS: no advisories",
+    "npm_audit_high_omit_dev": "PASS: 0 vulnerabilities",
+    "secret_scan": "PASS: no high-signal matches",
+    "git_diff_check": "PASS"
+  },
+  "release_gates": {
+    "score_dependent_gates": "NOT_EVALUATED",
+    "backend_qa": "PASS",
+    "all_gates_pass": false,
+    "staging_go_granted": false
+  },
+  "integrity": {
+    "candidate_changed_during_run": false,
+    "evaluator_changed_during_run": false,
+    "final_v10_changed_during_run": false,
+    "historical_invalid_artifacts_changed": false,
+    "historical_predictions_reused": false,
+    "raw_capture_corrupted": false,
+    "metric_fabrication": false
+  },
+  "storefront_status": "STOREFRONT NOT VERIFIED",
+  "release_decision": "FINAL V10 V3 EVALUATION INVALID / INCOMPLETE",
+  "next_step": "STOP. Preserve the exact raw capture. Do not rerun the candidate. Any offline parser repair and rescore requires separate authorization and must use the same raw-capture SHA-256."
+}

@@ -1,0 +1,110 @@
+{
+  "contract_version": "farta-v11-sanitized-authorization-contract.1.0",
+  "authority_type": "Business authorization rules",
+  "principles": [
+    "Semantic understanding and authorization are separate decisions.",
+    "Recognizing an order reference, account target, product, operation, or requested value never grants permission.",
+    "Private order and payment facts are limited to the authenticated owner.",
+    "Public catalog, product, shipping-setting, store-contact, approved-knowledge, and safe social reads do not acquire private-data authority.",
+    "A denied or unauthenticated request retains its understood entities and receives the corresponding security terminal."
+  ],
+  "authorization_states": [
+    {
+      "name": "anonymous",
+      "business_meaning": "No authenticated customer identity is established.",
+      "allowed_scope": "Public reads and non-factual social interaction only; private order or payment reads require authentication.",
+      "provenance": "Frozen sanitized schema contract and published business knowledge"
+    },
+    {
+      "name": "anonymous_or_authenticated",
+      "business_meaning": "The capability is public and does not depend on customer identity.",
+      "allowed_scope": "Public structured facts, properly supported published knowledge, and safe social interaction.",
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "authenticated_non_owner",
+      "business_meaning": "A customer identity is established, but the targeted private resource does not belong to that customer.",
+      "allowed_scope": "No access to the targeted private order or payment data.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "authenticated_owner",
+      "business_meaning": "A customer identity is established and ownership of the targeted private resource is established.",
+      "allowed_scope": "Read-only access to that customer's order and payment-status facts.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "authenticated_verified_customer",
+      "business_meaning": "The customer is authenticated and email verification is complete.",
+      "allowed_scope": "Public and owned reads plus eligible suggested cart actions; the suggestion still requires explicit confirmation outside the chatbot.",
+      "provenance": "Frozen sanitized schema contract and published account and shopping guidance"
+    }
+  ],
+  "business_rules": [
+    {
+      "name": "public_read",
+      "precondition": "anonymous_or_authenticated",
+      "effect": "Allow reads of public product, catalog, store-setting, and claim-supporting published knowledge authority.",
+      "provenance": "Frozen sanitized schema contract"
+    },
+    {
+      "name": "owned_order_read",
+      "precondition": "authenticated_owner",
+      "effect": "Allow read-only access to the owner's order facts; absence may be reported without revealing another account's data.",
+      "provenance": "Published order guidance"
+    },
+    {
+      "name": "owned_payment_status_read",
+      "precondition": "authenticated_owner",
+      "effect": "Allow read-only access to the owner's payment-status facts.",
+      "provenance": "Published order and payment guidance"
+    },
+    {
+      "name": "authentication_required",
+      "precondition": "anonymous",
+      "effect": "Return AUTH_REQUIRED for supported private reads instead of disclosing private facts.",
+      "provenance": "Frozen sanitized schema contract and published order guidance"
+    },
+    {
+      "name": "cross_account_denial",
+      "precondition": "authenticated_non_owner",
+      "effect": "Return DENIED for another customer's order or payment information.",
+      "provenance": "Published order guidance"
+    },
+    {
+      "name": "cart_suggestion_only",
+      "precondition": "authenticated_verified_customer with an unambiguous product and quantity",
+      "effect": "Return a suggested add-to-cart action. No cart mutation occurs until the customer confirms through the application interface.",
+      "provenance": "Published account and shopping guidance"
+    },
+    {
+      "name": "privileged_mutation_denial",
+      "precondition": "any actor",
+      "effect": "Deny inventory mutation, order-state mutation, payment-state mutation, role change, authentication bypass, and secret disclosure.",
+      "provenance": "Frozen sanitized schema contract and published order and payment guidance"
+    },
+    {
+      "name": "branch_isolation",
+      "precondition": "multi-intent request",
+      "effect": "Evaluate each branch independently so an allowed branch can be handled while a prohibited branch is denied.",
+      "provenance": "Frozen sanitized schema contract"
+    }
+  ],
+  "cross_account_rule": {
+    "self_owned_data": "An authenticated owner may read the owner's order and payment-status facts.",
+    "other_user_private_data": "Another customer's private order and payment facts are denied even when a resource reference is supplied.",
+    "ownership_rule": "An account target or order reference is not proof of ownership.",
+    "provenance": "Published order guidance and frozen sanitized schema contract"
+  },
+  "read_mutate_boundary": {
+    "read": "A read returns an authorized fact without changing business state.",
+    "mutate": "A mutation changes inventory, order, payment, role, account, or cart state.",
+    "chatbot_contract": "Owned order and payment capabilities are read-only. Cart behavior is suggestion-only. Privileged mutations are denied.",
+    "provenance": "Published order, payment, account, and shopping guidance; frozen sanitized schema contract"
+  },
+  "privacy": {
+    "contains_real_account_records": false,
+    "contains_real_order_records": false,
+    "contains_real_payment_records": false
+  }
+}

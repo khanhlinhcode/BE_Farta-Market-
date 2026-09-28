@@ -1,0 +1,176 @@
+{
+  "artifact_version": "farta-v11-sanitized-knowledge-registry.1.0",
+  "authority_type": "Published knowledge registry",
+  "eligibility_rule": "A source is eligible only when it is published, its declared domain matches the requested fact, its version is the one registered here, and its content contains the fact needed to support the claim.",
+  "topic_only_is_insufficient": true,
+  "sources": [
+    {
+      "source_id": "account-guide-vi",
+      "title": "Hướng dẫn tài khoản khách hàng",
+      "locale": "vi",
+      "domain": "account",
+      "version": 2,
+      "status": "published",
+      "owner": "Farta Market",
+      "source_checksum": "0d3790f0a508a8fb09c2358e4306e117708bb2329da641ebc4fe94bf26beda0d",
+      "source_updated_at": "2026-09-24",
+      "sections": [
+        {
+          "section": "Đăng ký và xác minh email",
+          "content": "Khách hàng đăng ký bằng tên, địa chỉ email và mật khẩu. Sau khi đăng ký, hệ thống gửi email xác minh. Khách hàng cần mở liên kết trong email để hoàn tất xác minh tài khoản."
+        },
+        {
+          "section": "Gửi lại email xác minh",
+          "content": "Nếu chưa nhận được email xác minh, khách hàng có thể đăng nhập và yêu cầu hệ thống gửi lại email. Liên kết xác minh có thời hạn và chỉ áp dụng cho đúng tài khoản được gửi."
+        },
+        {
+          "section": "Quên mật khẩu",
+          "content": "Khách hàng có thể sử dụng chức năng quên mật khẩu để nhận liên kết đặt lại mật khẩu qua email. Vì lý do bảo mật, hệ thống không xác nhận một địa chỉ email có tồn tại trong hệ thống hay không."
+        },
+        {
+          "section": "Các chức năng yêu cầu xác minh",
+          "content": "Một số chức năng như thanh toán SePay, sử dụng coupon, gửi đánh giá và nhận đề xuất thêm sản phẩm vào giỏ từ chatbot yêu cầu khách hàng đã đăng nhập và xác minh email."
+        }
+      ],
+      "provenance": "Published knowledge registry and approved document content"
+    },
+    {
+      "source_id": "order-guide-vi",
+      "title": "Hướng dẫn theo dõi và hủy đơn hàng",
+      "locale": "vi",
+      "domain": "orders",
+      "version": 2,
+      "status": "published",
+      "owner": "Farta Market",
+      "source_checksum": "2290f302e643d1984e81587ead5d22d04d7fcbd7636dc1c7abbbb513f07cd403",
+      "source_updated_at": "2026-09-24",
+      "authority_boundary": "Supports general order guidance only. Current private order facts require owned/private order authority and successful authorization.",
+      "sections": [
+        {
+          "section": "Xem đơn hàng",
+          "content": "Khách hàng đã đăng nhập có thể xem danh sách và chi tiết các đơn hàng thuộc tài khoản của mình. Hệ thống không cho phép một khách hàng xem đơn hàng của tài khoản khác."
+        },
+        {
+          "section": "Các trạng thái đơn hàng",
+          "content": "Đơn hàng có thể lần lượt ở các trạng thái chờ xử lý, đã xác nhận, đang xử lý, đang giao, đã giao hoặc đã hủy. Trạng thái được cập nhật theo quy trình xử lý đơn hàng của hệ thống."
+        },
+        {
+          "section": "Điều kiện hủy đơn",
+          "content": "Khách hàng chỉ có thể tự hủy đơn hàng thuộc tài khoản của mình khi đơn vẫn đang ở trạng thái chờ xử lý. Đơn đã chuyển sang trạng thái khác không thể hủy bằng chức năng tự hủy của khách hàng."
+        },
+        {
+          "section": "Hỏi chatbot về đơn hàng",
+          "content": "Chatbot chỉ tra cứu đơn hàng cho khách hàng đã đăng nhập và chỉ trả thông tin của chính tài khoản đó. Chatbot không có quyền thay đổi trạng thái, hủy đơn hoặc xác nhận thanh toán."
+        }
+      ],
+      "provenance": "Published knowledge registry and approved document content"
+    },
+    {
+      "source_id": "payment-guide-vi",
+      "title": "Hướng dẫn thanh toán",
+      "locale": "vi",
+      "domain": "payment",
+      "version": 2,
+      "status": "published",
+      "owner": "Farta Market",
+      "source_checksum": "7aa1a11a27fca3987eeece8a4868276a7de79a8230765a84d8eb8667621b8c2e",
+      "source_updated_at": "2026-09-24",
+      "authority_boundary": "Supports general payment guidance only. Current private payment status requires owned/private order authority and successful authorization.",
+      "sections": [
+        {
+          "section": "Thanh toán khi nhận hàng",
+          "content": "Khách hàng có thể chọn thanh toán khi nhận hàng. Hệ thống tạo đơn theo tổng tiền được tính trên máy chủ và đơn bắt đầu ở trạng thái chờ xử lý."
+        },
+        {
+          "section": "Thanh toán bằng SePay",
+          "content": "Thanh toán SePay yêu cầu khách hàng đã đăng nhập và xác minh email. Sau khi tạo yêu cầu thanh toán, hệ thống hiển thị mã QR, số tiền, tài khoản nhận, nội dung chuyển khoản và thời điểm hết hạn."
+        },
+        {
+          "section": "Nội dung và số tiền chuyển khoản",
+          "content": "Khi thanh toán bằng SePay, khách hàng cần chuyển đúng số tiền và giữ nguyên nội dung chuyển khoản được hiển thị. Hệ thống chỉ xác nhận thanh toán khi giao dịch khớp tài khoản nhận, số tiền và mã tham chiếu của đơn hàng."
+        },
+        {
+          "section": "Xác nhận thanh toán",
+          "content": "Trạng thái thanh toán được máy chủ cập nhật sau khi nhận thông báo giao dịch hợp lệ từ SePay. Trình duyệt hoặc chatbot không thể tự đánh dấu một đơn hàng là đã thanh toán."
+        },
+        {
+          "section": "Yêu cầu thanh toán hết hạn",
+          "content": "Khách hàng cần hoàn tất chuyển khoản trước thời điểm hết hạn hiển thị cùng mã QR. Một yêu cầu thanh toán đang chờ có thể bị hủy khi hết hạn và hệ thống sẽ xử lý hoàn lại lượng tồn kho đã giữ theo quy trình của đơn hàng."
+        }
+      ],
+      "provenance": "Published knowledge registry and approved document content"
+    },
+    {
+      "source_id": "policy-index-vi",
+      "title": "Tổng quan chính sách Farta Market",
+      "locale": "vi",
+      "domain": "policy",
+      "version": 1,
+      "status": "published",
+      "owner": "Farta Market",
+      "source_checksum": "1ecf0626ed3ba6164358227a3e6718748025018091543a0f98031291aca5d562",
+      "source_updated_at": "2026-09-24",
+      "authority_boundary": "Supports only the overview facts stated in its content. It does not establish unstated detailed policies.",
+      "sections": [
+        {
+          "section": "Các nhóm thông tin đã kiểm chứng",
+          "content": "Farta Market hiện có thông tin đã kiểm chứng về tài khoản và xác minh email; tìm kiếm, giỏ hàng và mua hàng; thanh toán COD và SePay; theo dõi và hủy đơn; phí giao hàng; thông tin liên hệ cửa hàng. Khách hàng có thể hỏi cụ thể một nhóm để nhận nội dung chi tiết từ tài liệu tương ứng."
+        }
+      ],
+      "provenance": "Published knowledge registry and approved document content"
+    },
+    {
+      "source_id": "shopping-guide-vi",
+      "title": "Hướng dẫn mua hàng tại Farta Market",
+      "locale": "vi",
+      "domain": "ordering",
+      "version": 2,
+      "status": "published",
+      "owner": "Farta Market",
+      "source_checksum": "5194496281c501ff2cc49fa6e16856000f25cc8361cf13f58637eca995e0b641",
+      "source_updated_at": "2026-09-24",
+      "sections": [
+        {
+          "section": "Tìm kiếm sản phẩm",
+          "content": "Khách hàng có thể tìm sản phẩm theo tên, xem theo danh mục hoặc yêu cầu chatbot gợi ý. Tên sản phẩm, giá bán và tình trạng tồn kho được hệ thống kiểm tra lại từ dữ liệu hiện tại trước khi hiển thị."
+        },
+        {
+          "section": "Thêm sản phẩm từ chatbot",
+          "content": "Chatbot chỉ tạo đề xuất thêm vào giỏ hàng khi khách hàng đã đăng nhập, đã xác minh email và yêu cầu rõ sản phẩm cùng số lượng. Sản phẩm chỉ được thêm sau khi khách hàng bấm nút xác nhận trên giao diện."
+        },
+        {
+          "section": "Kiểm tra giỏ hàng",
+          "content": "Trước khi đặt hàng, khách hàng cần kiểm tra lại sản phẩm, số lượng, địa chỉ nhận hàng, phương thức thanh toán và tổng tiền trên trang thanh toán. Giá và tồn kho được máy chủ tính lại khi tiếp nhận đơn hàng."
+        },
+        {
+          "section": "Mã giảm giá",
+          "content": "Mã giảm giá được hệ thống kiểm tra theo thời hạn, giá trị đơn hàng tối thiểu và giới hạn sử dụng. Mức giảm và tổng tiền cuối cùng do máy chủ tính toán tại thời điểm đặt hàng."
+        }
+      ],
+      "provenance": "Published knowledge registry and approved document content"
+    }
+  ],
+  "current_domain_availability": {
+    "account": [
+      "account-guide-vi"
+    ],
+    "ordering": [
+      "shopping-guide-vi"
+    ],
+    "orders": [
+      "order-guide-vi"
+    ],
+    "payment": [
+      "payment-guide-vi"
+    ],
+    "policy": [
+      "policy-index-vi"
+    ]
+  },
+  "privacy": {
+    "contains_private_account_data": false,
+    "contains_private_order_data": false,
+    "contains_private_payment_data": false
+  },
+  "provenance": "Published knowledge registry and approved document content"
+}

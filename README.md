@@ -158,8 +158,8 @@ files for rollback, and fails when a referenced legacy file cannot be migrated.
 ## AI assistant
 
 The assistant keeps `/api/chat` backward-compatible through the `reply` field
-and adds `message`, `intent`, verified `products`, `suggested_actions`, and an
-opaque conversation ID. The legacy `action` field is always inert. The
+and adds `message`, `intent`, `decision_state`, verified `products`,
+`suggested_actions`, and an opaque conversation ID. The legacy `action` field is always inert. The
 Storefront changes its session cart only after the customer clicks a visible
 add-to-cart button.
 
@@ -201,7 +201,33 @@ High-confidence security and business rules run before an optional semantic
 intent classifier. The classifier returns a strict, fixed intent/entity schema;
 it cannot call tools or grant access. Low-confidence, unavailable, or unrelated
 classification returns a clarification question instead of defaulting to
-product search. Enable it only after local evaluation passes.
+product search. Clear shipping, catalog, product, cart and order intents work
+with `AI_SEMANTIC_ROUTER_ENABLED=false`. Phase 14 kept that fallback disabled
+because no live, versioned classifier was available for a comparable benchmark.
+Requests spanning more than one domain become explicit bounded branch frames;
+failed or denied branches do not erase safe siblings, and no agent loop is used.
+
+Denied capabilities are evaluated before multi-intent and ordinary intent
+routing. Order/payment mutation, authentication bypass, prompt disclosure,
+stock override, and account/role mutation return a deterministic denial without
+calling a model or a business mutation handler.
+
+Deterministic intent classification and entity extraction are separate. A
+shared extractor handles bounded Vietnamese/English whole-number quantities and
+candidate product spans. A focused canonicalizer resolves them to active MySQL
+identities before dispatch, and handlers revalidate current business state.
+Bounded context can retain at most five ordered canonical product IDs and one
+category reference for five minutes; it never caches price, stock, order, or
+payment state.
+
+Current Phase 14 status is **LOCAL CANDIDATE FROZEN; NOT APPROVED FOR
+STAGING**. V10 is development evidence, not a release score. Its development
+regression reached 99.32% intent, 99.20% macro-F1, 100% handler, 99.32% business
+outcome, 100% missing-evidence safety, and zero wrong-topic, unsupported-policy,
+unsafe-execution, or wrong-entity unsafe-action signals. A new independently
+authored and audited V11 is required before any staging claim. See
+[docs/chat-phase-14-v10-root-cause-remediation.md](docs/chat-phase-14-v10-root-cause-remediation.md)
+for the candidate identity, full metrics, QA, and remaining risks.
 
 Groq responses use strict JSON schemas. Laravel reloads every product before
 returning its name, price, or inventory. Only authenticated, email-verified
@@ -209,8 +235,11 @@ customers can receive cart proposals or submit cart context; guests still browse
 and chat but receive `AUTH_REQUIRED_FOR_CART`. Order queries remain customer-only
 and owner-scoped.
 
-Knowledge RAG reads dynamic shipping/contact facts from `SiteSetting` and
-published curated policy documents. Sparse retrieval is the local default.
+Current shipping fee/free-shipping threshold bypass RAG and are read directly
+from `SiteSetting`. Catalog listing likewise reads active products from MySQL,
+and cart suggestions are revalidated against MySQL without mutating the cart.
+Knowledge RAG handles FAQ/policy/guide questions, published curated documents,
+and relevant dynamic contact facts. Sparse retrieval is the local default.
 Optional `aliases` and `sample_questions` improve retrieval only: they are
 stored in `retrieval_text`, while answers and citations remain limited to the
 approved section `content`.
@@ -218,11 +247,20 @@ Optional dense retrieval uses Qdrant Cloud Inference with
 `intfloat/multilingual-e5-small` and automatically falls back to sparse. The
 dedicated collection must be named `farta_chat_knowledge` (an environment suffix
 is allowed), and every point ID/payload `chunk_id` is the MySQL chunk ID. This
-guard prevents the chatbot from writing to an unrelated Qdrant collection. RRF
-uses `k=60`; at most five chunks are evidence. Generated knowledge answers
+guard prevents the chatbot from writing to an unrelated Qdrant collection.
+Knowledge candidates are constrained by the immutable route domain and allowed
+source IDs in MySQL and Qdrant before dense IDs are accepted for fusion. Every
+ranked result receives a final eligibility and claim-support check, so an
+unrelated high-scoring vector cannot cross the authority boundary. RRF uses
+`k=60`; at most five chunks are evidence. Generated knowledge answers
 require strict claims, exact evidence quotes, semantic verification and at most
 one repair. With generation disabled, the API returns a verified direct extract
 instead of inventing prose.
+
+Source precedence is fixed: current transactional facts come from database and
+business services, approved policy/explanation comes from published knowledge,
+and an LLM may only synthesize those sources. A missing topic therefore returns
+`NO_EVIDENCE`; it never borrows an answer from a different policy topic.
 
 ```dotenv
 QDRANT_URL=https://your-cluster.cloud.qdrant.io
@@ -247,7 +285,8 @@ php artisan chat:knowledge:sync
 Authoring rules are in
 [docs/chat-knowledge-authoring.md](docs/chat-knowledge-authoring.md). Architecture and trust boundaries are in
 [docs/chat-architecture.md](docs/chat-architecture.md); retrieval evaluation is
-in [docs/chat-rag.md](docs/chat-rag.md).
+in [docs/chat-rag.md](docs/chat-rag.md), and the current release decision is in
+[docs/chat-phase-14-v10-root-cause-remediation.md](docs/chat-phase-14-v10-root-cause-remediation.md).
 
 Anthropic remains supported through `AI_CHAT_DRIVER=anthropic` and the matching
 model, base URL, and API key.

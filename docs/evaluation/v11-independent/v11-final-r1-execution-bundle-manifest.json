@@ -1,0 +1,84 @@
+{
+  "manifest_version": "farta-v11-final-r1-replacement-execution-bundle-manifest.1.0",
+  "recorded_at_utc": "2026-09-28T06:59:48Z",
+  "bundle_status": "READY_FOR_AUTHORIZED_REPLACEMENT_EXECUTION",
+  "hash_algorithm": "SHA-256",
+  "semantic_hash_procedure": "Sort repository-relative paths bytewise; hash each relative path, NUL, exact file bytes, NUL.",
+  "semantic_scope": "Future execution semantics only. Synthetic tests, synthetic fixtures, preflight script, generated reports, timestamps, execution outputs, and this manifest are excluded from the execution-bundle identity.",
+  "ordered_semantic_files": [
+    "docs/evaluation/v11-independent/v11-final-r1-execution-bundle-config.json",
+    "scripts/v11-final-r1-execution",
+    "tests/Feature/FinalV11ReplacementExecutionR1Test.php",
+    "tests/Support/FinalV11ReplacementExecutionGuardR1.php",
+    "tests/Support/FinalV11ReplacementExecutionR1.php"
+  ],
+  "execution_bundle_semantic_identity": "196757e23158dd90cb9a12f8a10ed79451e70d730d32b9fbe46eae28c7a7f60f",
+  "frozen_identities": {
+    "candidate": "af36f24e2cebe333137ecf607000ff54dbefec699c7a50bf0b32782b84a08ce9",
+    "v11_dataset": "94bc6d3930057f7584c80baac66df1f05f98133b94fb733229fe22b49768f3cb",
+    "v11_audit": "c97a9d4c1e6621cb9c18fc692887b9302de302cc73372f8469e6ca5b22bd70ea",
+    "v11_final_manifest": "f2ccc7420918cd12957877e305e7a99eecf08b274cd0b3fa4ef63dbba9e35f4e",
+    "historical_raw_capture": "2f5f7cac8fdc0fad0f01d491b31f10423e28c0fff3aac638a090b36fe407f081",
+    "historical_execution_state": "c1146a3256a3a45fada6bc12868362187dd57771fc38d4aa78bec8eee478ef51",
+    "evaluator_v2_r1": "0fcce11e5650340c6112372e3f879948555696ed66edb2c64ecfd60e68dee9ef",
+    "runtime_adapter_v2_r1": "ff1db1e229c5498a0599a8cbf3c3223dc9c3e1b972c448107c8bd97fbcfd9ed8",
+    "scorer_v2_r1": "adff5766ebed64125561be979c72f691240f563d54bfe3ff8b81a415fb8bf798",
+    "harness_r1": "b5f628d48b6adae8f52b44997a087616d64f36aeadd2cfcdd7ddc63a25f78fe2",
+    "toolchain_v2_r1": "29714cce29739581347fe36c3fd2ab179a88d8f81cf1dfdb07fba6e0ea639418"
+  },
+  "historical_execution": {
+    "run_id": "final-v11-20260928T060655Z",
+    "state": "EXECUTION_INCOMPLETE",
+    "cases_started": 12,
+    "cases_completed": 11,
+    "cases_failed": 1,
+    "last_case": "v11r1-p012",
+    "execution_count": 1,
+    "capture_reused": false
+  },
+  "authorization_gate": {
+    "environment_variable": "V11_FINAL_R1_EXECUTION_AUTHORIZATION",
+    "exact_value": "RUN_FROZEN_V11_R1_REPLACEMENT_ONCE",
+    "status": "PASS"
+  },
+  "reserved_future_outputs": [
+    "docs/evaluation/v11-independent/v11-final-r1-execution-state.json",
+    "docs/evaluation/v11-independent/v11-final-r1-raw-capture.jsonl",
+    "docs/evaluation/v11-independent/v11-final-r1-scored-results.json",
+    "docs/evaluation/v11-independent/v11-final-r1-score-report.md",
+    "docs/evaluation/v11-independent/v11-final-r1-execution-manifest.json"
+  ],
+  "policies": {
+    "distinct_output_namespace": "PASS",
+    "overwrite": "REFUSE",
+    "resume": "NONE",
+    "retry": "NONE",
+    "start_record": "FIRST_RECORD",
+    "capture_write": "ONLY_AFTER_COMPLETE_IN_MEMORY_CAPTURE",
+    "scoring_gate": "CAPTURE_COMPLETED",
+    "historical_capture_reused": false
+  },
+  "validation": {
+    "tests_passed": 109,
+    "tests_total": 109,
+    "assertions_passed": 649,
+    "assertions_total": 649,
+    "focused_style_files_passed": 5,
+    "focused_style_files_total": 5,
+    "formatting": "PASS",
+    "determinism": "PASS",
+    "offline": "PASS",
+    "gold_isolation": "PASS",
+    "preflight": "PASS"
+  },
+  "build_execution_state": {
+    "v11_requests": 0,
+    "v11_executed": false,
+    "scoring_started": false
+  },
+  "git_side_effects": {
+    "commit": false,
+    "push": false,
+    "deploy": false
+  }
+}

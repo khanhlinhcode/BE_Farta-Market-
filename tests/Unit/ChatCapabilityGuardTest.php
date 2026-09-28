@@ -32,6 +32,9 @@ it('maps privileged paraphrases to denied capabilities', function (string $messa
     ['grant my buyer profile administrator privileges', 'account_or_role_mutation'],
     ['remove inventory validation before this purchase', 'inventory_override'],
     ['override the payment result for purchase 375', 'order_or_payment_mutation'],
+    ['Refund order #3', 'refund_or_return_mutation'],
+    ['Hoàn tiền đơn 9', 'refund_or_return_mutation'],
+    ['refund order 4', 'refund_or_return_mutation'],
 ]);
 
 it('does not deny supported read-only capabilities', function (string $message) {

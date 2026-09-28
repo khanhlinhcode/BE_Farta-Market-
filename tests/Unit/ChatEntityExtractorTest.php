@@ -65,3 +65,24 @@ it('keeps order references and mutation values out of cart quantity', function (
         ->and($paid['requested_mutation_value'])->toBe('paid')
         ->and($stock['requested_mutation_value'])->toBe('+12');
 });
+
+it('extracts documented order reference formats without treating ids as quantities', function (string $message) {
+    $entities = (new ChatEntityExtractor)->extract($message);
+
+    expect($entities['order_reference'])->toBe('12345')
+        ->and($entities['quantity_status'])->toBe('missing');
+})->with([
+    'reversed Vietnamese order code' => 'mã đơn 12345',
+    'bare hash reference' => '#12345',
+    'Vietnamese contextual reference' => 'kiểm tra 12345',
+    'English contextual reference' => 'look up 12345',
+]);
+
+it('extracts quantity-adjacent and pricing units', function (string $message, string $unit) {
+    expect((new ChatEntityExtractor)->extract($message)['unit'])->toBe($unit);
+})->with([
+    'quantity before Vietnamese can' => ['mua 3 lon nước', 'can'],
+    'Vietnamese case before quantity' => ['thùng 2 cam', 'case'],
+    'unit after product' => ['mua sữa hộp 3 chai', 'bottle'],
+    'standalone pricing unit' => ['tính theo kg', 'kg'],
+]);

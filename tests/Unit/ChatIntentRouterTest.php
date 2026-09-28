@@ -196,3 +196,15 @@ it('carries an immutable evidence domain on every knowledge branch', function ()
         ->and($route['subrequests'][0]->requiredEvidenceDomain?->topic)->toBe('payment')
         ->and($route['subrequests'][1]->requiredEvidenceDomain?->topic)->toBe('ordering');
 });
+
+it('inherits one unambiguous parent product into a clause without a product mention', function (string $message) {
+    $route = (new ChatIntentRouter(new \App\Services\Chat\ChatProvider))->route($message);
+
+    expect($route->intent)->toBe(ChatIntent::MultiIntent)
+        ->and($route->branches)->toHaveCount(2)
+        ->and($route->branches[0]->entities['product_name'])->toBe('cam tuoi')
+        ->and($route->branches[1]->entities['product_name'])->toBe('cam tuoi');
+})->with([
+    'product appears in second clause' => 'kiểm tra giá và thêm 2 cam tươi vào giỏ',
+    'product appears in first clause' => 'giá cam tươi và thêm 2 vào giỏ',
+]);

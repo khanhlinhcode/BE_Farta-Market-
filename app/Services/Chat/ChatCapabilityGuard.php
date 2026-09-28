@@ -57,9 +57,7 @@ final class ChatCapabilityGuard
             return 'order_or_payment_mutation';
         }
 
-        if ($capability['resource'] === 'returns' && $capability['operation'] === 'mutate'
-            && $this->matches($message, ['toi', 'minh', 'tui', 'my', 'now', 'ngay bay gio', 'luon', 'giup', 'right away', 'immediately'])
-            && ! $this->matches($message, ['chinh sach', 'policy', 'quy dinh', 'how', 'cach', 'huong dan'])) {
+        if ($capability['resource'] === 'returns' && $capability['operation'] === 'mutate') {
             return 'refund_or_return_mutation';
         }
 

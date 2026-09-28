@@ -17,7 +17,7 @@ final class ChatEntityExtractor
         $message = $this->normalize($raw);
         $quantity = $this->quantity($raw, $this->productPhrases());
         $product = $this->productMention($message);
-        $order = $this->orderReference($message);
+        $order = $this->orderReference($message, $raw);
 
         return [
             'product_raw_mention' => $product,
@@ -122,6 +122,9 @@ final class ChatEntityExtractor
         $text = preg_replace('/\bthu tu\b/', ' ', (string) $text);
         // Order identifiers are entity references, never cart quantities.
         $text = preg_replace('/\b(?:don(?: hang)?|order|purchase)\s*(?:(?:number|so|ma|code)\s+|#)?\d{1,18}\b/', ' ', (string) $text);
+        $text = preg_replace('/\b(?:ma|so|code|number)\s+(?:don(?: hang)?|order)\s*\d{1,18}\b/', ' ', (string) $text);
+        $text = preg_replace('/(?:^|\s)#\d{1,18}\b/', ' ', (string) $text);
+        $text = preg_replace('/\b(?:kiem tra|tra cuu|check|look up)\s+\d{4,18}\b/', ' ', (string) $text);
         $text = preg_replace('/\b(?:payment|thanh toan|tra tien)\b[^0-9]{0,40}\d{1,18}\b/', ' ', (string) $text);
         $text = preg_replace('/\b(?:cai|mon|san pham)?\s*(?:thu nhat|thu hai|thu ba|dau tien|mon dau|cai dau|cuoi cung|mon cuoi|cai cuoi)\b/', ' ', (string) $text);
         $text = preg_replace('/\b(?:the\s+)?(?:first|second|third|last|final)(?:\s+(?:one|item|product))?\b/', ' ', (string) $text);
@@ -273,7 +276,7 @@ final class ChatEntityExtractor
         return '';
     }
 
-    private function orderReference(string $message): string
+    private function orderReference(string $message, string $raw): string
     {
         if (preg_match('/\b(?:don(?: hang)?|order|purchase)\s*(?:(?:number|so|ma|code)\s+|#)?(\d{1,18})\b/', $message, $match) === 1) {
             return $match[1];
@@ -289,8 +292,11 @@ final class ChatEntityExtractor
         if (preg_match('/\b(?:payment(?: status)?|thanh toan|tra tien)\b[^0-9]{0,40}(\d{1,18})\b/', $message, $match) === 1) {
             return $match[1];
         }
-        // Bare hash-prefixed ID: "#12345"
-        if (preg_match('/(?:^|\s)#(\d{1,18})\b/', $message, $match) === 1) {
+        // Keep the raw input here because normalize() intentionally removes '#'.
+        if (preg_match('/(?:^|\s)#(\d{1,18})\b/', $raw, $match) === 1) {
+            return $match[1];
+        }
+        if (preg_match('/\b(?:kiem tra|tra cuu|check|look up)\s+(\d{4,18})\b/', $message, $match) === 1) {
             return $match[1];
         }
 
@@ -303,7 +309,8 @@ final class ChatEntityExtractor
         $unitWord = '(?:hop|phan|qua|kg|chai|goi|lon|tui|bich|thung|lo|units?|items?|pieces?|packs?|bottles?|cans?|bags?|cases?)';
         // Match "3 hộp" (quantity before unit) and "hộp 3" (unit before quantity, common in Vietnamese)
         if (preg_match('/\b'.$number.'\s+('.$unitWord.')\b/', $message, $match) === 1
-            || preg_match('/\b('.$unitWord.')\s+'.$number.'\b/', $message, $match) === 1) {
+            || preg_match('/\b('.$unitWord.')\s+'.$number.'\b/', $message, $match) === 1
+            || preg_match('/\b(?:theo|per)\s+('.$unitWord.')\b/', $message, $match) === 1) {
             return $this->normalizeUnit($match[1]);
         }
 

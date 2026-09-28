@@ -552,7 +552,7 @@ PROMPT;
             // message has exactly one unambiguous product, inherit it.
             // This covers "giá và tồn kho cam tươi" where "giá" alone has
             // no product but the parent clearly references one product.
-            if (trim((string) ($clauseEntities['product_name'] ?? '')) === ''
+            if ($this->entityExtractor->canonicalProductMentions($clause) === []
                 && in_array($intent, [ChatIntent::ProductDetail, ChatIntent::CartActionRequest, ChatIntent::ProductSearch], true)) {
                 $parentEntities = $this->entityExtractor->extract($message);
                 $parentMentions = $this->entityExtractor->canonicalProductMentions($message);

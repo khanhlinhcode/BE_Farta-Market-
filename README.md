@@ -220,14 +220,18 @@ Bounded context can retain at most five ordered canonical product IDs and one
 category reference for five minutes; it never caches price, stock, order, or
 payment state.
 
-Current Phase 14 status is **LOCAL CANDIDATE FROZEN; NOT APPROVED FOR
-STAGING**. V10 is development evidence, not a release score. Its development
-regression reached 99.32% intent, 99.20% macro-F1, 100% handler, 99.32% business
-outcome, 100% missing-evidence safety, and zero wrong-topic, unsupported-policy,
-unsafe-execution, or wrong-entity unsafe-action signals. A new independently
-authored and audited V11 is required before any staging claim. See
+The historical Phase 14 V10 development regression reached 99.32% intent,
+99.20% macro-F1, 100% handler, 99.32% business outcome, 100% missing-evidence
+safety, and zero wrong-topic, unsupported-policy, unsafe-execution, or
+wrong-entity unsafe-action signals. Those numbers describe that frozen
+candidate, not the current working tree or a release score. Generated captures,
+scored output, intermediate datasets, and run manifests are CI artifacts and
+are not committed; the repository retains only canonical fixtures required by
+offline contract tests. See
 [docs/chat-phase-14-v10-root-cause-remediation.md](docs/chat-phase-14-v10-root-cause-remediation.md)
-for the candidate identity, full metrics, QA, and remaining risks.
+for the historical candidate identity, metrics, QA, and remaining risks. Final
+V11 remains an independently controlled holdout and is excluded from the default
+test suite.
 
 Groq responses use strict JSON schemas. Laravel reloads every product before
 returning its name, price, or inventory. Only authenticated, email-verified

@@ -3,6 +3,8 @@
 *.bak
 *backup*
 test-results/
+/artifacts/evaluation/
+/strix_runs/
 /node_modules
 /build
 /public/build

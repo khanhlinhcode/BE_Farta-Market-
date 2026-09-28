@@ -10,6 +10,11 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <!-- Frozen holdout suites are opt-in and must be invoked explicitly. -->
+            <exclude>tests/Feature/FinalV11EvaluationToolchainTest.php</exclude>
+            <exclude>tests/Feature/FinalV11ExecutionHarnessTest.php</exclude>
+            <exclude>tests/Feature/FinalV11FinalExecutionTest.php</exclude>
+            <exclude>tests/Feature/FinalV11ToolchainV2PreflightTest.php</exclude>
         </testsuite>
     </testsuites>
     <source>

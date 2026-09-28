@@ -1,6 +1,6 @@
 # Farta Market staging deployment report
 
-Last verified: 24 September 2026 (Asia/Ho_Chi_Minh).
+Last verified: 28 September 2026 (Asia/Ho_Chi_Minh).
 
 This document describes the currently deployed public staging/demo environment.
 It is not a production-release declaration. Store credentials only in provider
@@ -31,29 +31,33 @@ origin while the worker forwards the request to the API.
 
 ## Git and deployed revisions
 
-The reviewed feature branches were merged into `main` on 24 September 2026:
+The recorded staging revisions are:
 
-| Repository | `main` merge commit | Current staging artifact/source |
+| Repository | Recorded repository revision | Current staging artifact/source |
 | --- | --- | --- |
-| Backend | `f782d83` | Northflank build `08fcff7` |
+| Backend | `1730f3d` | Northflank build `1730f3d` |
 | Storefront | `7dcf7d2` | Pages Direct Upload source `315e90d` |
 | Admin | `68ba1a7` | Pages Direct Upload source `8fb9d3c` |
 
-The staged artifact commits are ancestors of the merge commits and contain the
-same reviewed application changes. For release traceability, rebuild and deploy
-from the final `main` commits before declaring a production release.
+The Storefront and Admin artifacts remain the Direct Uploads verified on
+24 September 2026. For release traceability, rebuild and deploy from the final
+`main` commits before declaring a production release.
 
-Northflank API, worker, and scheduler currently track
-`security/auth-mail-hardening-20260922`. Change their source branch to `main`
-only as a controlled deployment step, then verify migrations, worker, scheduler,
-health checks, and rollback readiness.
+Northflank API, worker, and scheduler track `main` and have deployed SHA
+`1730f3d0eaa98ca1a491d7711c44a69dad62ed04`.
 
 ## Verified runtime state
 
-Read-only runtime checks on 24 September 2026 confirmed:
+Read-only runtime checks on 28 September 2026 confirmed:
 
-- `farta-api` build status `SUCCESS` and deployment status `COMPLETED`.
-- `farta-worker` build status `SUCCESS` and deployment status `COMPLETED`.
+- `farta-api` and `farta-worker` built SHA `1730f3d0` successfully and reached
+  deployment status `COMPLETED`.
+- `farta-scheduler` deployed SHA `1730f3d0`; its 10:05 UTC cron run completed
+  with status `SUCCESS`.
+- `/up` and `/api/products?per_page=1` return HTTP 200; an anonymous request to
+  `/api/user` returns HTTP 401.
+- CORS allows the staging storefront origin and does not return an allow-origin
+  grant for an unconfigured origin.
 - Laravel runs with production safety defaults inside the staging project.
 - `SESSION_DRIVER=database` and effective `session.encrypt=true`.
 - Default mailer is SMTP and queues use the database connection.
@@ -68,9 +72,11 @@ Latest local verification on the same code line:
 
 | Check | Result |
 | --- | --- |
-| Backend Pest | 252 tests, 1,444 assertions — PASS |
-| Backend Pint | 164 files — PASS |
+| Backend Pest | 660 tests, 3,102 assertions — PASS |
+| Focused backend security suite | 122 tests, 611 assertions — PASS |
+| Backend Pint | 275 files — PASS |
 | Composer validate/audit | Valid; no security advisories |
+| Backend npm build/audit | PASS; 0 vulnerabilities |
 | Storefront Vitest | 24 files, 89 tests — PASS |
 | Storefront build/audit | PASS; 0 vulnerabilities |
 | Admin Vitest | 12 files, 39 tests — PASS |
@@ -113,6 +119,9 @@ Before the SePay migration, the Northflank MySQL backup
 `pre-sepay-20260924` completed successfully. Migration
 `2026_09_23_000002_add_sepay_payment_fields_to_orders_table` then ran in staging
 batch 3.
+
+The backend revisions deployed on 28 September 2026 contain no new database
+migration files.
 
 The migration adds SePay reference, expiry, and provider transaction fields and
 preserves the `vnpay` enum value for historical rows. Do not automatically

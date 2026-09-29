@@ -6,19 +6,26 @@ analytics, coupons, reviews, and a Grounded Conversational AI Assistant.
 
 ## Current release status
 
-The reviewed authentication, storefront loading, and SePay integration changes
-were merged into `main` on 24 September 2026. The public domains are currently
-used as a staging/demo environment, not as a completed production release.
+The reviewed backend application changes through `36b7ea6` were deployed from
+`main` to Northflank on 29 September 2026. The public domains are currently used
+as a staging/demo environment, not as a completed production release.
 
 - Storefront: <https://fartamarket.company>
 - Admin: <https://admin.fartamarket.company>
 - API health: <https://api.fartamarket.company/up>
 - Deployment details and remaining gates: [STAGING_DEPLOY.md](STAGING_DEPLOY.md)
 
-SePay code and its database migration are deployed to staging, but the staging
-runtime does not yet contain the real bank-account and webhook-secret settings.
-Until those settings and an end-to-end simulated payment are verified, SePay
-checkout intentionally fails closed with HTTP `503`.
+The Storefront and Admin Pages deployments match their repository `main`
+application revisions. Exact revisions, deployment IDs, test totals, and
+verification times are maintained in `STAGING_DEPLOY.md` rather than duplicated
+here.
+
+SePay code and its database migration are deployed to staging. The 24 September
+runtime audit recorded that the real bank-account and webhook-secret settings
+were not configured; secret presence was intentionally not reread during the
+29 September deployment. Until configuration presence and an end-to-end
+simulated payment are verified, treat SePay checkout as unavailable; the code
+fails closed with HTTP `503` when required configuration is absent.
 
 ## Main capabilities
 
@@ -225,9 +232,11 @@ The historical Phase 14 V10 development regression reached 99.32% intent,
 safety, and zero wrong-topic, unsupported-policy, unsafe-execution, or
 wrong-entity unsafe-action signals. Those numbers describe that frozen
 candidate, not the current working tree or a release score. Generated captures,
-scored output, intermediate datasets, and run manifests are CI artifacts and
-are not committed; the repository retains only canonical fixtures required by
-offline contract tests. See
+scored output, intermediate datasets, and run manifests belong under
+`artifacts/evaluation/` and must not be committed; an evaluation-specific CI
+workflow should publish them when it generates them. The current general backend
+CI neither generates nor uploads evaluation artifacts. The repository retains
+only canonical fixtures required by offline contract tests. See
 [docs/chat-phase-14-v10-root-cause-remediation.md](docs/chat-phase-14-v10-root-cause-remediation.md)
 for the historical candidate identity, metrics, QA, and remaining risks. Final
 V11 remains an independently controlled holdout and is excluded from the default
@@ -289,8 +298,11 @@ php artisan chat:knowledge:sync
 Authoring rules are in
 [docs/chat-knowledge-authoring.md](docs/chat-knowledge-authoring.md). Architecture and trust boundaries are in
 [docs/chat-architecture.md](docs/chat-architecture.md); retrieval evaluation is
-in [docs/chat-rag.md](docs/chat-rag.md), and the current release decision is in
+in [docs/chat-rag.md](docs/chat-rag.md), and the historical Phase 14 decision is
+in
 [docs/chat-phase-14-v10-root-cause-remediation.md](docs/chat-phase-14-v10-root-cause-remediation.md).
+The current deployment and release decision is maintained in
+[STAGING_DEPLOY.md](STAGING_DEPLOY.md).
 
 Anthropic remains supported through `AI_CHAT_DRIVER=anthropic` and the matching
 model, base URL, and API key.
@@ -333,12 +345,13 @@ Before declaring production readiness:
 
 1. Configure SePay Test Mode with a real HMAC secret and complete an inbound
    simulated payment through the normal browser flow.
-2. Verify Admin MFA and Cloudinary create/replace/delete operations on the
+2. Configure Cloudflare Turnstile for guest checkout and rebuild the Storefront.
+3. Verify Admin MFA and Cloudinary create/replace/delete operations on the
    deployed domains.
-3. Repeat registration, email verification, password reset, COD order, order
+4. Repeat registration, email verification, password reset, COD order, order
    view, and cancellation with disposable accounts.
-4. Review historical duplicate orders manually; do not bulk-delete records that
+5. Review historical duplicate orders manually; do not bulk-delete records that
    may have affected inventory or payment state.
-5. Rotate any historically exposed provider/database credentials and retest.
-6. Point staging services at the intended `main` revisions, rerun CI and smoke
+6. Rotate any historically exposed provider/database credentials and retest.
+7. Keep Pages and Northflank on reviewed `main` revisions, rerun CI and smoke
    tests, and perform a separately controlled production release.

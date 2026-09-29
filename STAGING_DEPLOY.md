@@ -1,6 +1,6 @@
 # Farta Market staging deployment report
 
-Last verified: 28 September 2026 (Asia/Ho_Chi_Minh).
+Last verified: 29 September 2026, 09:57 ICT (Asia/Ho_Chi_Minh).
 
 This document describes the currently deployed public staging/demo environment.
 It is not a production-release declaration. Store credentials only in provider
@@ -31,64 +31,77 @@ origin while the worker forwards the request to the API.
 
 ## Git and deployed revisions
 
-The recorded staging revisions are:
+The verified repository and staging revisions are:
 
-| Repository | Recorded repository revision | Current staging artifact/source |
+| Repository | `main` at verification time | Staging artifact/source at verification time |
 | --- | --- | --- |
-| Backend | `1730f3d` | Northflank build `1730f3d` |
-| Storefront | `7dcf7d2` | Pages Direct Upload source `315e90d` |
-| Admin | `68ba1a7` | Pages Direct Upload source `8fb9d3c` |
+| Backend application | `36b7ea6` | Northflank API, worker, and scheduler build `36b7ea6` |
+| Storefront | `1cb07f2` | Pages Direct Upload `1c47fcdb-baf2-4db2-99f2-3f54e451f684`, source `1cb07f2` |
+| Admin | `90645af` | Pages Direct Upload `7ed4584f-ce1a-414d-9239-6734911a8d14`, source `90645af` |
 
-The Storefront and Admin artifacts remain the Direct Uploads verified on
-24 September 2026. For release traceability, rebuild and deploy from the final
-`main` commits before declaring a production release.
+Storefront and Admin have exact deployed-to-`main` application-source parity.
+The Backend application commit was pushed to `main` and deployed before this
+report-only update.
 
-Northflank API, worker, and scheduler track `main` and have deployed SHA
-`1730f3d0eaa98ca1a491d7711c44a69dad62ed04`.
+Northflank API, worker, and scheduler track `main` and built application SHA
+`36b7ea6f91333b00ed6b4d061d11dfa98c82138b`. The `[skip nf]` text used by an
+older commit did not suppress Northflank builds, so it must not be relied on as
+a docs-only deployment guard.
 
 ## Verified runtime state
 
-Read-only runtime checks on 28 September 2026 confirmed:
+Read-only runtime checks on 29 September 2026 confirmed:
 
-- `farta-api` and `farta-worker` built SHA `1730f3d0` successfully and reached
-  deployment status `COMPLETED`.
-- `farta-scheduler` deployed SHA `1730f3d0`; its 10:05 UTC cron run completed
-  with status `SUCCESS`.
+- `farta-api` and `farta-worker` built and deployed SHA `36b7ea6`; both rollout
+  states completed with one configured instance.
+- `farta-scheduler` built SHA `36b7ea6`, remains active on `*/5 * * * *`, and
+  its three latest displayed runs completed successfully.
 - `/up` and `/api/products?per_page=1` return HTTP 200; an anonymous request to
   `/api/user` returns HTTP 401.
 - CORS allows the staging storefront origin and does not return an allow-origin
   grant for an unconfigured origin.
-- Laravel runs with production safety defaults inside the staging project.
+- Storefront, Admin, their tested deep links, and `/up` return HTTP 200 with
+  HSTS.
+- Storefront can load the proxied product API and Cloudinary-backed catalog
+  data.
+- Each custom-domain root returns byte-identical HTML to its latest
+  deployment-specific `pages.dev` URL.
+- Backend, Storefront, and Admin GitHub Actions completed successfully for the
+  revisions in this report.
+
+The earlier non-secret runtime and UI audit on 24 September 2026 recorded:
+
+- Laravel used production safety defaults inside the staging project.
 - `SESSION_DRIVER=database` and effective `session.encrypt=true`.
-- Default mailer is SMTP and queues use the database connection.
-- Storefront, Admin, and `/up` return HTTP 200 with HSTS.
-- Storefront can load the product API and Cloudinary-backed catalog data.
-- Product-detail loading uses a stable accessible skeleton without horizontal
+- The default mailer was SMTP and queues used the database connection.
+- Product-detail loading used a stable accessible skeleton without horizontal
   overflow at the tested desktop and mobile widths.
-- Backend, Storefront, and Admin GitHub Actions on their merged `main` commits
-  completed successfully.
 
-Latest local verification on the same code line:
+These configuration facts were not reread on 28 September. Reverify them after
+any environment or secret-group change without printing secret values.
 
-| Check | Result |
-| --- | --- |
-| Backend Pest | 660 tests, 3,102 assertions — PASS |
-| Focused backend security suite | 122 tests, 611 assertions — PASS |
-| Backend Pint | 275 files — PASS |
-| Composer validate/audit | Valid; no security advisories |
-| Backend npm build/audit | PASS; 0 vulnerabilities |
-| Storefront Vitest | 24 files, 89 tests — PASS |
-| Storefront build/audit | PASS; 0 vulnerabilities |
-| Admin Vitest | 12 files, 39 tests — PASS |
-| Admin build/audit | PASS; 0 vulnerabilities |
-| Storefront/Admin Playwright on merged `main` | GitHub Actions — PASS |
+Latest recorded verification, with the revision and evidence source kept
+explicit:
+
+| Check | Revision | Verified | Result / evidence |
+| --- | --- | --- | --- |
+| Backend Pest | `36b7ea6` | 29 Sep 2026 | 710 tests, 3,249 assertions — local and GitHub Actions PASS |
+| Backend Pint | `36b7ea6` | 29 Sep 2026 | 277 files — local and GitHub Actions PASS |
+| Composer validate/audit | `36b7ea6` | 29 Sep 2026 | Valid; no security advisories — local and GitHub Actions PASS |
+| Backend Vite build/npm audit | `36b7ea6` | 29 Sep 2026 | PASS; 0 vulnerabilities — local |
+| Storefront Vitest | `1cb07f2` | 29 Sep 2026 | 26 files, 105 tests — local and GitHub Actions PASS |
+| Storefront Playwright | `1cb07f2` | 29 Sep 2026 | 21 tests — local and GitHub Actions PASS |
+| Storefront build/audit | `1cb07f2` | 29 Sep 2026 | PASS; 0 vulnerabilities — local and GitHub Actions |
+| Admin Vitest | `90645af` | 29 Sep 2026 | 16 files, 53 tests — local and GitHub Actions PASS |
+| Admin Playwright | `90645af` | 29 Sep 2026 | 15 tests — local and GitHub Actions PASS |
+| Admin build/audit | `90645af` | 29 Sep 2026 | PASS; 0 vulnerabilities — local and GitHub Actions |
 
 The latest Cloudflare Direct Uploads are:
 
 | Project | Deployment ID | Source |
 | --- | --- | --- |
-| `farta-storefront` | `03688cd4-7315-4b54-acef-43329cc60fc4` | `315e90d` |
-| `farta-admin` | `76ed1529-e5f4-485e-852e-48d16e99c4fc` | `8fb9d3c` |
+| `farta-storefront` | `1c47fcdb-baf2-4db2-99f2-3f54e451f684` | `1cb07f2` (matches `main`) |
+| `farta-admin` | `7ed4584f-ce1a-414d-9239-6734911a8d14` | `90645af` (matches `main`) |
 
 ## Completed application work
 
@@ -120,7 +133,7 @@ Before the SePay migration, the Northflank MySQL backup
 `2026_09_23_000002_add_sepay_payment_fields_to_orders_table` then ran in staging
 batch 3.
 
-The backend revisions deployed on 28 September 2026 contain no new database
+The backend application revision deployed on 29 September 2026 contains no new database
 migration files.
 
 The migration adds SePay reference, expiry, and provider transaction fields and
@@ -137,10 +150,12 @@ recovery material are stored outside every repository.
 The code, UI, CSP allowance for `https://vietqr.app`, migration, webhook route,
 payment-status polling, expiration command, and automated tests are deployed.
 
-The effective Northflank API runtime currently has no SePay bank code, account
-number, or webhook secret. This is intentional until Test Mode setup is complete.
-Payment creation and webhook handling therefore fail closed rather than creating
-an unverifiable payment.
+The 24 September non-secret runtime audit found no SePay bank code, account
+number, or webhook secret. Secret presence was intentionally not reread during
+the 28 September deployment-status check. Until Test Mode configuration presence
+and the simulated payment flow are verified, treat SePay as unavailable; the
+application fails closed rather than creating an unverifiable payment when the
+required configuration is absent.
 
 Required backend-only variables:
 
@@ -193,6 +208,10 @@ payment state.
 4. Run `php artisan migrate:status`; apply reviewed pending migrations once.
 5. Confirm non-secret runtime state, `/up`, queue consumption, and a scheduler
    run. Never dump runtime environment or secret-group values to shared logs.
+
+Northflank deployed `d3f1122` despite `[skip nf]` in its commit message. If
+docs-only commits must not rebuild workloads, configure and verify explicit
+Northflank path-ignore rules instead of relying on that commit marker.
 
 Useful read-only commands:
 
@@ -266,17 +285,20 @@ checks as unavailable rather than inventing commands.
 
 1. Configure SePay Test Mode with the real HMAC secret and complete the full
    simulated-payment flow described above.
-2. Run a deployed-domain customer smoke test: new Gmail registration, email
+2. Configure a Cloudflare Turnstile site/secret key pair and rebuild the
+   Storefront. The current artifact has no `VITE_TURNSTILE_SITE_KEY`, matching
+   the preceding staging artifact, so guest checkout does not render Turnstile.
+3. Run a deployed-domain customer smoke test: new Gmail registration, email
    verification, login, COD order, order view, and cancellation.
-3. Verify Admin MFA, one recovery-code login, and Cloudinary
+4. Verify Admin MFA, one recovery-code login, and Cloudinary
    upload/replace/delete on the deployed domain; remove all QA data afterward.
-4. Review possible duplicate orders created before scoped idempotency. Do not
+5. Review possible duplicate orders created before scoped idempotency. Do not
    bulk-delete records because inventory and payment state may be affected.
-5. Rotate historically exposed database/provider credentials one provider at a
+6. Rotate historically exposed database/provider credentials one provider at a
    time, verify the replacement, and revoke the old credential only afterward.
-6. Point all Northflank workloads to the reviewed `main` revision and rebuild
-   both Pages projects from their merged `main` commits.
-7. Run all automated checks and desktop/mobile smoke tests again, prepare a
+7. Keep both Pages artifacts and all Northflank workloads on reviewed `main`
+   revisions; do not reuse an untracked local build for production.
+8. Run all automated checks and desktop/mobile smoke tests again, prepare a
    rollback point, and release production separately.
 
 No Strix or active penetration test is part of this rollout. Any future active
@@ -285,4 +307,5 @@ rate limits, and explicit exclusion of real payment/provider side effects.
 
 ## Current conclusion
 
-**Ready for staging verification; not yet ready to be declared production.**
+**Backend staging deployment is current. The complete system remains ready for
+staging verification, not yet ready to be declared production.**

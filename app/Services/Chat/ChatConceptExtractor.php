@@ -10,6 +10,7 @@ final class ChatConceptExtractor
     public function extract(string $raw): array
     {
         $message = $this->entities->normalize($raw);
+        $topicSelection = $this->topicSelection($message);
         $quantity = $this->entities->quantity($message);
         // Do not use the bare normalized token "gio": Vietnamese "giờ" (now)
         // normalizes to the same value as "giỏ" (cart).
@@ -310,6 +311,9 @@ final class ChatConceptExtractor
                                 : ($orderGuidanceTopic ? 'orders'
                                     : ($paymentTopic && ! $checkoutReview ? 'payment'
                                         : (((! $shippingReference || ! $shippingValue) && ($policyCue || $this->matches($message, ['thong tin chinh thuc', 'nhom thong tin', 'verified help topics', 'verified help areas', 'verified store topics', 'nguon da duyet', 'approved policy overview', 'nguon huong dan']))) ? 'policy' : null)))))))));
+        if (in_array($topicSelection, ['payment', 'policy'], true)) {
+            $knowledgeTopic = $topicSelection;
+        }
         $productMentions = $this->entities->productMentions($message);
         $namedProductList = count($productMentions) > 1 && $this->matches($message, [
             'tim', 'find', 'search', 'show', 'list', 'liet ke', 'hien thi', 'xem', 'coi', 'check', 'kiem tra', 'danh sach', 'xep theo thu tu',
@@ -377,6 +381,9 @@ final class ChatConceptExtractor
         $operation = $guidanceCue || $orderRead || $paymentStatusRead || $pastCartRead || ($cartReference && $readCue)
             ? 'read'
             : ($cartMutation ? 'mutate' : ($searchCue ? 'suggest' : ($readCue ? 'read' : 'unknown')));
+        if ($topicSelection !== null) {
+            $operation = 'read';
+        }
 
         return [
             'normalized' => $message,
@@ -405,6 +412,7 @@ final class ChatConceptExtractor
             'cart_informational' => $cartInformational,
             'missing_evidence_topic' => $missingEvidenceTopic,
             'knowledge_topic' => $knowledgeTopic,
+            'topic_selection' => $topicSelection,
             'unsupported' => $unsupported,
             'general_chat' => $generalChat,
             'ambiguous_reference' => $ambiguousReference,
@@ -416,9 +424,29 @@ final class ChatConceptExtractor
         ];
     }
 
+    private function topicSelection(string $message): ?string
+    {
+        $prefix = '(?:(?:toi|minh|tui|em)\s+)?(?:(?:muon|can)\s+)?(?:(?:hoi|noi|thong tin|giai thich(?:\s+thong tin)?)\s+(?:ve\s+)?|ve\s+)';
+        $suffix = '(?:\s+(?:di|nhe|a))?';
+
+        return match (true) {
+            preg_match('/^'.$prefix.'(?:san pham|mat hang)'.$suffix.'$/', $message) === 1 => 'product',
+            preg_match('/^'.$prefix.'(?:gio hang|gio mua hang|cart)'.$suffix.'$/', $message) === 1 => 'cart',
+            preg_match('/^'.$prefix.'(?:don hang|order)'.$suffix.'$/', $message) === 1 => 'order',
+            preg_match('/^'.$prefix.'(?:thanh toan|payment)'.$suffix.'$/', $message) === 1 => 'payment',
+            preg_match('/^'.$prefix.'(?:giao hang|van chuyen|shipping|delivery)'.$suffix.'$/', $message) === 1 => 'shipping',
+            preg_match('/^'.$prefix.'(?:chinh sach(?:\s+cua hang)?|quy dinh(?:\s+cua hang)?|cua hang|farta)'.$suffix.'$/', $message) === 1 => 'policy',
+            default => null,
+        };
+    }
+
     private function mutationCommand(string $message, bool $hasQuantity): bool
     {
         $verb = '(?:them|mua|dat|lay|bo|dua|de|add|put|buy|order|place|purchase|prepare)';
+
+        if (preg_match('/^(?:ban\s+(?:co\s+)?muon|do\s+you\s+want\s+to)\s+'.$verb.'\b/', $message) === 1) {
+            return true;
+        }
 
         if (preg_match('/^(?:(?:xin|vui long|lam on|hay|co the|co|can|please|could you|can you|would you|shop)\s+)?'.$verb.'\b/', $message) === 1) {
             return true;

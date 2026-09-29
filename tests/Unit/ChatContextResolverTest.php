@@ -136,3 +136,7 @@ it('clarifies a target-free mutation follow-up without trusted target context', 
         ->and($resolved->mutationTarget)->toBeNull()
         ->and($resolved->mutationTargetAmbiguous)->toBeTrue();
 });
+
+it('recognizes supported affirmative phrases as conversational signals', function (string $message) {
+    expect((new ChatContextResolver)->isAffirmative($message))->toBeTrue();
+})->with(['co', 'dung roi', 'yes']);

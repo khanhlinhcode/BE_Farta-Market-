@@ -14,6 +14,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\MobileAuthController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PaymentController;
@@ -30,6 +31,13 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('')->group(function () {
+    Route::prefix('mobile')->group(function () {
+        Route::post('/login', [MobileAuthController::class, 'login'])
+            ->middleware('throttle:user-login');
+        Route::post('/logout', [MobileAuthController::class, 'logout'])
+            ->middleware('auth:sanctum');
+    });
+
     Route::post('/register', [AuthController::class, 'register'])
         ->block(35, 1)
         ->middleware('throttle:register');

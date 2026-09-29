@@ -42,6 +42,26 @@ it('extracts bounded price filters without asking a model', function () {
     ]);
 });
 
+it('routes bounded topic selections without semantic fallback', function (string $message, ChatIntent $intent, ?string $evidenceTopic) {
+    $result = (new ChatIntentRouter(new \App\Services\Chat\ChatProvider))->route($message);
+
+    expect($result->intent)->toBe($intent)
+        ->and($result->routingMode)->toBe($intent === ChatIntent::Clarification ? 'abstention' : 'deterministic')
+        ->and($result->requiredEvidenceDomain?->topic)->toBe($evidenceTopic);
+})->with([
+    ['hỏi về sản phẩm', ChatIntent::CatalogList, 'product_catalog'],
+    ['về sản phẩm đi', ChatIntent::CatalogList, 'product_catalog'],
+    ['thông tin về sản phẩm', ChatIntent::CatalogList, 'product_catalog'],
+    ['hoi ve san pham', ChatIntent::CatalogList, 'product_catalog'],
+    ['hỏi về giỏ hàng', ChatIntent::CartQuery, null],
+    ['hoi ve gio hang', ChatIntent::CartQuery, null],
+    ['hỏi về đơn hàng', ChatIntent::OrderQuery, 'owned_order_data'],
+    ['hỏi về thanh toán', ChatIntent::KnowledgeQuery, 'payment'],
+    ['hỏi về chính sách cửa hàng', ChatIntent::KnowledgeQuery, 'policy'],
+    ['giải thích thông tin cửa hàng', ChatIntent::KnowledgeQuery, 'policy'],
+    ['hỏi về giao hàng', ChatIntent::Clarification, null],
+]);
+
 it('extracts deterministic cart entities without semantic routing', function (string $message, int $quantity) {
     $result = (new ChatIntentRouter(new \App\Services\Chat\ChatProvider))
         ->route($message);
@@ -163,6 +183,7 @@ it('handles Phase 8 intent boundaries without semantic fallback', function (stri
     ['gửi một gói hàng về nhà đang thu bao nhiêu tiền', ChatIntent::ShippingInfo],
     ['thêm 2 Mì Soba cho lần mua của mình', ChatIntent::CartActionRequest],
     ['could you prepare two Mì Soba in my shopping basket', ChatIntent::CartActionRequest],
+    ['Bạn có muốn mua Cam Tươi không?', ChatIntent::CartActionRequest],
 ]);
 
 it('keeps independent safe and denied branches explicit', function () {

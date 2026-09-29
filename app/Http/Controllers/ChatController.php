@@ -191,10 +191,16 @@ class ChatController extends Controller
 
             if ($response === null) {
                 if ($route['intent'] === ChatIntent::Clarification || $route->semanticIntent === 'clarification') {
+                    $shippingTopic = ($route['concepts']['topic_selection'] ?? null) === 'shipping';
+
                     return $this->respond($request, [
                         'reply' => $english
-                            ? 'Would you like help with products, your cart, your orders, payment, shipping, or store policies?'
-                            : 'Bạn muốn hỏi về sản phẩm, giỏ hàng, đơn hàng, thanh toán, giao hàng hay chính sách cửa hàng?',
+                            ? ($shippingTopic
+                                ? 'Would you like the current delivery fee, the free-delivery threshold, or verified shipping policy information?'
+                                : 'Please choose a specific topic: products, your cart, your orders, payment, shipping, or store policies.')
+                            : ($shippingTopic
+                                ? 'Bạn muốn xem phí giao hàng, điều kiện miễn phí hay chính sách giao hàng?'
+                                : 'Bạn chưa chọn chủ đề cụ thể. Vui lòng chọn sản phẩm, giỏ hàng, đơn hàng, thanh toán, giao hàng hoặc chính sách.'),
                         'source' => 'clarification',
                         'code' => 'CLARIFICATION_REQUIRED',
                     ], $route, $startedAt);
@@ -951,8 +957,9 @@ class ChatController extends Controller
             }
 
             return ['reply' => $english
-                ? 'Please tell me the product name and a whole quantity from 1 to 100.'
-                : 'Bạn hãy cho tôi biết tên sản phẩm và số lượng nguyên từ 1 đến 100.'];
+                ? 'There is no pending yes-or-no confirmation. Please choose products, your cart, your orders, payment, shipping, or store policies.'
+                : 'Hiện không có xác nhận có/không nào đang chờ. Vui lòng chọn sản phẩm, giỏ hàng, đơn hàng, thanh toán, giao hàng hoặc chính sách.',
+                'code' => 'CLARIFICATION_REQUIRED'];
         }
 
         // These facts have no source in the catalog. A model cannot supply them.

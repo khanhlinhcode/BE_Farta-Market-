@@ -165,6 +165,7 @@ final class ChatIntentRouter
             [
                 'operation' => $capability['operation'],
                 'knowledge_topic' => $concepts['knowledge_topic'],
+                'topic_selection' => $concepts['topic_selection'] ?? null,
                 'unsupported' => $concepts['unsupported'],
                 'reference_required' => $concepts['reference_required'] ?? false,
                 'product_facet' => $concepts['product_facet'] ?? null,
@@ -202,6 +203,17 @@ final class ChatIntentRouter
 
         if ($concepts['clarification_required']) {
             return ChatIntent::Clarification;
+        }
+
+        if (($concepts['topic_selection'] ?? null) !== null) {
+            return match ($concepts['topic_selection']) {
+                'product' => ChatIntent::CatalogList,
+                'cart' => ChatIntent::CartQuery,
+                'order' => ChatIntent::OrderQuery,
+                'payment', 'policy' => ChatIntent::KnowledgeQuery,
+                'shipping' => ChatIntent::Clarification,
+                default => ChatIntent::Clarification,
+            };
         }
 
         if (($concepts['missing_evidence_topic'] ?? null) !== null || ($concepts['cart_informational'] ?? false)) {
@@ -832,6 +844,7 @@ PROMPT;
             [
                 'operation' => $concepts['operation'] ?? 'unknown',
                 'knowledge_topic' => $concepts['knowledge_topic'] ?? null,
+                'topic_selection' => $concepts['topic_selection'] ?? null,
                 'unsupported' => $concepts['unsupported'] ?? ($intent === ChatIntent::Unsupported),
                 'reference_required' => $concepts['reference_required'] ?? false,
                 'mentioned_resources' => $mutation->mentionedResources,

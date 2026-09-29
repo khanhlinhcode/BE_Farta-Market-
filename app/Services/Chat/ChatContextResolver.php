@@ -101,7 +101,7 @@ final class ChatContextResolver
 
     public function isAffirmative(string $message): bool
     {
-        return in_array($message, ['co', 'co a', 'co nhe', 'dong y', 'duoc', 'ok', 'okay', 'yes', 'yes please'], true);
+        return in_array($message, ['co', 'co a', 'co nhe', 'dong y', 'dung roi', 'duoc', 'ok', 'okay', 'yes', 'yes please'], true);
     }
 
     private function isMutationFollowUp(string $message, ChatRouteFrame $route): bool

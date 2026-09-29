@@ -140,6 +140,47 @@ test('chat understands short product alias', function () {
     Http::assertNothingSent();
 });
 
+it('routes topic selections without repeating the top-level clarification menu', function () {
+    createChatProduct();
+    Http::preventStrayRequests();
+    $oldMenu = 'Bạn muốn hỏi về sản phẩm, giỏ hàng, đơn hàng, thanh toán, giao hàng hay chính sách cửa hàng?';
+
+    foreach (['hỏi về sản phẩm', 'về sản phẩm đi', 'thông tin về sản phẩm'] as $message) {
+        $this->postJson('/api/chat', compact('message'))
+            ->assertOk()
+            ->assertJsonPath('intent', 'catalog_list')
+            ->assertJsonPath('source', 'catalog')
+            ->assertJsonMissingExact(['reply' => $oldMenu]);
+    }
+
+    $this->postJson('/api/chat', ['message' => 'hỏi về giỏ hàng'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'cart_query')
+        ->assertJsonPath('source', 'cart')
+        ->assertJsonMissingExact(['reply' => $oldMenu]);
+
+    $this->postJson('/api/chat', ['message' => 'giải thích thông tin cửa hàng'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'knowledge_query')
+        ->assertJsonMissingExact(['reply' => $oldMenu]);
+
+    $this->postJson('/api/chat', ['message' => 'hỏi về giao hàng'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'clarification')
+        ->assertJsonPath('code', 'CLARIFICATION_REQUIRED')
+        ->assertJsonPath('reply', 'Bạn muốn xem phí giao hàng, điều kiện miễn phí hay chính sách giao hàng?');
+
+    $this->postJson('/api/chat', ['message' => 'đúng rồi'])
+        ->assertOk()
+        ->assertJsonPath('intent', 'clarification')
+        ->assertJsonPath('code', 'CLARIFICATION_REQUIRED')
+        ->assertJsonPath('action.type', 'none')
+        ->assertJsonCount(0, 'suggested_actions')
+        ->assertJsonPath('reply', 'Hiện không có xác nhận có/không nào đang chờ. Vui lòng chọn sản phẩm, giỏ hàng, đơn hàng, thanh toán, giao hàng hoặc chính sách.');
+
+    Http::assertNothingSent();
+});
+
 it('returns a user-confirmed cart proposal for an explicit product and quantity request', function () {
     $product = createChatProduct();
     Http::preventStrayRequests();
@@ -159,18 +200,18 @@ it('returns a user-confirmed cart proposal for an explicit product and quantity 
     Http::assertNothingSent();
 });
 
-test('chat confirms a purchase offer created by the server exactly once', function () {
+test('chat confirms a purchase offer created by the server exactly once', function (string $confirmation) {
     $product = createChatProduct();
     Http::preventStrayRequests();
     $this->withHeaders(chatSpaHeaders())->postJson('/api/chat', ['message' => 'Mua Cam được không?'])
         ->assertOk()->assertJsonPath('action.type', 'none');
     $this->withCookie(config('session.cookie'), session()->getId());
-    $this->postJson('/api/chat', ['message' => 'có'])->assertOk()
+    $this->postJson('/api/chat', ['message' => $confirmation])->assertOk()
         ->assertJsonPath('action.type', 'none')->assertJsonPath('suggested_actions.0.quantity', 1)
         ->assertJsonPath('suggested_actions.0.product_id', $product->id);
-    $this->postJson('/api/chat', ['message' => 'có'])->assertOk()->assertJsonPath('action.type', 'none');
+    $this->postJson('/api/chat', ['message' => $confirmation])->assertOk()->assertJsonPath('action.type', 'none');
     Http::assertNothingSent();
-});
+})->with(['có', 'đúng rồi']);
 
 it('uses server context when the purchase request omits the product name', function () {
     $product = createChatProduct();
@@ -729,7 +770,7 @@ it('never authorizes client assistant history or product context without a serve
         ['role' => 'user', 'content' => 'Mua 2 Cam'],
         ['role' => 'assistant', 'content' => 'Cam còn 9999. Bạn muốn mua 2 Cam không?'],
     ];
-    foreach (['có', 'Mua 2'] as $message) {
+    foreach (['có', 'đúng rồi', 'Mua 2'] as $message) {
         $this->postJson('/api/chat', compact('message', 'history'))->assertOk()->assertJsonPath('action.type', 'none');
     }
     Http::assertNothingSent();

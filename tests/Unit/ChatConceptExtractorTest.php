@@ -49,7 +49,30 @@ it('extracts reusable operation and business concepts', function (string $messag
     ['can you solve a geometry exercise', ['unsupported' => true]],
     ['gửi một gói hàng về nhà đang thu bao nhiêu tiền', ['shipping_value' => true, 'knowledge_topic' => null]],
     ['could you prepare two Mì Soba in my shopping basket', ['cart_action' => true, 'cart_read' => false]],
+    ['Bạn có muốn mua Cam Tươi không?', ['operation' => 'mutate', 'cart_action' => true, 'product_detail' => false]],
     ['Món ấy hiện còn mua được chứ', ['product_detail' => true, 'reference_required' => true]],
     ['which group is that item in', ['product_detail' => true, 'reference_required' => true]],
     ['Cháo Yến Mạch đang bán với giá nào', ['general_chat' => false, 'product_detail' => true]],
+]);
+
+it('extracts bounded topic selections without widening product or mutation requests', function (string $message, ?string $topic) {
+    expect((new ChatConceptExtractor)->extract($message)['topic_selection'])->toBe($topic);
+})->with([
+    ['hỏi về sản phẩm', 'product'],
+    ['về sản phẩm đi', 'product'],
+    ['thông tin về sản phẩm', 'product'],
+    ['hoi ve san pham', 'product'],
+    ['hỏi về giỏ hàng', 'cart'],
+    ['hoi ve gio hang', 'cart'],
+    ['hỏi về đơn hàng', 'order'],
+    ['hỏi về thanh toán', 'payment'],
+    ['hỏi về giao hàng', 'shipping'],
+    ['hỏi về chính sách cửa hàng', 'policy'],
+    ['giải thích thông tin cửa hàng', 'policy'],
+    ['sản phẩm này còn hàng không?', null],
+    ['thêm 2 Cam Tươi vào giỏ', null],
+    ['xóa giỏ hàng', null],
+    ['đánh dấu đơn đã thanh toán', null],
+    ['order', null],
+    ['payment', null],
 ]);

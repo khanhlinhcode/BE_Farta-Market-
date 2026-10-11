@@ -11,18 +11,17 @@ class ExpireGuestOrders extends Command
 {
     protected $signature = 'orders:expire-guests';
 
-    protected $description = 'Cancel stale guest COD orders and restore reserved inventory';
+    protected $description = 'Cancel expired pending COD reservations and restore inventory and coupons';
 
     public function handle(OrderStatusService $statusService): int
     {
         $expired = 0;
 
         Order::query()
-            ->whereNull('user_id')
             ->where('status', Order::STATUS_PENDING)
             ->where('payment_method', Order::PAYMENT_METHOD_COD)
-            ->whereNotNull('guest_expires_at')
-            ->where('guest_expires_at', '<=', now())
+            ->whereNotNull('reservation_expires_at')
+            ->where('reservation_expires_at', '<=', now())
             ->orderBy('id')
             ->pluck('id')
             ->each(function (int $orderId) use ($statusService, &$expired) {
@@ -35,7 +34,7 @@ class ExpireGuestOrders extends Command
                     $statusService->transition(
                         $order,
                         Order::STATUS_CANCELLED,
-                        'Unconfirmed guest order expired.'
+                        'Unconfirmed COD reservation expired.'
                     );
                     $expired++;
                 } catch (InvalidArgumentException) {
@@ -43,7 +42,7 @@ class ExpireGuestOrders extends Command
                 }
             });
 
-        $this->info("Expired {$expired} guest order(s).");
+        $this->info("Expired {$expired} pending COD order(s).");
 
         return self::SUCCESS;
     }

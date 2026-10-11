@@ -14,6 +14,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\GuestCheckoutBindingController;
 use App\Http\Controllers\MobileAuthController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PasswordResetController;
@@ -23,19 +24,33 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SiteContentController;
 use App\Http\Controllers\WishlistController;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+    return response()->json((new UserResource($request->user()))->resolve($request));
+})->middleware(['auth:sanctum', 'pat.ability:mobile:customer', 'customer', 'deprecated:api/me']);
 
 Route::prefix('')->group(function () {
     Route::prefix('mobile')->group(function () {
+        Route::post('/register', [MobileAuthController::class, 'register'])
+            ->middleware('throttle:register');
         Route::post('/login', [MobileAuthController::class, 'login'])
             ->middleware('throttle:user-login');
-        Route::post('/logout', [MobileAuthController::class, 'logout'])
-            ->middleware('auth:sanctum');
+        Route::post('/forgot-password', [PasswordResetController::class, 'requestMobileLink'])
+            ->middleware('throttle:forgot-password');
+        Route::post('/reset-password', [PasswordResetController::class, 'mobileReset'])
+            ->middleware('throttle:reset-password');
+        Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+            ->middleware(['signed', 'throttle:6,1'])
+            ->name('verification.verify');
+        Route::middleware(['auth:sanctum', 'pat.ability:mobile:customer', 'customer'])->group(function () {
+            Route::post('/logout', [MobileAuthController::class, 'logout']);
+            Route::get('/email/verification-status', [EmailVerificationController::class, 'status']);
+            Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
+                ->middleware('throttle:verification-resend');
+        });
     });
 
     Route::post('/register', [AuthController::class, 'register'])
@@ -59,26 +74,29 @@ Route::prefix('')->group(function () {
         ->middleware('throttle:analytics-session');
     Route::post('/analytics/page-view', [AnalyticsController::class, 'store'])
         ->middleware('throttle:analytics');
-    Route::get('/products/suggest', [ProductController::class, 'suggest']);
-    Route::get('/products/recommended', [ProductController::class, 'recommended']);
-    Route::get('/products/{product}/related', [ProductController::class, 'related']);
-    Route::get('/products/{product}/frequently-bought-with', [ProductController::class, 'frequentlyBoughtWith']);
+    Route::post('/guest-checkout/binding', GuestCheckoutBindingController::class)
+        ->middleware('throttle:30,1');
+    Route::get('/products/suggest', [ProductController::class, 'suggest'])->middleware('throttle:expensive-read');
+    Route::get('/products/recommended', [ProductController::class, 'recommended'])->middleware('throttle:expensive-read');
+    Route::get('/products/{product}/related', [ProductController::class, 'related'])->middleware('throttle:expensive-read');
+    Route::get('/products/{product}/frequently-bought-with', [ProductController::class, 'frequentlyBoughtWith'])->middleware('throttle:expensive-read');
     Route::apiResource('products', ProductController::class)->only(['index', 'show']);
     Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
     Route::post('/order', [OrderController::class, 'store'])
-        ->middleware('throttle:guest-orders');
+        ->middleware(['pat.ability:mobile:customer', 'guest.binding', 'throttle:guest-orders', 'throttle:authenticated-checkout']);
     Route::post('/payment/sepay/webhook', [PaymentController::class, 'webhook'])
         ->middleware('throttle:120,1');
     Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-    Route::middleware('auth:sanctum')->group(function () {
+        ->middleware(['signed', 'throttle:6,1']);
+    Route::middleware(['auth:sanctum', 'pat.ability:mobile:customer', 'customer'])->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::get('/profile', [ProfileController::class, 'show']);
-        Route::put('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-update');
+        Route::put('/profile', [ProfileController::class, 'update'])
+            ->middleware(['throttle:profile-update', 'deprecated:api/profile']);
         Route::patch('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-update');
         Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->middleware('throttle:uploads');
-        Route::post('/profile/change-password', [ProfileController::class, 'updatePassword'])->middleware('throttle:password-change');
+        Route::post('/profile/change-password', [ProfileController::class, 'updatePassword'])
+            ->middleware(['throttle:password-change', 'deprecated:api/profile/password']);
         Route::patch('/profile/password', [ProfileController::class, 'updatePassword'])->middleware('throttle:password-change');
         Route::get('/addresses', [AddressController::class, 'index']);
         Route::post('/addresses', [AddressController::class, 'store']);
@@ -90,7 +108,7 @@ Route::prefix('')->group(function () {
             ->middleware('throttle:verification-resend');
         Route::post('/coupons/validate', [CouponController::class, 'validateCoupon'])->middleware('verified');
         Route::post('/payment/create', [PaymentController::class, 'create'])
-            ->middleware(['verified', 'throttle:10,1']);
+            ->middleware(['verified', 'throttle:authenticated-checkout']);
         Route::get('/payment/{order}/status', [PaymentController::class, 'status'])
             ->middleware(['verified', 'throttle:60,1']);
         Route::get('/my-orders', [OrderController::class, 'myOrders']);
@@ -123,55 +141,56 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->middleware('throttle:mfa-challenge');
 
     Route::middleware(['auth:sanctum', 'admin.panel'])->group(function () {
-        Route::get('/dashboard', AdminDashboardController::class);
-        Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary']);
-        Route::get('/dashboard/revenue-chart', [AdminDashboardController::class, 'revenueChart']);
-        Route::get('/dashboard/top-products', [AdminDashboardController::class, 'topProducts']);
-        Route::get('/media', [AdminMediaController::class, 'index']);
+        Route::get('/dashboard', AdminDashboardController::class)->middleware('admin.capability:dashboard.read');
+        Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary'])->middleware('admin.capability:dashboard.read');
+        Route::get('/dashboard/revenue-chart', [AdminDashboardController::class, 'revenueChart'])->middleware('admin.capability:dashboard.read');
+        Route::get('/dashboard/top-products', [AdminDashboardController::class, 'topProducts'])->middleware('admin.capability:dashboard.read');
+        Route::get('/media', [AdminMediaController::class, 'index'])->middleware('admin.capability:media.upload');
         Route::get('/system/queue-health', [AdminSystemController::class, 'queueHealth'])
-            ->middleware('admin');
-        Route::get('/me', [AuthController::class, 'me']);
+            ->middleware('admin.capability:system-health.read');
+        Route::get('/me', [AuthController::class, 'me'])->middleware('admin.capability:dashboard.read');
         Route::post('/mfa/recovery-codes', [AdminMfaController::class, 'regenerateRecoveryCodes'])
-            ->middleware('throttle:mfa-challenge');
+            ->middleware(['admin.capability:dashboard.read', 'throttle:mfa-challenge']);
         Route::delete('/mfa', [AdminMfaController::class, 'disable'])
-            ->middleware('throttle:mfa-challenge');
-        Route::apiResource('categories', CategoryController::class)->except(['destroy']);
+            ->middleware(['admin.capability:dashboard.read', 'throttle:mfa-challenge']);
+        Route::apiResource('categories', CategoryController::class)->except(['destroy'])->middleware('admin.capability:catalog.write');
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
-            ->middleware('admin');
-        Route::post('/categories/{category}/image', [CategoryController::class, 'uploadImage']);
-        Route::post('/categories/{category}/image/reuse', [CategoryController::class, 'reuseImage']);
+            ->middleware('admin.capability:catalog.delete');
+        Route::post('/categories/{category}/image', [CategoryController::class, 'uploadImage'])->middleware('admin.capability:media.upload');
+        Route::post('/categories/{category}/image/reuse', [CategoryController::class, 'reuseImage'])->middleware('admin.capability:media.upload');
         Route::delete('/categories/{category}/image', [CategoryController::class, 'destroyImage'])
-            ->middleware('admin');
-        Route::apiResource('products', ProductController::class)->except(['destroy']);
+            ->middleware('admin.capability:media.delete');
+        Route::apiResource('products', ProductController::class)->except(['destroy'])->middleware('admin.capability:catalog.write');
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])
-            ->middleware('admin');
-        Route::post('/products/{product}/image', [ProductController::class, 'uploadImage'])->middleware('throttle:uploads');
-        Route::post('/products/{product}/images', [ProductController::class, 'uploadImages'])->middleware('throttle:uploads');
-        Route::post('/products/{product}/images/reuse', [ProductController::class, 'reuseImage']);
-        Route::delete('/product-images/{image}', [ProductController::class, 'destroyImage']);
-        Route::patch('/product-images/{image}/primary', [ProductController::class, 'setPrimaryImage']);
-        Route::patch('/products/{product}/images/order', [ProductController::class, 'reorderImages']);
-        Route::get('/site-settings', [AdminSiteSettingController::class, 'show']);
-        Route::put('/site-settings', [AdminSiteSettingController::class, 'update']);
-        Route::apiResource('banners', BannerController::class)->except(['destroy']);
-        Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->middleware('admin');
-        Route::get('/reviews', [ReviewController::class, 'adminIndex']);
-        Route::patch('/reviews/{review}/visibility', [ReviewController::class, 'updateVisibility']);
-        Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
-        Route::get('/orders', [OrderController::class, 'index']);
-        Route::get('/orders/export', [OrderController::class, 'exportCsv']);
-        Route::get('/orders/export.csv', [OrderController::class, 'exportCsv']);
-        Route::get('/orders/{order}', [OrderController::class, 'show']);
-        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-        Route::apiResource('coupons', CouponController::class);
-        Route::get('/coupons/{coupon}/usage-stats', [CouponController::class, 'usageStats']);
+            ->middleware('admin.capability:catalog.delete');
+        Route::post('/products/{product}/image', [ProductController::class, 'uploadImage'])->middleware(['admin.capability:media.upload', 'throttle:uploads']);
+        Route::post('/products/{product}/images', [ProductController::class, 'uploadImages'])->middleware(['admin.capability:media.upload', 'throttle:uploads']);
+        Route::post('/products/{product}/images/reuse', [ProductController::class, 'reuseImage'])->middleware('admin.capability:media.upload');
+        Route::delete('/product-images/{image}', [ProductController::class, 'destroyImage'])->middleware('admin.capability:media.delete');
+        Route::patch('/product-images/{image}/primary', [ProductController::class, 'setPrimaryImage'])->middleware('admin.capability:media.upload');
+        Route::patch('/products/{product}/images/order', [ProductController::class, 'reorderImages'])->middleware('admin.capability:media.upload');
+        Route::get('/site-settings', [AdminSiteSettingController::class, 'show'])->middleware('admin.capability:site-settings.write');
+        Route::put('/site-settings', [AdminSiteSettingController::class, 'update'])->middleware('admin.capability:site-settings.write');
+        Route::apiResource('banners', BannerController::class)->except(['destroy'])->middleware('admin.capability:catalog.write');
+        Route::delete('/banners/{banner}', [BannerController::class, 'destroy'])->middleware('admin.capability:catalog.delete');
+        Route::get('/reviews', [ReviewController::class, 'adminIndex'])->middleware('admin.capability:reviews.moderate');
+        Route::patch('/reviews/{review}/visibility', [ReviewController::class, 'updateVisibility'])->middleware('admin.capability:reviews.moderate');
+        Route::get('/analytics/overview', [AnalyticsController::class, 'overview'])->middleware('admin.capability:analytics.read');
+        Route::get('/orders', [OrderController::class, 'index'])->middleware('admin.capability:orders.read');
+        Route::get('/orders/export', [OrderController::class, 'exportCsv'])
+            ->middleware(['admin.capability:orders.read', 'throttle:admin-export', 'deprecated:api/admin/orders/export.csv']);
+        Route::get('/orders/export.csv', [OrderController::class, 'exportCsv'])->middleware(['admin.capability:orders.read', 'throttle:admin-export']);
+        Route::get('/orders/{order}', [OrderController::class, 'show'])->middleware('admin.capability:orders.read');
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('admin.capability:orders.transition');
+        Route::apiResource('coupons', CouponController::class)->middleware('admin.capability:coupons.manage');
+        Route::get('/coupons/{coupon}/usage-stats', [CouponController::class, 'usageStats'])->middleware('admin.capability:coupons.manage');
         Route::get('/users', [AdminUserController::class, 'index'])
-            ->middleware('admin');
+            ->middleware('admin.capability:users.manage');
         Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])
-            ->middleware('admin');
+            ->middleware('admin.capability:users.manage');
         Route::get('/users/{user}/orders', [AdminUserController::class, 'orders'])
-            ->middleware('admin');
+            ->middleware('admin.capability:users.manage');
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])
-            ->middleware('admin');
+            ->middleware('admin.capability:users.manage');
     });
 });

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Support\Vnd;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -19,7 +20,7 @@ class SepayService
     {
         $this->ensureQrConfigured();
 
-        $amount = (int) round((float) $order->grand_total);
+        $amount = Vnd::fromDecimal($order->grand_total);
         if ($amount <= 0 || ! $order->payment_reference) {
             throw new RuntimeException('SEPAY_INVALID_ORDER');
         }

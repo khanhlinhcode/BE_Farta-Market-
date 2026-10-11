@@ -2,6 +2,7 @@
 
 use App\Jobs\SendOrderConfirmationEmail;
 use App\Models\Category;
+use App\Models\CouponUsage;
 use App\Models\IdempotencyKey;
 use App\Models\Order;
 use App\Models\Product;
@@ -113,6 +114,94 @@ test('authenticated customer can create a SePay QR payment', function () {
         ->toContain('amount=110000')
         ->toContain('des='.urlencode($response->json('payment.reference')));
     expect($product->fresh()->inventory)->toBe(8);
+});
+
+test('mobile customer bearer token can create a SePay QR payment', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+    $token = $user->createToken('mobile', ['mobile:customer'])->plainTextToken;
+
+    $this->withToken($token)
+        ->withHeader('X-Idempotency-Key', 'sepay-valid-mobile-token-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertCreated()
+        ->assertJsonPath('data.user_id', $user->id);
+
+    expect(Order::count())->toBe(1)
+        ->and(IdempotencyKey::count())->toBe(1)
+        ->and($product->fresh()->inventory)->toBe(8);
+});
+
+test('invalid expired revoked or unauthorized bearer tokens cannot create SePay payments', function (string $case) {
+    configureSepayTest();
+    config(['sanctum.expiration' => 60]);
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+
+    $token = match ($case) {
+        'invalid' => 'invalid-bearer-token',
+        'expired-by-age' => tap(
+            $user->createToken('expired-age', ['mobile:customer']),
+            fn ($created) => $created->accessToken->forceFill([
+                'created_at' => now()->subMinutes(61),
+            ])->save()
+        )->plainTextToken,
+        'expired-at' => $user->createToken(
+            'expired-at',
+            ['mobile:customer'],
+            now()->subMinute()
+        )->plainTextToken,
+        'revoked' => tap(
+            $user->createToken('revoked', ['mobile:customer']),
+            fn ($created) => $created->accessToken->delete()
+        )->plainTextToken,
+        'wrong-ability' => $user->createToken('wrong-ability', ['profile:read'])->plainTextToken,
+    };
+
+    $response = $this->withToken($token)
+        ->withHeader('X-Idempotency-Key', "sepay-token-rejection-{$case}")
+        ->postJson('/api/payment/create', paymentPayload($product));
+
+    $response->assertStatus($case === 'wrong-ability' ? 403 : 401);
+    expect(Order::count())->toBe(0)
+        ->and(IdempotencyKey::count())->toBe(0)
+        ->and(CouponUsage::count())->toBe(0)
+        ->and($product->fresh()->inventory)->toBe(10);
+})->with([
+    'invalid',
+    'expired-by-age',
+    'expired-at',
+    'revoked',
+    'wrong-ability',
+]);
+
+test('browser session can create SePay payment without a bearer token', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+
+    $this->actingAs($user)
+        ->withHeader('X-Idempotency-Key', 'sepay-browser-session-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertCreated()
+        ->assertJsonPath('data.user_id', $user->id);
+});
+
+test('invalid bearer does not fall back to an authenticated browser session', function () {
+    configureSepayTest();
+    $user = User::factory()->customer()->create();
+    $product = createPaymentProduct();
+
+    $this->actingAs($user)
+        ->withToken('invalid-bearer-token')
+        ->withHeader('X-Idempotency-Key', 'sepay-invalid-session-fallback-0001')
+        ->postJson('/api/payment/create', paymentPayload($product))
+        ->assertUnauthorized();
+
+    expect(Order::count())->toBe(0)
+        ->and(IdempotencyKey::count())->toBe(0)
+        ->and($product->fresh()->inventory)->toBe(10);
 });
 
 test('SePay payment requires an idempotency key header', function () {

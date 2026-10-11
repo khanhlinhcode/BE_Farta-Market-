@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\OrderResource;
 use App\Jobs\SendOrderConfirmationEmail;
 use App\Models\CouponUsage;
 use App\Models\IdempotencyKey;
 use App\Models\Order;
-use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Services\AnalyticsSessionService;
 use App\Services\CouponService;
 use App\Services\OrderStatusService;
+use App\Services\ReservationPolicy;
 use App\Services\SepayService;
 use App\Support\AnalyticsIdentifier;
 use App\Support\IdempotencyHasher;
+use App\Support\Vnd;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
@@ -29,7 +31,8 @@ class PaymentController extends Controller
         Request $request,
         SepayService $sepayService,
         CouponService $couponService,
-        AnalyticsSessionService $analyticsSessions
+        AnalyticsSessionService $analyticsSessions,
+        ReservationPolicy $reservationPolicy
     ) {
         if ($request->user()->role !== 'customer') {
             return response()->json([
@@ -64,8 +67,8 @@ class PaymentController extends Controller
             [$order, $isReplay] = Cache::lock(
                 'payment:create:'.hash('sha256', $idempotencyScope.'|'.$data['idempotency_key']),
                 15
-            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $sepayService, $analyticsSessionHash, $idempotencyScope) {
-                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $sepayService, $analyticsSessionHash, $idempotencyScope) {
+            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $sepayService, $analyticsSessionHash, $idempotencyScope, $reservationPolicy) {
+                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $sepayService, $analyticsSessionHash, $idempotencyScope, $reservationPolicy) {
                     IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
                         ->where('scope', $idempotencyScope)
@@ -83,6 +86,7 @@ class PaymentController extends Controller
                         if ($existingKey->payload_hash !== $payloadHash) {
                             throw new HttpResponseException(response()->json([
                                 'message' => 'Idempotency key đã được dùng với request khác.',
+                                'error_code' => 'idempotency_payload_conflict',
                             ], 409));
                         }
 
@@ -99,6 +103,11 @@ class PaymentController extends Controller
                         $existingKey->delete();
                     }
 
+                    $reservation = $reservationPolicy->lockAndValidate($data['products'], $userId);
+                    $reservationExpiresAt = now()->addMinutes(
+                        max(1, (int) config('commerce.reservations.sepay_ttl_minutes'))
+                    );
+
                     $order = Order::create([
                         'user_id' => $userId,
                         'fullname' => $data['customer_name'],
@@ -110,40 +119,22 @@ class PaymentController extends Controller
                         'payment_method' => Order::PAYMENT_METHOD_SEPAY,
                         'payment_status' => Order::PAYMENT_STATUS_PENDING,
                         'idempotency_key' => $data['idempotency_key'],
+                        'reservation_expires_at' => $reservationExpiresAt,
                     ]);
                     if ($analyticsSessionHash) {
                         $order->forceFill(['analytics_session_hash' => $analyticsSessionHash])->save();
                     }
 
-                    $productIds = collect($data['products'])
-                        ->pluck('product_id')
-                        ->sort()
-                        ->values();
-                    $products = Product::query()
-                        ->whereIn('id', $productIds)
-                        ->orderBy('id')
-                        ->lockForUpdate()
-                        ->get()
-                        ->keyBy('id');
-
-                    $subtotal = 0;
+                    $products = $reservation['products'];
+                    $subtotal = $reservation['subtotal'];
 
                     foreach ($data['products'] as $productData) {
                         $product = $products->get((int) $productData['product_id']);
                         $quantity = (int) $productData['quantity'];
 
-                        if (! $product || ! $product->is_active) {
-                            abort(422, 'Sản phẩm không khả dụng hoặc đã ngưng kinh doanh.');
-                        }
-
-                        if ($product->inventory < $quantity) {
-                            abort(422, "Sản phẩm {$product->name} không đủ tồn kho.");
-                        }
-
                         $product->decrement('inventory', $quantity);
-                        $unitPrice = (float) $product->price;
+                        $unitPrice = (int) $product->price;
                         $lineTotal = $unitPrice * $quantity;
-                        $subtotal += $lineTotal;
 
                         $order->details()->create([
                             'product_id' => $product->id,
@@ -171,7 +162,7 @@ class PaymentController extends Controller
                             ], 422));
                         }
 
-                        $discountAmount = (float) $couponResult['discount_amount'];
+                        $discountAmount = (int) $couponResult['discount_amount'];
 
                         $order->forceFill([
                             'coupon_id' => $couponResult['coupon']->id,
@@ -182,7 +173,7 @@ class PaymentController extends Controller
                     $this->updateOrderTotals($order, $subtotal, $discountAmount);
                     $order->forceFill([
                         'payment_reference' => $sepayService->createPaymentReference($order),
-                        'payment_expires_at' => now()->addMinutes(max(1, (int) config('services.sepay.payment_ttl_minutes', 30))),
+                        'payment_expires_at' => $reservationExpiresAt,
                     ])->save();
                     $sepayService->paymentDetails($order);
 
@@ -229,7 +220,7 @@ class PaymentController extends Controller
         $order->load(['details.product.category', 'coupon'])->loadSum('details as total', 'line_total');
 
         return response()->json([
-            'data' => $order,
+            'data' => (new OrderResource($order))->resolve($request),
             'payment' => $sepayService->paymentDetails($order),
             'idempotent_replay' => $isReplay,
         ], $isReplay ? 200 : 201);
@@ -243,7 +234,7 @@ class PaymentController extends Controller
         $order->load(['details.product.category', 'coupon'])->loadSum('details as total', 'line_total');
 
         return response()->json([
-            'data' => $order,
+            'data' => (new OrderResource($order))->resolve($request),
             'payment' => $sepayService->paymentDetails($order),
         ]);
     }
@@ -322,7 +313,7 @@ class PaymentController extends Controller
                 abort(409, 'Đơn hàng không còn chờ thanh toán.');
             }
 
-            if ((int) $data['transferAmount'] !== (int) round((float) $order->grand_total)) {
+            if ((int) $data['transferAmount'] !== Vnd::fromDecimal($order->grand_total)) {
                 abort(422, 'Số tiền thanh toán không khớp.');
             }
 
@@ -384,11 +375,11 @@ class PaymentController extends Controller
         return $data;
     }
 
-    private function updateOrderTotals(Order $order, float $subtotal, float $discountAmount = 0): void
+    private function updateOrderTotals(Order $order, int $subtotal, int $discountAmount = 0): void
     {
         $settings = SiteSetting::current();
         $shippingFee = $subtotal > 0 && $subtotal < $settings->free_shipping_threshold
-            ? (float) $settings->shipping_fee
+            ? (int) $settings->shipping_fee
             : 0;
         $discountAmount = min(max($discountAmount, 0), $subtotal);
 

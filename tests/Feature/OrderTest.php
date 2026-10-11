@@ -8,8 +8,10 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Services\GuestCheckoutBindingService;
 use App\Support\AnalyticsIdentifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -49,6 +51,15 @@ function orderPayload(Product $product, int $quantity = 2): array
             ],
         ],
     ];
+}
+
+function continueGuestCheckoutBinding($test, $response): void
+{
+    $cookie = collect($response->headers->getCookies())
+        ->first(fn ($candidate) => $candidate->getName() === GuestCheckoutBindingService::COOKIE);
+    expect($cookie)->not->toBeNull();
+    $test->withCredentials()
+        ->withUnencryptedCookie(GuestCheckoutBindingService::COOKIE, $cookie->getValue());
 }
 
 test('placing an order creates snapshot and admin total uses line totals', function () {
@@ -184,6 +195,7 @@ test('replaying an idempotency key returns the same order without decrementing s
     $firstResponse = $this->withHeaders($headers)
         ->postJson('/api/order', $payload)
         ->assertCreated();
+    continueGuestCheckoutBinding($this, $firstResponse);
     $secondResponse = $this->withHeaders($headers)
         ->postJson('/api/order', $payload)
         ->assertOk()
@@ -204,24 +216,48 @@ test('guest idempotency keys have a database enforced scope', function () {
 
     $storedKey = IdempotencyKey::query()->sole();
 
-    expect($storedKey->scope)->toBe('guest');
+    expect($storedKey->scope)->toStartWith('guest:binding:');
 
     expect(fn () => IdempotencyKey::query()->create([
         'idempotency_key' => $key,
-        'scope' => 'guest',
+        'scope' => $storedKey->scope,
         'payload_hash' => str_repeat('a', 64),
         'order_id' => $storedKey->order_id,
         'expires_at' => now()->addHour(),
     ]))->toThrow(\Illuminate\Database\QueryException::class);
 });
 
+test('guest idempotency replay returns a receipt without customer pii', function () {
+    $product = createOrderProduct();
+    $headers = ['X-Idempotency-Key' => 'order-guest-private-replay-0001'];
+    $payload = orderPayload($product);
+
+    $firstResponse = $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
+        ->withHeaders($headers)
+        ->postJson('/api/order', $payload)
+        ->assertCreated();
+    continueGuestCheckoutBinding($this, $firstResponse);
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
+        ->withHeaders($headers)
+        ->postJson('/api/order', $payload)
+        ->assertOk()
+        ->assertJsonPath('idempotent_replay', true)
+        ->assertJsonMissingPath('data.fullname')
+        ->assertJsonMissingPath('data.email')
+        ->assertJsonMissingPath('data.phone')
+        ->assertJsonMissingPath('data.address')
+        ->assertJsonMissingPath('data.note');
+});
+
 test('reusing an idempotency key with a different payload returns conflict', function () {
     $product = createOrderProduct();
     $headers = ['X-Idempotency-Key' => 'order-conflict-test-0001'];
 
-    $this->withHeaders($headers)
+    $firstResponse = $this->withHeaders($headers)
         ->postJson('/api/order', orderPayload($product, 2))
         ->assertCreated();
+    continueGuestCheckoutBinding($this, $firstResponse);
 
     $this->withHeaders($headers)
         ->postJson('/api/order', orderPayload($product, 1))
@@ -237,9 +273,10 @@ test('reusing an order idempotency key with a changed email returns conflict', f
     $headers = ['X-Idempotency-Key' => 'order-conflict-email-0001'];
     $payload = orderPayload($product, 2);
 
-    $this->withHeaders($headers)
+    $firstResponse = $this->withHeaders($headers)
         ->postJson('/api/order', $payload)
         ->assertCreated();
+    continueGuestCheckoutBinding($this, $firstResponse);
 
     $payload['email'] = 'another-customer@example.test';
 
@@ -258,9 +295,10 @@ test('reusing an order idempotency key with changed customer name or note return
     $payload = orderPayload($product, 2);
     $payload['note'] = 'Leave at reception';
 
-    $this->withHeaders($headers)
+    $firstResponse = $this->withHeaders($headers)
         ->postJson('/api/order', $payload)
         ->assertCreated();
+    continueGuestCheckoutBinding($this, $firstResponse);
 
     $payload['customer_name'] = 'Tran Thi B';
 
@@ -287,12 +325,14 @@ test('the same idempotency key is scoped per authenticated user', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
-    $this->withToken($userA->createToken('customer')->plainTextToken)
+    $this->withToken($userA->createToken('customer', ['mobile:customer'])->plainTextToken)
         ->withHeader('X-Idempotency-Key', $key)
         ->postJson('/api/order', orderPayload($product, 2))
         ->assertCreated();
 
-    $this->withToken($userB->createToken('customer')->plainTextToken)
+    Auth::forgetGuards();
+
+    $this->withToken($userB->createToken('customer', ['mobile:customer'])->plainTextToken)
         ->withHeader('X-Idempotency-Key', $key)
         ->postJson('/api/order', orderPayload($product, 1))
         ->assertCreated();
@@ -302,13 +342,85 @@ test('the same idempotency key is scoped per authenticated user', function () {
     expect($product->fresh()->inventory)->toBe(7);
 });
 
+test('invalid expired revoked or unauthorized bearer tokens cannot create orders', function (string $case) {
+    config([
+        'sanctum.expiration' => 60,
+        'services.turnstile.required' => true,
+    ]);
+    $product = createOrderProduct(['inventory' => 10]);
+    $user = User::factory()->customer()->create();
+
+    $token = match ($case) {
+        'invalid' => 'invalid-bearer-token',
+        'expired-by-age' => tap(
+            $user->createToken('expired-age', ['mobile:customer']),
+            fn ($created) => $created->accessToken->forceFill([
+                'created_at' => now()->subMinutes(61),
+            ])->save()
+        )->plainTextToken,
+        'expired-at' => $user->createToken(
+            'expired-at',
+            ['mobile:customer'],
+            now()->subMinute()
+        )->plainTextToken,
+        'revoked' => tap(
+            $user->createToken('revoked', ['mobile:customer']),
+            fn ($created) => $created->accessToken->delete()
+        )->plainTextToken,
+        'wrong-ability' => $user->createToken('wrong-ability', ['profile:read'])->plainTextToken,
+    };
+
+    $response = $this->withToken($token)
+        ->withHeader('X-Idempotency-Key', "order-token-rejection-{$case}")
+        ->postJson('/api/order', orderPayload($product, 2));
+
+    $response->assertStatus($case === 'wrong-ability' ? 403 : 401);
+    expect(Order::count())->toBe(0)
+        ->and(IdempotencyKey::count())->toBe(0)
+        ->and($product->fresh()->inventory)->toBe(10);
+})->with([
+    'invalid',
+    'expired-by-age',
+    'expired-at',
+    'revoked',
+    'wrong-ability',
+]);
+
+test('mobile bearer checkout keeps its validated identity', function () {
+    $product = createOrderProduct(['inventory' => 10]);
+    $user = User::factory()->customer()->create();
+    $token = $user->createToken('mobile', ['mobile:customer'])->plainTextToken;
+
+    $order = $this->withToken($token)
+        ->withHeader('X-Idempotency-Key', 'order-valid-mobile-token-0001')
+        ->postJson('/api/order', orderPayload($product, 1))
+        ->assertCreated()
+        ->json('data');
+
+    expect($order['user_id'])->toBe($user->id);
+});
+
+test('browser session checkout keeps its validated identity', function () {
+    $product = createOrderProduct(['inventory' => 10]);
+    $user = User::factory()->customer()->create();
+
+    $order = $this->actingAs($user)
+        ->withHeader('X-Idempotency-Key', 'order-valid-browser-session-0001')
+        ->postJson('/api/order', orderPayload($product, 1))
+        ->assertCreated()
+        ->json('data');
+
+    expect($order['user_id'])->toBe($user->id);
+});
+
 test('expired idempotency keys are not replayed', function () {
     $product = createOrderProduct(['inventory' => 10]);
     $headers = ['X-Idempotency-Key' => 'order-expired-test-0001'];
 
-    $this->withHeaders($headers)
+    $firstResponse = $this->withHeaders($headers)
         ->postJson('/api/order', orderPayload($product, 2))
         ->assertCreated();
+    continueGuestCheckoutBinding($this, $firstResponse);
 
     IdempotencyKey::query()->update(['expires_at' => now()->subMinute()]);
 

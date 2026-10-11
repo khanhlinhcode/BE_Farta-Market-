@@ -24,7 +24,7 @@ class SendOrderConfirmationEmail implements ShouldQueue
     {
         $order = Order::query()
             ->with(['details.product.category'])
-            ->withSum('details as total', 'line_total')
+            ->withSum('details as total', 'line_total_vnd')
             ->find($this->orderId);
 
         if (! $order || ! $order->email) {

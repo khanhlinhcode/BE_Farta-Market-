@@ -51,7 +51,7 @@ test('public site content returns visible scheduled banners without provider ide
         ->assertJsonMissingPath('banners.0.image_public_id');
 });
 
-test('staff updates settings and public categories only include active records', function () {
+test('admin updates settings and public categories only include active records', function () {
     $hidden = Category::create(['name' => 'Hidden', 'is_active' => false]);
     $visible = Category::create(['name' => 'Visible', 'is_active' => true, 'sort_order' => 2]);
     foreach ([true, false] as $active) {
@@ -63,8 +63,7 @@ test('staff updates settings and public categories only include active records',
             'facebook' => '', 'twitter' => '', 'instagram' => '', 'linkedin' => '',
         ]);
     }
-    $staff = User::factory()->create(['role' => 'staff']);
-    Sanctum::actingAs($staff);
+    Sanctum::actingAs(User::factory()->admin()->create());
     $this->getJson('/api/site-content')->assertJsonPath('settings.brand_name', 'FartaMarket');
     $payload = SiteSetting::current()->toArray();
     $payload['brand_name'] = 'Farta Fresh';

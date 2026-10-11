@@ -103,6 +103,7 @@ test('changing email requires verification again and sends a new notice', functi
     $this->patchJson('/api/profile', [
         'name' => $user->name,
         'email' => 'changed@example.test',
+        'current_password' => 'password',
     ])->assertOk()->assertJsonPath('email_verified', false);
 
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();

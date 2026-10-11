@@ -76,7 +76,7 @@ class AdminUserController extends Controller
             Order::query()
                 ->where('user_id', $user->id)
                 ->with(['details.product.category'])
-                ->withSum('details as total', 'line_total')
+                ->withSum('details as total', 'line_total_vnd')
                 ->orderByDesc('created_at')
                 ->paginate(10)
         );

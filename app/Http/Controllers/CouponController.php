@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Services\CouponService;
+use App\Support\Vnd;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,7 +22,7 @@ class CouponController extends Controller
         try {
             $result = $couponService->validate(
                 $data['code'],
-                (float) $data['order_amount'],
+                Vnd::fromDecimal((string) $data['order_amount']),
                 (int) $request->user()->id
             );
 
@@ -106,7 +107,7 @@ class CouponController extends Controller
         return response()->json([
             'coupon' => $coupon,
             'total_used' => $usages->count(),
-            'total_discount_amount' => round((float) $usages->sum('discount_amount'), 2),
+            'total_discount_amount' => (int) $usages->sum('discount_amount_vnd'),
             'users' => $usages->map(fn (CouponUsage $usage) => [
                 'id' => $usage->id,
                 'discount_amount' => $usage->discount_amount,

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 
@@ -18,6 +19,11 @@ final class AnalyticsSessionService
             'session_binding' => $this->sessionBinding($browserSessionId),
             'expires_at' => $expiresAt->timestamp,
         ];
+        Cache::put(
+            $this->activeSessionKey($payload['session_binding']),
+            hash('sha256', $payload['session_id']),
+            $expiresAt
+        );
 
         return [
             'token' => Crypt::encryptString(json_encode($payload, JSON_THROW_ON_ERROR)),
@@ -46,7 +52,11 @@ final class AnalyticsSessionService
             || ! is_int($payload['expires_at'] ?? null)
             || $payload['expires_at'] < now()->timestamp
             || ! is_string($payload['session_binding'] ?? null)
-            || ! hash_equals($payload['session_binding'], $this->sessionBinding($browserSessionId))) {
+            || ! hash_equals($payload['session_binding'], $this->sessionBinding($browserSessionId))
+            || ! hash_equals(
+                (string) Cache::get($this->activeSessionKey($payload['session_binding']), ''),
+                hash('sha256', $payload['session_id'])
+            )) {
             return null;
         }
 
@@ -60,5 +70,10 @@ final class AnalyticsSessionService
     private function sessionBinding(string $browserSessionId): string
     {
         return hash_hmac('sha256', $browserSessionId, (string) config('app.key'));
+    }
+
+    private function activeSessionKey(string $sessionBinding): string
+    {
+        return 'analytics-session:active:'.$sessionBinding;
     }
 }

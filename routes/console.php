@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('idempotency:prune')->daily();
+Schedule::command('sanctum:prune-expired')->daily();
 Schedule::command('sitemap:generate')->daily();
 Schedule::command('payments:expire-pending')->everyTenMinutes();
 Schedule::command('queue:check-stuck')->everyFiveMinutes();

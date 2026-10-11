@@ -103,13 +103,14 @@ test('customer cannot list, upload, replace or delete admin product images', fun
     Http::assertSentCount(1);
 });
 
-test('staff can manage images but cannot delete a product', function () {
+test('staff can upload images but cannot delete media or products', function () {
     Sanctum::actingAs(User::factory()->create(['role' => 'staff']));
     $id = $this->product->id;
     $image = $this->postJson("/api/admin/products/{$id}/image", [
         'image' => UploadedFile::fake()->image('staff.png'),
     ])->assertOk()->json('product.images.0');
-    $this->deleteJson('/api/admin/product-images/'.$image['id'])->assertOk();
+    $this->deleteJson('/api/admin/product-images/'.$image['id'])->assertForbidden();
+    $this->assertDatabaseHas('product_images', ['id' => $image['id']]);
     $this->deleteJson("/api/admin/products/{$id}")->assertForbidden();
 });
 

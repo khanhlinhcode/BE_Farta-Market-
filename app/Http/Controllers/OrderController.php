@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\OrderResource;
 use App\Jobs\SendOrderConfirmationEmail;
 use App\Models\CouponUsage;
 use App\Models\IdempotencyKey;
 use App\Models\Order;
-use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Services\AnalyticsSessionService;
 use App\Services\CouponService;
 use App\Services\OrderStatusService;
+use App\Services\ReservationPolicy;
 use App\Services\TurnstileService;
 use App\Support\AnalyticsIdentifier;
 use App\Support\IdempotencyHasher;
@@ -23,7 +24,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class OrderController extends Controller
 {
@@ -56,16 +56,16 @@ class OrderController extends Controller
         $summary = [
             'orders' => (clone $filtered)->count(),
             'pending' => (clone $filtered)->where('status', Order::STATUS_PENDING)->count(),
-            'delivered_revenue' => (float) (clone $filtered)->where('status', Order::STATUS_DELIVERED)->sum('grand_total'),
+            'delivered_revenue' => (int) (clone $filtered)->where('status', Order::STATUS_DELIVERED)->sum('grand_total_vnd'),
         ];
         $orders = $filtered
             ->with(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
-            ->withSum('details as total', 'line_total')
+            ->withSum('details as total', 'line_total_vnd')
             ->latest()
             ->paginate((int) ($filters['per_page'] ?? 20));
 
         return response()->json([
-            'data' => $orders->items(),
+            'data' => OrderResource::collection($orders->getCollection())->resolve($request),
             'meta' => [
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
@@ -141,39 +141,45 @@ class OrderController extends Controller
         ]);
     }
 
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         $order = Order::with(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
-            ->withSum('details as total', 'line_total')
+            ->withSum('details as total', 'line_total_vnd')
             ->findOrFail($id);
 
-        return response()->json($order);
+        return response()->json((new OrderResource($order))->resolve($request));
     }
 
     public function myOrders(Request $request)
     {
-        return response()->json(
-            Order::query()
-                ->where('user_id', $request->user()->id)
-                ->with(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
-                ->withSum('details as total', 'line_total')
-                ->orderByDesc('created_at')
-                ->paginate(10)
-        );
+        $orders = Order::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
+            ->withSum('details as total', 'line_total_vnd')
+            ->orderByDesc('created_at')
+            ->paginate(10);
+        $orders->setCollection($orders->getCollection()->map(
+            fn ($order) => (new OrderResource($order))->resolve($request)
+        ));
+
+        return response()->json($orders);
     }
 
     public function myOrder(Request $request, Order $order)
     {
         abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
 
-        return response()->json($order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role']));
+        $order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role']);
+
+        return response()->json((new OrderResource($order))->resolve($request));
     }
 
     public function store(
         Request $request,
         CouponService $couponService,
         TurnstileService $turnstile,
-        AnalyticsSessionService $analyticsSessions
+        AnalyticsSessionService $analyticsSessions,
+        ReservationPolicy $reservationPolicy
     ) {
         $idempotencyKey = $request->header('X-Idempotency-Key');
 
@@ -229,9 +235,13 @@ class OrderController extends Controller
             ? strtoupper(trim((string) $data['coupon_code']))
             : null;
         $data['payment_method'] = Order::PAYMENT_METHOD_COD;
-        $payloadHash = IdempotencyHasher::hash($data);
-        $userId = $this->idempotencyUserId($request);
         $authenticatedUser = $request->user('sanctum') ?? $request->user();
+        if ($authenticatedUser && $authenticatedUser->role !== 'customer') {
+            return response()->json(['message' => 'Bạn không có quyền thực hiện thao tác này.'], 403);
+        }
+
+        $payloadHash = IdempotencyHasher::hash($data);
+        $userId = $authenticatedUser?->getKey();
         if ($authenticatedUser && ! $authenticatedUser->hasVerifiedEmail()) {
             return response()->json([
                 'message' => 'Vui lòng xác minh email trước khi đặt hàng.',
@@ -260,7 +270,13 @@ class OrderController extends Controller
         $analyticsSessionHash = $analyticsSession
             ? AnalyticsIdentifier::hash($analyticsSession['session_id'])
             : null;
-        $idempotencyScope = $userId === null ? 'guest' : "user:{$userId}";
+        $guestBindingHash = $request->attributes->get('guest_checkout_binding_hash');
+        if ($userId === null && ! is_string($guestBindingHash)) {
+            throw new \LogicException('Guest checkout binding middleware did not provide a binding.');
+        }
+        $idempotencyScope = $userId === null
+            ? 'guest:binding:'.$guestBindingHash
+            : "user:{$userId}";
 
         if ($data['coupon_code'] && $userId === null) {
             return response()->json([
@@ -272,8 +288,8 @@ class OrderController extends Controller
             [$order, $isReplay] = Cache::lock(
                 'order:create:'.hash('sha256', $idempotencyScope.'|'.$data['idempotency_key']),
                 15
-            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash, $idempotencyScope) {
-                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash, $idempotencyScope) {
+            )->block(5, function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash, $idempotencyScope, $reservationPolicy) {
+                return DB::transaction(function () use ($data, $payloadHash, $userId, $couponService, $analyticsSessionHash, $checkoutIpHash, $idempotencyScope, $reservationPolicy) {
                     IdempotencyKey::query()
                         ->where('idempotency_key', $data['idempotency_key'])
                         ->where('scope', $idempotencyScope)
@@ -291,6 +307,7 @@ class OrderController extends Controller
                         if ($existingKey->payload_hash !== $payloadHash) {
                             throw new HttpResponseException(response()->json([
                                 'message' => 'Idempotency key đã được dùng với request khác.',
+                                'error_code' => 'idempotency_payload_conflict',
                             ], 409));
                         }
 
@@ -305,6 +322,11 @@ class OrderController extends Controller
                         }
                     }
 
+                    $reservation = $reservationPolicy->lockAndValidate($data['products'], $userId);
+                    $reservationExpiresAt = now()->addMinutes($userId === null
+                        ? max(1, (int) config('commerce.reservations.guest_cod_ttl_minutes'))
+                        : max(1, (int) config('commerce.reservations.authenticated_cod_ttl_minutes')));
+
                     $order = Order::create([
                         'user_id' => $userId,
                         'fullname' => $data['customer_name'],
@@ -317,43 +339,23 @@ class OrderController extends Controller
                         'payment_status' => Order::PAYMENT_STATUS_PENDING,
                         'idempotency_key' => $data['idempotency_key'],
                         'checkout_ip_hash' => $userId === null ? $checkoutIpHash : null,
-                        'guest_expires_at' => $userId === null
-                            ? now()->addMinutes(max(15, (int) config('services.turnstile.guest_order_ttl_minutes', 120)))
-                            : null,
+                        'guest_expires_at' => $userId === null ? $reservationExpiresAt : null,
+                        'reservation_expires_at' => $reservationExpiresAt,
                     ]);
                     if ($analyticsSessionHash) {
                         $order->forceFill(['analytics_session_hash' => $analyticsSessionHash])->save();
                     }
 
-                    $productIds = collect($data['products'])
-                        ->pluck('product_id')
-                        ->sort()
-                        ->values();
-                    $products = Product::query()
-                        ->whereIn('id', $productIds)
-                        ->orderBy('id')
-                        ->lockForUpdate()
-                        ->get()
-                        ->keyBy('id');
-
-                    $subtotal = 0;
+                    $products = $reservation['products'];
+                    $subtotal = $reservation['subtotal'];
 
                     foreach ($data['products'] as $productData) {
                         $product = $products->get((int) $productData['product_id']);
                         $quantity = (int) $productData['quantity'];
 
-                        if (! $product || ! $product->is_active) {
-                            abort(422, 'Sản phẩm không khả dụng hoặc đã ngưng kinh doanh.');
-                        }
-
-                        if ($product->inventory < $quantity) {
-                            abort(422, "Sản phẩm {$product->name} không đủ tồn kho.");
-                        }
-
                         $product->decrement('inventory', $quantity);
-                        $unitPrice = (float) $product->price;
+                        $unitPrice = (int) $product->price;
                         $lineTotal = $unitPrice * $quantity;
-                        $subtotal += $lineTotal;
 
                         $order->details()->create([
                             'product_id' => $product->id,
@@ -381,7 +383,7 @@ class OrderController extends Controller
                             ], 422));
                         }
 
-                        $discountAmount = (float) $couponResult['discount_amount'];
+                        $discountAmount = (int) $couponResult['discount_amount'];
 
                         $order->forceFill([
                             'coupon_id' => $couponResult['coupon']->id,
@@ -426,7 +428,7 @@ class OrderController extends Controller
         }
 
         $order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
-            ->loadSum('details as total', 'line_total');
+            ->loadSum('details as total', 'line_total_vnd');
 
         if (! $isReplay && Cache::add(
             'order-confirmation-email:'.AnalyticsIdentifier::hash($data['email']),
@@ -437,7 +439,9 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'data' => $order,
+            'data' => $isReplay && $userId === null
+                ? $this->guestReplayReceipt($order)
+                : (new OrderResource($order))->resolve($request),
             'idempotent_replay' => $isReplay,
         ], $isReplay ? 200 : 201);
     }
@@ -460,9 +464,9 @@ class OrderController extends Controller
         }
 
         $order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
-            ->loadSum('details as total', 'line_total');
+            ->loadSum('details as total', 'line_total_vnd');
 
-        return response()->json($order);
+        return response()->json((new OrderResource($order))->resolve($request));
     }
 
     public function cancelMyOrder(Request $request, Order $order, OrderStatusService $statusService)
@@ -484,9 +488,9 @@ class OrderController extends Controller
         }
 
         $order->load(['details.product.category', 'coupon', 'statusHistory.changedBy:id,name,role'])
-            ->loadSum('details as total', 'line_total');
+            ->loadSum('details as total', 'line_total_vnd');
 
-        return response()->json($order);
+        return response()->json((new OrderResource($order))->resolve($request));
     }
 
     private function applyAdminFilters($query, array $filters): void
@@ -531,7 +535,7 @@ class OrderController extends Controller
         }
     }
 
-    private function updateOrderTotals(Order $order, float $subtotal, float $discountAmount = 0): void
+    private function updateOrderTotals(Order $order, int $subtotal, int $discountAmount = 0): void
     {
         $shippingFee = $this->shippingFee($subtotal);
         $discountAmount = min(max($discountAmount, 0), $subtotal);
@@ -544,14 +548,31 @@ class OrderController extends Controller
         ])->save();
     }
 
-    private function shippingFee(float $subtotal): float
+    private function shippingFee(int $subtotal): int
     {
         $settings = SiteSetting::current();
         if ($subtotal <= 0 || $subtotal >= $settings->free_shipping_threshold) {
             return 0;
         }
 
-        return (float) $settings->shipping_fee;
+        return (int) $settings->shipping_fee;
+    }
+
+    /** @return array<string, mixed> */
+    private function guestReplayReceipt(Order $order): array
+    {
+        return [
+            'id' => $order->id,
+            'status' => $order->status,
+            'payment_method' => $order->payment_method,
+            'payment_status' => $order->payment_status,
+            'subtotal' => $order->subtotal,
+            'shipping_fee' => $order->shipping_fee,
+            'discount_amount' => $order->discount_amount,
+            'grand_total' => $order->grand_total,
+            'created_at' => $order->created_at,
+            'reservation_expires_at' => $order->reservation_expires_at,
+        ];
     }
 
     private function csvCell(mixed $value): mixed
@@ -563,27 +584,6 @@ class OrderController extends Controller
         return preg_match('/^[\x00-\x20]*[=+\-@]/', $value) === 1
             ? "'".$value
             : $value;
-    }
-
-    private function idempotencyUserId(Request $request): ?int
-    {
-        $token = $request->bearerToken();
-
-        if ($token) {
-            $tokenable = PersonalAccessToken::findToken($token)?->tokenable;
-
-            if ($tokenable) {
-                return $tokenable->getKey();
-            }
-        }
-
-        $user = $request->user('sanctum') ?? $request->user();
-
-        if ($user) {
-            return $user->id;
-        }
-
-        return null;
     }
 
     private function hasTooManyPendingGuestOrders(string $email, string $phone, string $ipHash): bool

@@ -21,6 +21,19 @@ class PasswordResetController extends Controller
             return $response;
         }
 
+        return $this->sendResetLink($request);
+    }
+
+    public function requestMobileLink(Request $request): JsonResponse
+    {
+        return $this->sendResetLink($request);
+    }
+
+    private function sendResetLink(Request $request): JsonResponse
+    {
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->input('email'))),
+        ]);
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
         ]);
@@ -53,6 +66,19 @@ class PasswordResetController extends Controller
             return $response;
         }
 
+        return $this->performReset($request);
+    }
+
+    public function mobileReset(Request $request): JsonResponse
+    {
+        return $this->performReset($request);
+    }
+
+    private function performReset(Request $request): JsonResponse
+    {
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->input('email'))),
+        ]);
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
             'token' => ['required', 'string', 'max:2048'],

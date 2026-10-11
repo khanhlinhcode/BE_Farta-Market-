@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Session\ArraySessionHandler;
+use Illuminate\Session\Store;
 use Illuminate\Support\Facades\RateLimiter;
 
 uses(RefreshDatabase::class);
@@ -41,6 +44,87 @@ test('registration is rate limited by source ip', function () {
         'password' => 'FartaPass123',
         'password_confirmation' => 'FartaPass123',
     ])->assertTooManyRequests();
+});
+
+test('default api limiter covers routes without an explicit limiter', function () {
+    config([
+        'security.rate_limits.api_per_minute' => 2,
+        'security.rate_limits.api_ip_per_minute' => 100,
+        'security.rate_limits.api_global_per_minute' => 100,
+    ]);
+    $ip = '203.0.113.20';
+    RateLimiter::clear('api:ip:'.hash('sha256', $ip));
+    RateLimiter::clear('api:global');
+
+    $this->withServerVariables(['REMOTE_ADDR' => $ip])->getJson('/api/products')->assertOk();
+    $this->withServerVariables(['REMOTE_ADDR' => $ip])->getJson('/api/products')->assertOk();
+    $this->withServerVariables(['REMOTE_ADDR' => $ip])->getJson('/api/products')
+        ->assertTooManyRequests()
+        ->assertHeader('Retry-After');
+});
+
+test('untrusted forwarded addresses cannot rotate the api limiter identity', function () {
+    config([
+        'trustedproxy.proxies' => [],
+        'security.rate_limits.api_per_minute' => 1,
+        'security.rate_limits.api_ip_per_minute' => 100,
+        'security.rate_limits.api_global_per_minute' => 100,
+    ]);
+    $proxyIp = '198.51.100.10';
+    RateLimiter::clear('api:ip:'.hash('sha256', $proxyIp));
+    RateLimiter::clear('api:global');
+
+    $this->withServerVariables(['REMOTE_ADDR' => $proxyIp])
+        ->withHeader('X-Forwarded-For', '203.0.113.1')
+        ->getJson('/api/products')
+        ->assertOk();
+
+    $this->withServerVariables(['REMOTE_ADDR' => $proxyIp])
+        ->withHeader('X-Forwarded-For', '203.0.113.2')
+        ->getJson('/api/products')
+        ->assertTooManyRequests();
+});
+
+test('an explicitly trusted proxy separates real client rate limit identities', function () {
+    config([
+        'trustedproxy.proxies' => ['198.51.100.20'],
+        'security.rate_limits.api_per_minute' => 1,
+        'security.rate_limits.api_ip_per_minute' => 100,
+        'security.rate_limits.api_global_per_minute' => 100,
+    ]);
+    RateLimiter::clear('api:ip:'.hash('sha256', '203.0.113.10'));
+    RateLimiter::clear('api:ip:'.hash('sha256', '203.0.113.11'));
+    RateLimiter::clear('api:global');
+
+    $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.20'])
+        ->withHeader('X-Forwarded-For', '203.0.113.10')
+        ->getJson('/api/products')
+        ->assertOk();
+
+    $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.20'])
+        ->withHeader('X-Forwarded-For', '203.0.113.11')
+        ->getJson('/api/products')
+        ->assertOk();
+});
+
+test('anonymous browser sessions behind one ip have separate default buckets', function () {
+    config([
+        'security.rate_limits.api_per_minute' => 1,
+        'security.rate_limits.api_ip_per_minute' => 100,
+        'security.rate_limits.api_global_per_minute' => 100,
+    ]);
+    $first = Request::create('/api/products', 'GET', server: ['REMOTE_ADDR' => '203.0.113.40']);
+    $first->setLaravelSession(new Store('test', new ArraySessionHandler(120), 'first-session-id'));
+    $second = Request::create('/api/products', 'GET', server: ['REMOTE_ADDR' => '203.0.113.40']);
+    $second->setLaravelSession(new Store('test', new ArraySessionHandler(120), 'second-session-id'));
+
+    $limiter = RateLimiter::limiter('api');
+    $firstLimits = $limiter($first);
+    $secondLimits = $limiter($second);
+
+    expect($firstLimits[0]->key)->not->toBe($secondLimits[0]->key)
+        ->and($firstLimits[1]->key)->toBe($secondLimits[1]->key)
+        ->and($firstLimits[1]->maxAttempts)->toBe(100);
 });
 
 test('public chat is rate limited per ip and across the deployment', function () {

@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 uses(RefreshDatabase::class);
@@ -45,6 +46,11 @@ test('invalid password returns generic auth failure', function () {
 });
 
 test('nonexistent email returns generic auth failure', function () {
+    Hash::shouldReceive('check')
+        ->once()
+        ->with('FartaPass123', '$2y$12$eweZJwcVnRNMHAHs8j1D5eMZS7./pvk9SIUgRh9a45ithSyfJMS/K')
+        ->andReturnFalse();
+
     $this->postJson('/api/mobile/login', [
         'email' => 'nonexistent@example.test',
         'password' => 'FartaPass123',

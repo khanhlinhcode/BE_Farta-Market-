@@ -4,6 +4,7 @@ namespace App\Services\Chat;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Support\Vnd;
 
 final class ChatOrderTool
 {
@@ -59,7 +60,7 @@ final class ChatOrderTool
             'status' => (string) $order->status,
             'payment_status' => (string) $order->payment_status,
             'payment_method' => (string) $order->payment_method,
-            'grand_total' => (int) round((float) $order->grand_total),
+            'grand_total' => Vnd::fromDecimal($order->grand_total),
             'created_at' => $order->created_at?->toIso8601String(),
         ];
     }

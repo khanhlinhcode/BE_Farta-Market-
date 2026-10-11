@@ -23,6 +23,15 @@ class AdminPanelMiddleware
             ], 403);
         }
 
+        $hasCapabilityMapping = collect($request->route()?->gatherMiddleware() ?? [])
+            ->contains(fn (string $middleware): bool => str_starts_with($middleware, 'admin.capability:'));
+
+        if (! $hasCapabilityMapping) {
+            return response()->json([
+                'message' => 'Admin route capability is not configured.',
+            ], 403);
+        }
+
         return $next($request);
     }
 }

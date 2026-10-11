@@ -85,6 +85,49 @@ class AppServiceProvider extends ServiceProvider
                 : $rule->uncompromised();
         });
 
+        RateLimiter::for('api', function (Request $request) {
+            $user = $request->user('sanctum');
+            $identity = $this->apiClientIdentity($request, $user?->getAuthIdentifier());
+            $limits = [
+                Limit::perMinute(max(1, (int) config('security.rate_limits.api_per_minute')))
+                    ->by('api:'.$identity),
+            ];
+
+            if (! $user && $request->hasSession()) {
+                $limits[] = Limit::perMinute(max(1, (int) config('security.rate_limits.api_ip_per_minute')))
+                    ->by('api:ip:'.$this->requestIpHash($request));
+            }
+
+            $limits[] = Limit::perMinute(max(1, (int) config('security.rate_limits.api_global_per_minute')))
+                ->by('api:global');
+
+            return $limits;
+        });
+
+        RateLimiter::for('expensive-read', function (Request $request) {
+            $user = $request->user('sanctum');
+            $identity = $this->apiClientIdentity($request, $user?->getAuthIdentifier());
+            $limits = [
+                Limit::perMinute(max(1, (int) config('security.rate_limits.expensive_read_per_minute')))
+                    ->by('expensive-read:'.$identity),
+            ];
+
+            if (! $user && $request->hasSession()) {
+                $limits[] = Limit::perMinute(max(1, (int) config('security.rate_limits.expensive_read_ip_per_minute')))
+                    ->by('expensive-read:ip:'.$this->requestIpHash($request));
+            }
+
+            $limits[] = Limit::perMinute(max(1, (int) config('security.rate_limits.expensive_read_global_per_minute')))
+                ->by('expensive-read:global');
+
+            return $limits;
+        });
+
+        RateLimiter::for('admin-export', function (Request $request) {
+            return Limit::perMinute(max(1, (int) config('security.rate_limits.admin_export_per_minute')))
+                ->by('admin-export:user:'.($request->user()?->getAuthIdentifier() ?? 'anonymous'));
+        });
+
         RateLimiter::for('user-login', function (Request $request) {
             return [
                 Limit::perMinute(10)->by('user-login:ip:'.$request->ip()),
@@ -118,10 +161,21 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('authenticated-checkout', function (Request $request) {
+            $user = $request->user('sanctum');
+
+            return $user
+                ? Limit::perMinute(max(1, (int) config('commerce.reservations.authenticated_checkout_per_minute')))
+                    ->by('authenticated-checkout:user:'.$user->id)
+                : Limit::none();
+        });
+
         RateLimiter::for('register', function (Request $request) {
+            $email = Str::lower(trim((string) $request->input('email')));
+
             return [
                 Limit::perMinute(5)->by('register:ip:'.$request->ip()),
-                Limit::perMinute(3)->by('register:email:'.hash('sha256', Str::lower((string) $request->input('email')))),
+                Limit::perMinute(3)->by('register:email:'.hash('sha256', $email)),
             ];
         });
 
@@ -143,7 +197,12 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('reset-password', function (Request $request) {
-            return Limit::perMinute(10)->by('reset-password:ip:'.hash('sha256', (string) $request->ip()));
+            $email = Str::lower(trim((string) $request->input('email')));
+
+            return [
+                Limit::perMinute(10)->by('reset-password:ip:'.hash('sha256', (string) $request->ip())),
+                Limit::perMinute(5)->by('reset-password:email:'.hash('sha256', $email)),
+            ];
         });
 
         RateLimiter::for('uploads', function (Request $request) {
@@ -206,5 +265,24 @@ class AppServiceProvider extends ServiceProvider
     private function loginAccountHash(Request $request): string
     {
         return hash('sha256', Str::lower(trim((string) $request->input('email'))));
+    }
+
+    private function apiClientIdentity(Request $request, int|string|null $userId): string
+    {
+        if ($userId !== null) {
+            return 'user:'.$userId;
+        }
+
+        $ipHash = $this->requestIpHash($request);
+        if (! $request->hasSession() || $request->session()->getId() === '') {
+            return 'ip:'.$ipHash;
+        }
+
+        return 'ip:'.$ipHash.':session:'.hash('sha256', $request->session()->getId());
+    }
+
+    private function requestIpHash(Request $request): string
+    {
+        return hash('sha256', (string) $request->ip());
     }
 }

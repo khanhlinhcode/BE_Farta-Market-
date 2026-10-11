@@ -12,23 +12,23 @@ class DashboardRevenueQuery
         return Order::query()->where('status', Order::STATUS_DELIVERED);
     }
 
-    public function total(): float
+    public function total(): int
     {
-        return (float) $this->deliveredOrders()->sum('grand_total');
+        return (int) $this->deliveredOrders()->sum('grand_total_vnd');
     }
 
-    public function today(): float
+    public function today(): int
     {
-        return (float) $this->deliveredOrders()
+        return (int) $this->deliveredOrders()
             ->whereDate('created_at', now()->toDateString())
-            ->sum('grand_total');
+            ->sum('grand_total_vnd');
     }
 
-    public function currentMonth(): float
+    public function currentMonth(): int
     {
-        return (float) $this->deliveredOrders()
+        return (int) $this->deliveredOrders()
             ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
-            ->sum('grand_total');
+            ->sum('grand_total_vnd');
     }
 
     public function chart(string $range): array
@@ -43,7 +43,7 @@ class DashboardRevenueQuery
     private function dailyChart(int $days): array
     {
         return $this->deliveredOrders()
-            ->selectRaw('DATE(orders.created_at) as date, COUNT(*) as orders, COALESCE(SUM(orders.grand_total), 0) as revenue')
+            ->selectRaw('DATE(orders.created_at) as date, COUNT(*) as orders, COALESCE(SUM(orders.grand_total_vnd), 0) as revenue')
             ->where('orders.created_at', '>=', now()->subDays($days)->startOfDay())
             ->groupBy(DB::raw('DATE(orders.created_at)'))
             ->orderBy('date')
@@ -51,7 +51,7 @@ class DashboardRevenueQuery
             ->map(fn ($item) => [
                 'date' => $item->date,
                 'orders' => (int) $item->orders,
-                'revenue' => (float) $item->revenue,
+                'revenue' => (int) $item->revenue,
             ])
             ->all();
     }
@@ -63,7 +63,7 @@ class DashboardRevenueQuery
             : "strftime('%Y-%m', orders.created_at)";
 
         return $this->deliveredOrders()
-            ->selectRaw("{$monthBucket} as date, COUNT(*) as orders, COALESCE(SUM(orders.grand_total), 0) as revenue")
+            ->selectRaw("{$monthBucket} as date, COUNT(*) as orders, COALESCE(SUM(orders.grand_total_vnd), 0) as revenue")
             ->where('orders.created_at', '>=', now()->subMonths(11)->startOfMonth())
             ->groupBy(DB::raw($monthBucket))
             ->orderBy('date')
@@ -71,7 +71,7 @@ class DashboardRevenueQuery
             ->map(fn ($item) => [
                 'date' => $item->date,
                 'orders' => (int) $item->orders,
-                'revenue' => (float) $item->revenue,
+                'revenue' => (int) $item->revenue,
             ])
             ->all();
     }

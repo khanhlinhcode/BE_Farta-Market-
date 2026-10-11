@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
@@ -75,6 +76,42 @@ test('customer can update profile information and upload avatar', function () {
         ->and($user->fresh()->avatar_url)->toBe($response->json('avatar_url'))
         ->and($user->fresh()->avatar_public_id)->toBe($this->avatarPublicId);
     Http::assertSentCount(1);
+});
+
+test('changing email requires the current password and revokes bearer sessions', function () {
+    Notification::fake();
+    $user = User::factory()->customer()->create([
+        'email' => 'before@example.test',
+        'password' => Hash::make('CurrentPass123'),
+        'email_verified_at' => now(),
+    ]);
+    $currentToken = $user->createToken('current-mobile', ['mobile:customer']);
+    $otherToken = $user->createToken('other-mobile', ['mobile:customer']);
+    $payload = [
+        'name' => $user->name,
+        'email' => 'after@example.test',
+    ];
+
+    $this->withToken($currentToken->plainTextToken)
+        ->putJson('/api/profile', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['current_password']);
+
+    $this->withToken($currentToken->plainTextToken)
+        ->putJson('/api/profile', $payload + ['current_password' => 'wrong-password'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['current_password']);
+
+    $this->withToken($currentToken->plainTextToken)
+        ->putJson('/api/profile', $payload + ['current_password' => 'CurrentPass123'])
+        ->assertOk()
+        ->assertJsonPath('email', 'after@example.test')
+        ->assertJsonPath('email_verified', false);
+
+    expect($user->fresh()->email)->toBe('after@example.test')
+        ->and($user->fresh()->email_verified_at)->toBeNull()
+        ->and($currentToken->accessToken->fresh())->toBeNull()
+        ->and($otherToken->accessToken->fresh())->toBeNull();
 });
 
 test('profile avatar validates file type and size', function () {

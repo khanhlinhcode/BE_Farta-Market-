@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\CloudinaryException;
+use App\Http\Resources\UserResource;
 use App\Services\CloudinaryImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class ProfileController extends Controller
@@ -17,30 +21,45 @@ class ProfileController extends Controller
 
     public function show(Request $request)
     {
-        return response()->json($this->profilePayload($request->user()));
+        return response()->json((new UserResource($request->user()))->resolve($request));
     }
 
     public function update(Request $request)
     {
+        $user = $request->user();
+        if ($request->has('email')) {
+            $request->merge([
+                'email' => Str::lower(trim((string) $request->input('email'))),
+            ]);
+        }
+        $emailChanged = $request->has('email') && $request->input('email') !== $user->email;
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($request->user()->id)],
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'regex:/^[0-9]{10,11}$/'],
             'default_address' => ['nullable', 'string', 'max:255'],
+            'current_password' => [Rule::requiredIf($emailChanged), 'nullable', 'string'],
         ]);
 
-        $user = $request->user();
-        $emailChanged = isset($data['email']) && $data['email'] !== $user->email;
+        if ($emailChanged && ! Hash::check((string) $data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Mật khẩu hiện tại không đúng.'],
+            ]);
+        }
+
+        unset($data['current_password']);
         if ($emailChanged) {
             $user->forceFill(['email_verified_at' => null]);
         }
         $user->update($data);
 
         if ($emailChanged) {
+            $this->rotateSessionsAfterEmailChange($request);
             $user->sendEmailVerificationNotification();
         }
 
-        return response()->json($this->profilePayload($user->fresh()));
+        return response()->json((new UserResource($user->fresh()))->resolve($request));
     }
 
     public function updatePassword(Request $request)
@@ -116,7 +135,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'avatar_url' => $uploaded['url'],
-            'data' => $this->profilePayload($user->fresh()),
+            'data' => (new UserResource($user->fresh()))->resolve($request),
         ]);
     }
 
@@ -132,18 +151,24 @@ class ProfileController extends Controller
         }
     }
 
-    private function profilePayload($user): array
+    private function rotateSessionsAfterEmailChange(Request $request): void
     {
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'email_verified' => $user->hasVerifiedEmail(),
-            'phone' => $user->phone,
-            'avatar_url' => $user->avatar_url,
-            'default_address' => $user->default_address,
-            'role' => $user->role,
-            'created_at' => $user->created_at,
-        ];
+        $user = $request->user();
+        $user->tokens()->delete();
+
+        if (config('session.driver') === 'database') {
+            $sessions = DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $user->id);
+
+            if ($request->hasSession()) {
+                $sessions->where('id', '!=', $request->session()->getId());
+            }
+
+            $sessions->delete();
+        }
+
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
     }
 }

@@ -475,6 +475,23 @@ test('admin login ip limiter applies when attacker changes email', function () {
         ])->assertTooManyRequests();
 });
 
+test('admin login verifies a password hash for existing and missing accounts', function () {
+    User::factory()->admin()->create([
+        'email' => 'known-admin@example.test',
+        'password' => 'CorrectPass123',
+    ]);
+    Hash::shouldReceive('check')->twice()->andReturnFalse();
+
+    foreach (['known-admin@example.test', 'missing-admin@example.test'] as $email) {
+        $this->withHeaders(spaHeaders())
+            ->postJson('/api/admin/login', [
+                'email' => $email,
+                'password' => 'WrongPass123',
+            ])->assertUnauthorized()
+            ->assertJsonPath('message', 'Thông tin đăng nhập không đúng.');
+    }
+});
+
 test('customer cannot use an admin mfa endpoint', function () {
     $this->actingAs(User::factory()->customer()->create(), 'web')
         ->withHeaders(spaHeaders())

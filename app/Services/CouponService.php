@@ -4,16 +4,17 @@ namespace App\Services;
 
 use App\Models\Coupon;
 use App\Models\CouponUsage;
+use App\Support\Vnd;
 use Exception;
 
 class CouponService
 {
     /**
-     * @return array{coupon: Coupon, discount_amount: float}
+     * @return array{coupon: Coupon, discount_amount: int}
      *
      * @throws Exception
      */
-    public function validate(string $code, float $orderAmount, int $userId, bool $lock = false): array
+    public function validate(string $code, int $orderAmount, int $userId, bool $lock = false): array
     {
         $query = Coupon::query()
             ->where('code', strtoupper(trim($code)))
@@ -31,8 +32,9 @@ class CouponService
             throw new Exception('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
         }
 
-        if ($orderAmount < (float) $coupon->min_order_amount) {
-            throw new Exception('Đơn hàng tối thiểu '.number_format((float) $coupon->min_order_amount).'đ để dùng mã này.');
+        $minimumOrderAmount = Vnd::fromDecimal($coupon->min_order_amount);
+        if ($orderAmount < $minimumOrderAmount) {
+            throw new Exception('Đơn hàng tối thiểu '.number_format($minimumOrderAmount).'đ để dùng mã này.');
         }
 
         if ($coupon->max_uses && $coupon->used_count >= $coupon->max_uses) {
@@ -49,18 +51,18 @@ class CouponService
         }
 
         $discount = $coupon->type === Coupon::TYPE_PERCENT
-            ? $orderAmount * ((float) $coupon->value / 100)
-            : (float) $coupon->value;
+            ? Vnd::percentageDiscount($orderAmount, $coupon->value)
+            : Vnd::fromDecimal($coupon->value);
 
         if ($coupon->max_discount_amount !== null) {
-            $discount = min($discount, (float) $coupon->max_discount_amount);
+            $discount = min($discount, Vnd::fromDecimal($coupon->max_discount_amount));
         }
 
         $discount = min($discount, $orderAmount);
 
         return [
             'coupon' => $coupon,
-            'discount_amount' => round($discount),
+            'discount_amount' => $discount,
         ];
     }
 }

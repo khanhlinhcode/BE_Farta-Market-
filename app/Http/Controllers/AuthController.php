@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Throwable;
 
 class AuthController extends Controller
 {
+    private const DUMMY_PASSWORD_HASH = '$2y$12$eweZJwcVnRNMHAHs8j1D5eMZS7./pvk9SIUgRh9a45ithSyfJMS/K';
+
     public function register(Request $request)
     {
         if ($response = $this->requireStatefulSession($request)) {
@@ -44,7 +47,7 @@ class AuthController extends Controller
         $verificationEmailSent = $this->sendVerificationEmail($user, 'registration');
 
         return response()->json([
-            'user' => $user->fresh(),
+            'user' => (new UserResource($user->fresh()))->resolve($request),
             'verification_email_sent' => $verificationEmailSent,
         ], 201);
     }
@@ -81,7 +84,7 @@ class AuthController extends Controller
 
         $this->bindSessionToPassword($request, $user);
 
-        $response = ['user' => $user];
+        $response = ['user' => (new UserResource($user))->resolve($request)];
         if (! $user->hasVerifiedEmail()) {
             $response['verification_email_sent'] = $this->sendVerificationEmail($user, 'login');
         }
@@ -101,8 +104,12 @@ class AuthController extends Controller
         ]);
 
         $user = User::query()->where('email', $credentials['email'])->first();
+        $passwordIsValid = Hash::check(
+            $credentials['password'],
+            $user?->password ?? self::DUMMY_PASSWORD_HASH
+        );
 
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! $passwordIsValid) {
             return response()->json([
                 'message' => 'Thông tin đăng nhập không đúng.',
             ], 401);
@@ -135,7 +142,7 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json((new UserResource($request->user()))->resolve($request));
     }
 
     public function logout(Request $request)
